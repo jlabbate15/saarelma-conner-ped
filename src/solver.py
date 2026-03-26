@@ -14,13 +14,6 @@ class saarelma_connor:
 
     Parameters
     ----------
-    info : String, optional
-        Any machine or shot data available for pedestal instance
-    r : np array
-        Span of r for relavant machine
-    rmax : float
-        Max of r for relevant machine
-    r_res : int
     E_FC : float
         Energy of Franck-Condon neutrals as defined in Mahdavi M.A., Maingi R., Groebner R.J., Leonard A.W., Osborne T.H. and Porter G. 2003 Phys. Plasmas 10 3984
     M_i : float
@@ -29,17 +22,10 @@ class saarelma_connor:
     """
     def __init__(
         self,
-        info = None,
-        r = None, # m, radial grid
-        rmax = None,
-        r_res = 30,
         E_FC = 3 * 1.60218e-19, # J,
         Z_i = 1, # Z of ions
         M_i = 3.344e-27, # kg, mass of deuterium nuclei
         M_e = 9.109e-31, # kg, mass of electron
-        T_i = np.linspace(1000,5000,10), # K, ion temperature over r (possibly could modify to take in 3D T and then flux-surface average)
-        T_e = np.linspace(1000,5000,10), # K, electron temperature over r (possibly could modify to take in 3D T and then flux-surface average)
-        T_rat = 1, # dim, T_i / T_e
         sigma_i = None, # m^2, ionization cross-section
         sigma_cx = None, # m^2, charge-exchange cross-section
         P_tot_e = None, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002)
@@ -64,38 +50,35 @@ class saarelma_connor:
         else:
             assert True, 'species must be D or D-T'
 
-        if r == None:
-            r = np.linspace(0,rmax,r_res)
-            x = r - self.r_sep # ???, radial coordinate with origin at separatrix, x is a flux coordinate I think
+        # if r == None:
+        #     r = np.linspace(0,rmax,r_res)
+        #     x = r - self.r_sep # ???, radial coordinate with origin at separatrix, x is a flux coordinate I think
 
         self.Z_i = Z_i
         self.e_i = Z_i * 1.602e-19 # C
-        self.V_th_i = np.sqrt(2*T_i/M_i) # m/s
-        self.V_th_e = np.sqrt(2*T_e/M_e) # m/s
+        self.V_th_i = np.sqrt(2*self.T_i/M_i) # m/s
+        self.V_th_e = np.sqrt(2*self.T_e/M_e) # m/s
 
         self.S_i = sigma_i * self.V_th_e # m^3/s
         self.S_cx = sigma_cx * self.V_th_i # m^3/s
 
         self.V_FC = np.sqrt(8*E_FC/((np.pi^2) * M_i)) # m/s
-        self.V_cx = np.sqrt(2*T_i/(np.pi * M_i)) # m/s
+        self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i)) # m/s
 
         self.dne_dx_ninf = dne_dx_ninf
 
-        if T_rat_flag:
-            T_i = T_e * T_rat
-
         # Diffusion coefficient setup
-        c_s =  # m/s, https://www.osti.gov/servlets/purl/4315023
-        rho_s = self.V_th_i*M_i / (self.e_i * B) # m, how do you find B?
+        c_s = self.fsa() # m/s, https://www.osti.gov/servlets/purl/4315023
+        rho_s = self.fsa(  self.V_th_i*M_i / (self.e_i * self.B) ) # m
         mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
-        alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * mu0 * np.gradient(self.P) * np.sqrt(self.V_plasma / (2*R0*np.pi**2))
+        alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * mu0 * np.gradient(self.P) * np.sqrt(self.V_plasma / (2*self.R0*np.pi**2))
 
         # Diffusion coefficient computation
         D_KBM = np.where(
             alpha > alpha_crit,
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * np.gradient(T)) # Is T just the electron temperature here? Do we give a 1D profile or 3D? Probably 3D if we want a true gradient, but we are looking for the magnitude of the gradient I think
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * np.gradient(self.T_e) ) # Need to be careful with gradient of T_e, make sure this is right
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
@@ -163,14 +146,17 @@ class saarelma_connor:
             pf = read_pfile("p123456.01000")
 
             # Extract profiles
-            ne = pf.get("ne")       # returns (psinorm, values, derivatives) tuple
-            Te = pf.get("te")
+            self.n_e = pf.get("ne")       # returns (psinorm, values, derivatives) tuple
+            self.T_e = pf.get("te")
 
             # Calculate boundary condition from profiles
             dne_dx_ninf = None, # (particles/m^3) / m, electron density gradient in the core of the plasma
 
         else:
             assert True, 'kprof_loc method not supported'
+
+        if T_rat_flag:
+            self.T_i = self.T_e * self.T_rat
 
 
     
