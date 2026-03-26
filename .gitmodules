@@ -4,3 +4,6 @@
 [submodule "dependencies/bouquet"]
 	path = dependencies/bouquet
 	url = https://github.com/d-burg/bouquet.git
+[submodule "dependencies/OpenFUSIONToolkit"]
+	path = dependencies/OpenFUSIONToolkit
+	url = https://github.com/OpenFUSIONToolkit/OpenFUSIONToolkit.git

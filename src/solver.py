@@ -28,7 +28,7 @@ class saarelma_connor:
         M_e = 9.109e-31, # kg, mass of electron
         sigma_i = None, # m^2, ionization cross-section
         sigma_cx = None, # m^2, charge-exchange cross-section
-        P_tot_e = None, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002)
+        P_tot_e = None, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
         alpha_crit = None,
         C_KBM = None,
         De_chie_etg = None,
@@ -39,6 +39,8 @@ class saarelma_connor:
         T_rat_flag = False,
         species = 'D', # species of ions, currently supporting: D, D-T
     ):
+
+        self.T_rat_flag = T_rat_flag
 
         self.mhd_load(mhd_loc,mhd_fp) # load in MHD quantities
         self.kprof_load(kprof_loc,kprof_fp) # load in kinetic quantities
@@ -64,8 +66,6 @@ class saarelma_connor:
 
         self.V_FC = np.sqrt(8*E_FC/((np.pi^2) * M_i)) # m/s
         self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i)) # m/s
-
-        self.dne_dx_ninf = dne_dx_ninf
 
         # Diffusion coefficient setup
         c_s = self.fsa() # m/s, https://www.osti.gov/servlets/purl/4315023
@@ -150,12 +150,12 @@ class saarelma_connor:
             self.T_e = pf.get("te")
 
             # Calculate boundary condition from profiles
-            dne_dx_ninf = None, # (particles/m^3) / m, electron density gradient in the core of the plasma
+            self.dne_dx_ninf = # (particles/m^3) / m, electron density gradient in the core of the plasma
 
         else:
             assert True, 'kprof_loc method not supported'
 
-        if T_rat_flag:
+        if self.T_rat_flag:
             self.T_i = self.T_e * self.T_rat
 
 
