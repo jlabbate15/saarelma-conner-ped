@@ -1,0 +1,6 @@
+[submodule "dependencies/EPEDNN.jl"]
+	path = dependencies/EPEDNN.jl
+	url = https://github.com/ProjectTorreyPines/EPEDNN.jl.git
+[submodule "dependencies/bouquet"]
+	path = dependencies/bouquet
+	url = https://github.com/d-burg/bouquet.git
