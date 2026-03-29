@@ -1,33 +1,49 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from bouquet import GEQDSKEquilibrium # need bouquet as dependency, "pip install bouquet"
+from OpenFUSIONToolkit.TokaMaker.util import read_eqdsk
 
+eq = read_eqdsk('g192185.02440')
+# print(eq.keys())
+'''
+print(eq['case'])
+print(eq['nr'])
+print(eq['nz'])
+print(eq['rdim'])
+print(eq['zdim'])
+print(eq['rcentr'])
+print(eq['rleft'])
+print(eq['zmid'])
+print(eq['raxis'])
+print(eq['zaxis'])
+print(eq['psimag'])
+'''
 
-fp = '/Users/nelsonlab/codes/Equilibria/test_1.geqdsk'
+# Load a g-file
+rdim = eq['rdim'] # m, 1D R grid
+zdim = eq['zdim'] # m, 1D Z grid
+rcentr = eq['rcentr'] # m, radius of the center of the plasma
+rleft = eq['rleft'] # m, radius of the left edge of the plasma
+zmid = eq['zmid'] # m, height of the midplane of the plasma
+raxis = eq['raxis'] # m, radius of the magnetic axis
+zaxis = eq['zaxis'] # m, height of the magnetic axis
+psimag = eq['psimag'] # Wb, poloidal flux at the magnetic axis
+psibry = eq['psibry'] # Wb, poloidal flux at the boundary
 
-# Find all parameters here: https://github.com/d-burg/bouquet/blob/377608605628780e553351f1a43d6a598c6d31ca/bouquet/io/geqdsk.py#L769
-eq = GEQDSKEquilibrium(fp)
-R_grid = eq.R_grid # m, 1D R grid
-Z_grid = eq.Z_grid # m, 1D Z grid
-psi_RZ = eq.psi_RZ # 2D poloidal flux array at each RZ grid point
-pres = eq.pres # pressure evaluated at each psi_N
-psi_N = eq.psi_N # Normalized psi
-psi_boundary = eq.psi_boundary # poloidal flux at boundary, seems to actually be at the center
-R_mag = eq.R_mag # m, R at magnetic axis including finite Beta effects (R0)
+psi_RZ = eq['psirz'] # 2D poloidal flux array at each RZ grid point
+psi_boundary = eq.psi_boundary # poloidal flux at boundary
+
+# Saarelma-Connor model input parameters
+S_plasma = eq.geometry["surfArea"] # m^2, total surface area of plasma
+V_plasma = eq.geometry["vol"] # m^3, volume enclosed by the plasma per poloidal flux
 a = eq.geometry["a"] # m, minor radius
-plasma_surfArea = eq.geometry["surfArea"]
-plasma_vol = eq.geometry["vol"]
-psi_N_RZ = eq.psi_N_RZ
+P = eq['pres'] # Pa, pressure evaluated at each psi_N
+R0 = eq.R_mag # location of magnetic axis relative to device rotational line of toroidal symmetry
+r_mhd = eq.R_grid # physical radius grid from the file that imports MHD parameters
+r_sep =  # physical radius of separatrix as a function of theta
 
-fig,ax = plt.subplots()
-ax.plot(psi_N_RZ[:,0])
-plt.show()
-
-# R - AuxQuantities PSIRZ_NORM
-# a = fluxSurfaces-geo-a
-# plasma_surf_area = fluxSurfaces-geo-surfArea
-# plasma_vol = fluxSurfaces-geo-vol
-
-# # what is the difference between these two?
-# print(R_center) # no shafranov shift (vacuum)
-# print(R_mag)
+# EPEDNN input parameters
+betan =        # Normalized beta
+Bt =           # Toroidal magnetic field (T)
+bcentr = eq['bcentr'] # T, magnetic field at the center of the plasma
+# delta =       # Effective triangularity
+Ip = eq['ip']          # Plasma current (MA)
+# kappa =        # Elongation

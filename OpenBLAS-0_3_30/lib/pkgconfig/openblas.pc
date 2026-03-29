@@ -1,0 +1,16 @@
+libdir=/Users/nelsonlab/codes/saarelma-conner-ped/OpenBLAS-0_3_30/lib
+libprefix=
+libnamesuffix=
+libsuffix=
+includedir=/Users/nelsonlab/codes/saarelma-conner-ped/OpenBLAS-0_3_30/include
+omp_opt=
+openblas_config= USE_64BITINT= DYNAMIC_ARCH= DYNAMIC_OLDER= NO_CBLAS=1 NO_LAPACK= NO_LAPACKE=1 NO_AFFINITY=1 USE_OPENMP= ARMV8 MAX_THREADS=8
+version=0.3.30
+extralib=-lgfortran -lgfortran
+Name: openblas
+Description: OpenBLAS is an optimized BLAS library based on GotoBLAS2 1.13 BSD version
+Version: ${version}
+URL: https://github.com/xianyi/OpenBLAS
+Libs: -L${libdir} -l${libprefix}openblas${libsuffix}${libnamesuffix}
+Libs.private: ${extralib}
+Cflags: -I${includedir} ${omp_opt}
