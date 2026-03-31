@@ -61,7 +61,7 @@ class saarelma_connor:
         self,
         E_FC = 3 * 1.60218e-19, # J,
         Z_i = 1, # Z of ions
-        M_i = 3.344e-27, # kg, mass of deuterium nuclei
+        M_i = 1.673e-27, # kg, mass of hydrogen nuclei
         M_e = 9.109e-31, # kg, mass of electron
         sigma_i = None, # m^2, ionization cross-section
         sigma_cx = None, # m^2, charge-exchange cross-section
@@ -74,7 +74,7 @@ class saarelma_connor:
         mhd_fp = None, # filepath to MHD paramter file
         kprof_fp = None, # filepath to kinetic paramter file
         T_rat_flag = True,
-        pol_norm = False, # True for when the poloidal flux is not normalized by 2pi
+        pol_norm = False, # True for when the poloidal flux is not normalized by 2pi. COCOS 7 convention is pol_norm=False, so poloidal flux is normalized by 2pi
         verbose = False,
         species = 'D', # species of ions, currently supporting: D, D-T
     ):
@@ -94,14 +94,14 @@ class saarelma_connor:
 
         self.Z_i = Z_i
         self.e_i = Z_i * 1.602e-19 # C
-        self.V_th_i = np.sqrt(2*self.T_i/M_i) # m/s
+        self.V_th_i = np.sqrt(2*self.T_i/(M_i*self.M_eff)) # m/s
         self.V_th_e = np.sqrt(2*self.T_e/M_e) # m/s
 
         self.S_i = sigma_i * self.V_th_e # m^3/s
         self.S_cx = sigma_cx * self.V_th_i # m^3/s
 
-        self.V_FC = np.sqrt(8*E_FC/((np.pi^2) * M_i)) # m/s
-        self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i)) # m/s
+        self.V_FC = np.sqrt(8*E_FC/((np.pi^2) * M_i*self.M_eff)) # m/s
+        self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i*self.M_eff)) # m/s
 
         # Diffusion coefficient setup
         c_s = self.fsa() # m/s, https://www.osti.gov/servlets/purl/4315023
@@ -118,14 +118,8 @@ class saarelma_connor:
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
-    def find_separatrix_points(eq, psi_tol=0.3):
-        """Find X-points (if they exist) or the top/bottom extrema of the separatrix.
-
-        Handles single-null, double-null, and limiter (no null) configurations.
-        Uses 2D spline interpolation of psi(R,Z) to locate critical points of the
-        poloidal flux, classifies them via the Hessian determinant, then selects
-        the best X-point in each hemisphere (above/below magnetic axis) by ranking
-        how close each saddle point's psi is to psi_boundary.
+    def find_boundary_points(eq):
+        """Find the top/bottom/inboard/outboard extrema of the separatrix.
 
         Parameters
         ----------
@@ -134,164 +128,47 @@ class saarelma_connor:
             keys: ``nr``, ``nz``, ``rleft``, ``rdim``, ``zmid``, ``zdim``,
             ``psirz``, ``raxis``, ``zaxis``, ``psimag``, ``psibry``.
             Optionally ``rzout`` (boundary R,Z points).
-        psi_tol : float
-            Maximum allowed ``|psi_norm - 1|`` for an X-point to be considered
-            a separatrix X-point at all.  Acts as a loose sanity-check; within
-            each hemisphere the candidate closest to psi_boundary is always
-            preferred.  Default 0.3.
 
         Returns
         -------
         result : dict
-            ``'type'``     – ``'double_null'``, ``'single_null'``, or ``'limiter'``
-            ``'xpoints'``  – list of ``(R, Z)`` tuples for separatrix X-points
-            ``'top'``      – ``(R, Z)`` of the upper X-point or upper separatrix extremum
-            ``'bottom'``   – ``(R, Z)`` of the lower X-point or lower separatrix extremum
+            ``'top'``      – ``(R, Z)`` of the upper boundary point
+            ``'bottom'``   – ``(R, Z)`` of the lower boundary point
+            ``'outboard'``  – ``(R, Z)`` of the outboard boundary point
+            ``'inboard'``   – ``(R, Z)`` of the inboard boundary point
         """
-        nr = eq['nr']
-        nz = eq['nz']
-        r = np.linspace(eq['rleft'], eq['rleft'] + eq['rdim'], nr)
-        z = np.linspace(eq['zmid'] - eq['zdim'], eq['zmid'] + eq['zdim'], nz)
+
         psi = eq['psirz']
-        zaxis = eq['zaxis']
-        psimag = eq['psimag']
         psibry = eq['psibry']
 
-        # ---- 2-D spline interpolation  (psi has shape (nz, nr) -> x=z, y=r) ----
-        spl = RectBivariateSpline(z, r, psi)
-
-        def _grad(point):
-            """Return [dpsi/dR, dpsi/dZ] at a single (R, Z) point."""
-            R, Z = point
-            dR = float(spl(Z, R, dx=0, dy=1, grid=False))
-            dZ = float(spl(Z, R, dx=1, dy=0, grid=False))
-            return [dR, dZ]
-
-        # ---- locate candidate critical points via sign changes on the grid ----
-        dpsidR = spl(z, r, dx=0, dy=1)   # shape (nz, nr)
-        dpsidZ = spl(z, r, dx=1, dy=0)
-
-        candidates = []
-        for iz in range(nz - 1):
-            for ir in range(nr - 1):
-                corners_dR = [dpsidR[iz, ir], dpsidR[iz, ir+1],
-                            dpsidR[iz+1, ir], dpsidR[iz+1, ir+1]]
-                corners_dZ = [dpsidZ[iz, ir], dpsidZ[iz, ir+1],
-                            dpsidZ[iz+1, ir], dpsidZ[iz+1, ir+1]]
-                signs_dR = set(np.sign(v) for v in corners_dR if v != 0.0)
-                signs_dZ = set(np.sign(v) for v in corners_dZ if v != 0.0)
-                if len(signs_dR) > 1 and len(signs_dZ) > 1:
-                    candidates.append((0.5*(r[ir]+r[ir+1]),
-                                    0.5*(z[iz]+z[iz+1])))
-
-        # ---- refine & classify each candidate ----
-        xpoints = []
-        opoints = []
-        found = []
-
-        for R0, Z0 in candidates:
-            try:
-                sol, _, ier, _ = fsolve(_grad, [R0, Z0], full_output=True)
-            except Exception:
-                continue
-            if ier != 1:
-                continue
-            Rs, Zs = sol
-            if Rs < r[0] or Rs > r[-1] or Zs < z[0] or Zs > z[-1]:
-                continue
-            residual = _grad(sol)
-            if abs(residual[0]) > 1e-6 or abs(residual[1]) > 1e-6:
-                continue
-            if any(abs(Rs - Rf) < 0.01 and abs(Zs - Zf) < 0.01
-                for Rf, Zf in found):
-                continue
-            found.append((Rs, Zs))
-
-            # Hessian determinant distinguishes saddle (X) from extremum (O)
-            d2R2 = float(spl(Zs, Rs, dx=0, dy=2, grid=False))
-            d2Z2 = float(spl(Zs, Rs, dx=2, dy=0, grid=False))
-            d2RZ = float(spl(Zs, Rs, dx=1, dy=1, grid=False))
-            det_H = d2R2 * d2Z2 - d2RZ**2
-
-            if det_H < 0:
-                xpoints.append((Rs, Zs))
-            else:
-                opoints.append((Rs, Zs))
-
-        # ---- rank X-points by proximity to psi_boundary, per hemisphere ----
-        psi_range = abs(psibry - psimag)
-        upper_xpts = []   # (R, Z, psi_error)  for Z > zaxis
-        lower_xpts = []   # (R, Z, psi_error)  for Z < zaxis
-
-        for Rx, Zx in xpoints:
-            psi_norm = abs(float(spl(Zx, Rx, grid=False)) - psimag) / psi_range
-            psi_err = abs(psi_norm - 1.0)
-            if psi_err > psi_tol:
-                continue
-            if Zx > zaxis:
-                upper_xpts.append((Rx, Zx, psi_err))
-            else:
-                lower_xpts.append((Rx, Zx, psi_err))
-
-        best_upper = min(upper_xpts, key=lambda x: x[2]) if upper_xpts else None
-        best_lower = min(lower_xpts, key=lambda x: x[2]) if lower_xpts else None
-
-        sep_xpoints = []
-        if best_upper is not None:
-            sep_xpoints.append((best_upper[0], best_upper[1]))
-        if best_lower is not None:
-            sep_xpoints.append((best_lower[0], best_lower[1]))
-
-        # ---- helper: extrema from boundary contour or rzout ----
-        def _boundary_extrema():
-            """Return top, bottom, outboard, inboard (R,Z) extrema of the separatrix."""
-            if 'rzout' in eq and eq['rzout'] is not None and len(eq['rzout']) > 0:
-                bdy = eq['rzout']
-            else:
-                import matplotlib
-                matplotlib.use('Agg')
-                fig, ax = plt.subplots()
-                cs = ax.contour(r, z, psi, levels=[psibry])
-                bdy = np.vstack(cs.allsegs[0])
-                plt.close(fig)
-            itop = np.argmax(bdy[:, 1])
-            ibot = np.argmin(bdy[:, 1])
-            iout = np.argmax(bdy[:, 0])
-            iin  = np.argmin(bdy[:, 0])
-            top      = (bdy[itop, 0], bdy[itop, 1])
-            bottom   = (bdy[ibot, 0], bdy[ibot, 1])
-            outboard = (bdy[iout, 0], bdy[iout, 1])
-            inboard  = (bdy[iin,  0], bdy[iin,  1])
-            return top, bottom, outboard, inboard
-
-        # ---- assemble result ----
-        result = {'xpoints': sep_xpoints, 'opoints': opoints}
-        top_bdy, bot_bdy, out_bdy, in_bdy = _boundary_extrema()
-        result['outboard'] = out_bdy
-        result['inboard']  = in_bdy
-
-        if len(sep_xpoints) == 0:
-            result['type'] = 'limiter'
-            result['top'] = top_bdy
-            result['bottom'] = bot_bdy
-
-        elif len(sep_xpoints) == 1:
-            result['type'] = 'single_null'
-            xpt = sep_xpoints[0]
-            if xpt[1] > zaxis:
-                result['top'] = xpt
-                result['bottom'] = bot_bdy
-            else:
-                result['bottom'] = xpt
-                result['top'] = top_bdy
-
+        if 'rzout' in eq and eq['rzout'] is not None and len(eq['rzout']) > 0:
+            bdy = eq['rzout']
         else:
-            result['type'] = 'double_null'
-            sep_xpoints.sort(key=lambda p: p[1])
-            result['bottom'] = sep_xpoints[0]
-            result['top'] = sep_xpoints[-1]
+            nr = eq['nr']
+            nz = eq['nz']
+            r = np.linspace(eq['rleft'], eq['rleft'] + eq['rdim'], nr)
+            z = np.linspace(eq['zmid'] - eq['zdim']/2, eq['zmid'] + eq['zdim']/2, nz)
+            import matplotlib
+            matplotlib.use('Agg')
+            fig, ax = plt.subplots()
+            cs = ax.contour(r, z, psi, levels=[psibry])
+            bdy = np.vstack(cs.allsegs[0])
+            plt.close(fig)
+        itop = np.argmax(bdy[:, 1])
+        ibot = np.argmin(bdy[:, 1])
+        iout = np.argmax(bdy[:, 0])
+        iin  = np.argmin(bdy[:, 0])
+        top      = (bdy[itop, 0], bdy[itop, 1])
+        bottom   = (bdy[ibot, 0], bdy[ibot, 1])
+        outboard = (bdy[iout, 0], bdy[iout, 1])
+        inboard  = (bdy[iin,  0], bdy[iin,  1])
 
-        return result
+        return {
+            'top': top,
+            'bottom': bottom,
+            'outboard': outboard,
+            'inboard': inboard,
+        }
 
     def plasma_surface_area_and_volume(self,eq):
         """Compute the surface area and volume of the plasma bounded by the separatrix.
@@ -341,6 +218,7 @@ class saarelma_connor:
         """Calculate magnetic field at some point in the plasma
             Always use (rho,theta,var_zeta) coordinate convention as defined by https://crppwww.epfl.ch/~sauter/cocos/Sauter_COCOS_Tokamak_Coordinate_Conventions.pdf
 
+           Note: sigma_Bb is not important for this model, we will always use sigma_Bp=1.
         Parameters
         ----------
         self : object
@@ -354,21 +232,23 @@ class saarelma_connor:
         """
 
         F = eq['fpol']
+        psi_F = np.linspace(eq['psimag'], eq['psibry'], len(F))
         B = np.array([0,0,0])
 
-        sigma_Bp = 1 if self.helicity > 0 else -1 # does this change sign in a single equilibrium?
         e_Bp = 1 if self.pol_norm else 0
 
         r = self.rgrid
         z = self.zgrid
         spl = RectBivariateSpline(z, r, eq['psirz'])
-        dpsi_dR = spl(Z_eval, R_eval, dx=0, dy=1, grid=False)
+        psi = spl(Z_eval, R_eval, grid=False)
+        dpsi_dR = spl(Z_eval, R_eval, dx=0, dy=1, grid=False) # specifying dx, dy specifies the derivative order in the respective direction
         dpsi_dZ = spl(Z_eval, R_eval, dx=1, dy=0, grid=False)
-        B[0] = (sigma_Bp / ((2*np.pi)**e_Bp)) * dpsi_dZ / R_eval # R component of the magnetic field
-        B[1] = (sigma_Bp / ((2*np.pi)**e_Bp)) * -dpsi_dR / R_eval # Z component of the magnetic field
-        B[2] = (F / self.rgrid) # T, toroidal magnetic field
+        F_interp = interp1d(psi_F, F, kind='linear')
+        B[0] = (1 / ((2*np.pi)**e_Bp)) * dpsi_dZ / R_eval # R component of the magnetic field
+        B[1] = (1 / ((2*np.pi)**e_Bp)) * -dpsi_dR / R_eval # Z component of the magnetic field
+        B[2] = (F_interp(psi) / R_eval) # T, toroidal magnetic field
 
-        self.B = B # T, total magnetic field (vector)
+        self.B = np.linalg.norm(B) # T, total magnetic field (vector)
 
     def mhd_load(self,mhd_loc,fp):
         """Load MHD equilibrium parameters using method specified by mhd_eq_loc flag. 
@@ -391,44 +271,14 @@ class saarelma_connor:
             self.eq = read_eqdsk(fp)
 
             # Find separatrix points
-            sep = self.find_separatrix_points(self.eq)
-            if self.verbose:
-                print(f"Configuration type: {sep['type']}")
-                print(f"Top    (R, Z) = ({sep['top'][0]:.4f}, {sep['top'][1]:.4f})")
-                print(f"Bottom (R, Z) = ({sep['bottom'][0]:.4f}, {sep['bottom'][1]:.4f})")
-                if sep['xpoints']:
-                    for i, xpt in enumerate(sep['xpoints']):
-                        print(f"X-point {i+1}: (R, Z) = ({xpt[0]:.4f}, {xpt[1]:.4f})")
+            bdry = self.find_boundary_points(self.eq)
 
-                r_grid = np.linspace(eq["rleft"], eq["rleft"] + eq["rdim"], eq["nr"])
-                z_grid = np.linspace(eq["zmid"] - eq["zdim"], eq["zmid"] + eq["zdim"], eq["nz"])
-
-                fig, ax = plt.subplots()
-                ax.contour(r_grid, z_grid, eq["psirz"], levels=30, colors='gray', linewidths=0.5)
-                ax.contour(r_grid, z_grid, eq["psirz"], levels=[eq['psibry']], colors='blue', linewidths=1.5)
-                ax.plot(eq['raxis'], eq['zaxis'], 'go', markersize=8, label='O-point (axis)')
-
-                ax.plot(*sep['top'], 'rv', markersize=10, label=f"Top ({sep['type']})")
-                ax.plot(*sep['bottom'], 'r^', markersize=10, label=f"Bottom ({sep['type']})")
-
-                for xpt in sep['xpoints']:
-                    ax.plot(*xpt, 'rx', markersize=12, markeredgewidth=2)
-
-                ax.plot(sep['outboard'][0], sep['outboard'][1], 'rx', markersize=10, label='Outboard')
-                ax.plot(sep['inboard'][0], sep['inboard'][1], 'gx', markersize=10, label='Inboard')
-
-                ax.set_xlabel('R (m)')
-                ax.set_ylabel('Z (m)')
-                ax.set_aspect('equal')
-                ax.legend()
-                plt.title(f"Separatrix analysis: {sep['type']}")
-                plt.show()
-            rmax_top = sep['top'][0]
-            rmax_bottom = sep['bottom'][0]
-            zmax_top = sep['top'][1]
-            zmax_bottom = sep['bottom'][1]
-            rmax_outboard = sep['outboard'][0]
-            rmax_inboard = sep['inboard'][0]
+            rmax_top = bdry['top'][0]
+            rmax_bottom = bdry['bottom'][0]
+            zmax_top = bdry['top'][1]
+            zmax_bottom = bdry['bottom'][1]
+            rmax_outboard = bdry['outboard'][0]
+            rmax_inboard = bdry['inboard'][0]
             # zmax_outboard = sep['outboard'][1]
             # zmax_inboard = sep['inboard'][1]
 
@@ -449,7 +299,7 @@ class saarelma_connor:
             
             # Grids
             self.rgrid = np.linspace(self.eq['rleft'],self.eq['rleft']+self.eq['rdim'],self.eq['nr']) # m, 1D R grid
-            self.zgrid = np.linspace(self.eq['zmid']-self.eq['zdim'],self.eq['zmid']+self.eq['zdim'],self.eq['nz']) # m, 1D Z grid
+            self.zgrid = np.linspace(self.eq['zmid']-self.eq['zdim']/2,self.eq['zmid']+self.eq['zdim']/2,self.eq['nz']) # m, 1D Z grid
             self.psi_RZ = self.eq['psirz'] # 2D poloidal flux array at each RZ grid point
 
     def kprof_load(self,kprof_loc='p',kprof_fp=None):
