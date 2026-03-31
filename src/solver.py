@@ -1,6 +1,6 @@
 import numpy as np
 import scipy
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 
@@ -12,17 +12,50 @@ class saarelma_connor:
     ----------
     Creates instance of a tokamak pedestal configuration that the Saarelma-Connor (S. Saarelma et al 2024 Nucl. Fusion 64 076025) model can be applied to
     Dependencies:
-    - bouquet (install with pip install bouquet) for equilibrium inputs
     - juliacall (install with pip install juliacall) for EPEDNN interfacing
     - EPEDNN (install by git clone)
+    - OpenFUSIONToolkit -> TokaMaker
+
+    Uses COCOS 7 coordinate convention (same as TokaMaker) as defined by https://crppwww.epfl.ch/~sauter/cocos/Sauter_COCOS_Tokamak_Coordinate_Conventions.pdf
 
     Parameters
     ----------
     E_FC : float
-        Energy of Franck-Condon neutrals as defined in Mahdavi M.A., Maingi R., Groebner R.J., Leonard A.W., Osborne T.H. and Porter G. 2003 Phys. Plasmas 10 3984
+        Energy of Franck-Condon neutrals as defined in Mahdavi M.A., Maingi R., Groebner R.J., Leonard A.W., Osborne T.H. and Porter G. 2003 Phys. Plasmas 10 3984 J
+    Z_i : int
+        Z of ions
     M_i : float
-        Ion mass (I think it is hydrogrenic ions)
-
+        Ion mass, kg what do you do for DT?????
+    M_e : float
+        Electron mass, kg
+    sigma_i : float
+        Ionization cross-section, m^2
+    sigma_cx : float
+        Charge-exchange cross-section, m^2
+    P_tot_e : float
+        Total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox, W
+    alpha_crit : float
+        FREE PARAMETER, Critical alpha value for onset of infinite-n ballooning instability, dimensionless
+    C_KBM : float
+        FREE PARAMETER, KBM diffusion coefficient, m^2/s CHECK UNITS?????
+    De_chie_etg : float
+        FREE PARAMETER, ETG diffusion coefficient, m^2/s CHECK UNITS?????
+    mhd_loc : string
+        Location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
+    kprof_loc : string
+        Location of kinetic equilibrium parameters, currently supporting: p-file
+    mhd_fp : string
+        Filepath to mhd_loc-type file
+    kprof_fp : string
+        Filepath to kprof_loc-type file
+    T_rat_flag : bool
+        True if the temperature ratio is given, False if the temperature ratio is to be calculated
+    pol_norm : bool
+        True if the poloidal flux is normalized by 2pi, False if the poloidal flux is not normalized by 2pi
+    verbose : bool
+        True if verbose output is desired, False if verbose output is not desired
+    species : string
+        Species of ions, currently supporting: D, D-T
     """
     def __init__(
         self,
@@ -40,7 +73,7 @@ class saarelma_connor:
         kprof_loc = 'p', # location of kinetic parameters, currently supporting: p-file
         mhd_fp = None, # filepath to MHD paramter file
         kprof_fp = None, # filepath to kinetic paramter file
-        T_rat_flag = False,
+        T_rat_flag = True,
         pol_norm = False, # True for when the poloidal flux is not normalized by 2pi
         verbose = False,
         species = 'D', # species of ions, currently supporting: D, D-T
@@ -419,31 +452,56 @@ class saarelma_connor:
             self.zgrid = np.linspace(self.eq['zmid']-self.eq['zdim'],self.eq['zmid']+self.eq['zdim'],self.eq['nz']) # m, 1D Z grid
             self.psi_RZ = self.eq['psirz'] # 2D poloidal flux array at each RZ grid point
 
-    def kprof_load(self,kprof_loc='p',T_rat=None):
-        """Load kinetic equilibrium parameters using method specified by mhd_eq_loc flag. 
+    def kprof_load(self,kprof_loc='p',kprof_fp=None):
+        """Load kinetic equilibrium parameters using method specified by kprof_loc flag. 
         Parameters that will be loaded include: T_e, n_e
         Calculates: dn_e/dx|x=-inf, T_i
         
         Parameters
         ----------
+        self : object
+            instance of saarelma_connor class
         kprof_loc : string
             which method to use to load kinetic parameters.
+        kprof_fp : string
+            filepath to kprof_loc-type file with kinetic parameters.
              
         """
 
         if kprof_loc == 'p':
-            from bouquet import read_pfile # need bouquet as dependency, "pip install bouquet"
 
-            # Load a p-file
-            pf = read_pfile("p123456.01000")
+            def read_pfile(path):
+                data = {}
+                key = ''
+                with open(path) as f:
+                    for line in f:
+                        if '3 N Z A' in line:
+                            break
+                        if line.startswith('201'):
+                            key = line.split()[2]
+                            data[key] = np.array([])
+                            data[f'{key}_psi'] = np.array([])
+                        else:
+                            psi, dat, _ = line.split()
+                            psi = float(psi)
+                            dat = float(dat)
+                            data[key] = np.append(data[key], dat)
+                            data[f'{key}_psi'] = np.append(data[f'{key}_psi'], psi)
+                return data
 
             # Extract profiles
-            self.n_e = pf.get("ne")       # returns (psinorm, values, derivatives) tuple
-            self.T_e = pf.get("te")
+            pf = read_pfile(kprof_fp)
+            self.n_e = pf['ne(10^20/m^3)'] # n_e values (10^20/m^3) evaluated at psi_ne_eval
+            self.T_e = pf['te(KeV)'] # T_e values (KeV) evaluated at psi_Te_eval
+            self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated
+            self.psi_Te_eval = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
 
-            # Calculate boundary condition from profiles
-            self.dne_dx_ninf = # (particles/m^3) / m, electron density gradient in the core of the plasma
+            # Calculate boundary condition from profiles at psi_N = 0.85
+            self.dne_dx = np.gradient(self.n_e, self.psi_ne_eval) # (particles/m^3) / m, electron density gradient
 
+            # Create the interpolation function
+            dne_dx_interp = interp1d(self.psi_ne_eval, self.dne_dx, kind='linear')
+            self.dne_dx_neginf = dne_dx_interp(0.85) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
         else:
             assert True, 'kprof_loc method not supported'
 
