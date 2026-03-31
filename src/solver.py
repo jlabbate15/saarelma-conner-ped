@@ -94,27 +94,27 @@ class saarelma_connor:
 
         self.Z_i = Z_i
         self.e_i = Z_i * 1.602e-19 # C
-        self.V_th_i = np.sqrt(2*self.T_i/(M_i*self.M_eff)) # m/s
-        self.V_th_e = np.sqrt(2*self.T_e/M_e) # m/s
+        self.V_th_i = np.sqrt(2*self.T_i/(M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
+        self.V_th_e = np.sqrt(2*self.T_e/M_e) # m/s, per psi_N_eval for Te
 
-        self.S_i = sigma_i * self.V_th_e # m^3/s
-        self.S_cx = sigma_cx * self.V_th_i # m^3/s
+        self.S_i = sigma_i * self.V_th_e # m^3/s, per psi_N_eval for Te
+        self.S_cx = sigma_cx * self.V_th_i # m^3/s, per psi_N_eval for Te
 
         self.V_FC = np.sqrt(8*E_FC/((np.pi^2) * M_i*self.M_eff)) # m/s
-        self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i*self.M_eff)) # m/s
+        self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
 
         # Diffusion coefficient setup
         c_s = self.fsa() # m/s, https://www.osti.gov/servlets/purl/4315023
         rho_s = self.fsa(  self.V_th_i*M_i / (self.e_i * self.B) ) # m
         mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
-        alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * mu0 * np.gradient(self.P) * np.sqrt(self.V_plasma / (2*self.R0*np.pi**2))
+        alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * mu0 * np.gradient(self.pres) * np.sqrt(self.V_plasma / (2*self.R0*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
 
         # Diffusion coefficient computation
         D_KBM = np.where(
             alpha > alpha_crit,
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * np.gradient(self.T_e) ) # Need to be careful with gradient of T_e, make sure this is right
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * np.gradient(self.T_e,self.psi_Te_eval) ) # evaluated at each psi_Te_eval
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
@@ -251,9 +251,7 @@ class saarelma_connor:
         self.B = np.linalg.norm(B) # T, total magnetic field (vector)
 
     def mhd_load(self,mhd_loc,fp):
-        """Load MHD equilibrium parameters using method specified by mhd_eq_loc flag. 
-        Parameters that will be loaded include: R0, a, r_sep(theta), r, P(psi), psi_pol(r)
-        Calculates: Plasma volume, plasma surface area
+        """Load and calculate various MHD equilibrium parameters using method specified by mhd_eq_loc flag. 
         
         Parameters
         ----------
@@ -270,7 +268,6 @@ class saarelma_connor:
             from OpenFUSIONToolkit.TokaMaker.util import read_eqdsk
             self.eq = read_eqdsk(fp)
 
-            # Find separatrix points
             bdry = self.find_boundary_points(self.eq)
 
             rmax_top = bdry['top'][0]
@@ -279,8 +276,8 @@ class saarelma_connor:
             zmax_bottom = bdry['bottom'][1]
             rmax_outboard = bdry['outboard'][0]
             rmax_inboard = bdry['inboard'][0]
-            # zmax_outboard = sep['outboard'][1]
-            # zmax_inboard = sep['inboard'][1]
+            # zmax_outboard = bdry['outboard'][1]
+            # zmax_inboard = bdry['inboard'][1]
 
             # Geometric parameters
             self.Raxis = self.eq['raxis'] # m, location of magnetic axis relative to device rotational line of toroidal symmetry
@@ -294,9 +291,8 @@ class saarelma_connor:
 
             # Plasma parameters
             self.Ip = self.eq['ip'] # MA, Plasma current
-            self.Bt = self.eq['bcentr'] # T, Toroidal magnetic field at the center of the plasma (in vacuum field)
-            self.Ppsi = self.eq['pres'] # pressure evaluated at each psi_N
-            
+            self.pres = self.eq['pres'] # pressure evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
+
             # Grids
             self.rgrid = np.linspace(self.eq['rleft'],self.eq['rleft']+self.eq['rdim'],self.eq['nr']) # m, 1D R grid
             self.zgrid = np.linspace(self.eq['zmid']-self.eq['zdim']/2,self.eq['zmid']+self.eq['zdim']/2,self.eq['nz']) # m, 1D Z grid
@@ -378,16 +374,33 @@ class saarelma_connor:
              
         """
 
-        f_FC = form_factor('FC')
-        f_cx = form_factor('cx')
+        # form factors are currently set to 1, assuming poloidal symmetry as done in S. Saarelma et al 2024 Nucl. Fusion 64 076025 Section 3
+        self.form_factor('FC')
+        self.form_factor('cx')
 
-        step_one = first_step()
+        self.first_step()
 
         self.neped =  # solution of SC model
 
     def form_factor(self,type = 'ex'):
+        """Calculate the form factor for FC or charge-exchange cases
+        Currently just sets to 1, but can be updated to use a more sophisticated to account for poloidal asymmetries in the FC and CX neutral profiles.
+
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+        type : string
+            type of form factor to calculate, supporting: FC, cx
+        """
         assert type != 'FC' or type != 'cx', 'form factor must be for FC or cx'
 
+        # grad(r) and nFC or nCX are needed
+
+        if type == 'FC':
+            self.fFC = 1
+        elif type == 'cx':
+            self.fCX = 1
 
     def fsa(self,A,theta,R):
         """Flux surface average a quantity as defined by ⟨A⟩= int(R^2Adθ)/ int(R^22dθ) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -516,6 +529,3 @@ class saarelma_connor:
         self.pedestal_width = solution.width.GH.H        # in normalized poloidal flux
 
         return {"pedestal_pressure": self.pedestal_pressure, "pedestal_width": self.pedestal_width}
-
-
-    
