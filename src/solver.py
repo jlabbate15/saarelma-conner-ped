@@ -3,6 +3,7 @@ import scipy
 from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
+from adas.adas_ionisation import scd_adas
 
 
 class saarelma_connor:
@@ -84,6 +85,8 @@ class saarelma_connor:
 
         self.mhd_load(mhd_loc,mhd_fp) # load in MHD quantities
         self.kprof_load(kprof_loc,kprof_fp) # load in kinetic quantities
+        self.cross_sections(species) # load in cross-sections
+        self.calc_B(self.rgrid,self.zgrid) # calculate the magnetic field at each RZ grid point, sets self.B
 
         if species == 'D':
             self.M_eff = 2.0
@@ -97,15 +100,15 @@ class saarelma_connor:
         self.V_th_i = np.sqrt(2*self.T_i/(M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
         self.V_th_e = np.sqrt(2*self.T_e/M_e) # m/s, per psi_N_eval for Te
 
-        self.S_i = sigma_i * self.V_th_e # m^3/s, per psi_N_eval for Te
-        self.S_cx = sigma_cx * self.V_th_i # m^3/s, per psi_N_eval for Te
+        self.S_i = self.sigma_i * self.V_th_e # m^3/s, per psi_N_eval for Te
+        self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, per psi_N_eval for Te
 
         self.V_FC = np.sqrt(8*E_FC/((np.pi^2) * M_i*self.M_eff)) # m/s
         self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
 
         # Diffusion coefficient setup
-        c_s = self.fsa() # m/s, https://www.osti.gov/servlets/purl/4315023
-        rho_s = self.fsa(  self.V_th_i*M_i / (self.e_i * self.B) ) # m
+        c_s = (self.e_i * self.T_e / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
+        rho_s = self.V_th_i*M_i*self.M_eff / (self.e_i * self.B) # m
         mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
         alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * mu0 * np.gradient(self.pres) * np.sqrt(self.V_plasma / (2*self.R0*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
 
@@ -223,32 +226,33 @@ class saarelma_connor:
         ----------
         self : object
             instance of saarelma_connor class
-        eq : dict
-            Equilibrium dictionary from read_eqdsk
         R_eval : float or array
             radial location at which to evaluate the magnetic field
         Z_eval : float or array
             vertical location at which to evaluate the magnetic field
         """
 
-        F = eq['fpol']
+        F = self.eq['fpol']
         psi_F = np.linspace(eq['psimag'], eq['psibry'], len(F))
-        B = np.array([0,0,0])
 
         e_Bp = 1 if self.pol_norm else 0
 
         r = self.rgrid
         z = self.zgrid
         spl = RectBivariateSpline(z, r, eq['psirz'])
-        psi = spl(Z_eval, R_eval, grid=False)
-        dpsi_dR = spl(Z_eval, R_eval, dx=0, dy=1, grid=False) # specifying dx, dy specifies the derivative order in the respective direction
-        dpsi_dZ = spl(Z_eval, R_eval, dx=1, dy=0, grid=False)
-        F_interp = interp1d(psi_F, F, kind='linear')
-        B[0] = (1 / ((2*np.pi)**e_Bp)) * dpsi_dZ / R_eval # R component of the magnetic field
-        B[1] = (1 / ((2*np.pi)**e_Bp)) * -dpsi_dR / R_eval # Z component of the magnetic field
-        B[2] = (F_interp(psi) / R_eval) # T, toroidal magnetic field
 
-        self.B = np.linalg.norm(B) # T, total magnetic field (vector)
+        R_eval_arr = np.atleast_1d(R_eval)
+        Z_eval_arr = np.atleast_1d(Z_eval)
+
+        psi = spl(Z_eval_arr, R_eval_arr, grid=False)
+        dpsi_dR = spl(Z_eval_arr, R_eval_arr, dx=0, dy=1, grid=False) # specifying dx, dy specifies the derivative order in the respective direction
+        dpsi_dZ = spl(Z_eval_arr, R_eval_arr, dx=1, dy=0, grid=False)
+        F_interp = interp1d(psi_F, F, kind='linear', bounds_error=False, fill_value="extrapolate")
+        B_R = (1 / ((2*np.pi)**e_Bp)) * dpsi_dZ / R_eval_arr # R component of the magnetic field
+        B_Z = (1 / ((2*np.pi)**e_Bp)) * -dpsi_dR / R_eval_arr # Z component of the magnetic field
+        B_phi = (F_interp(psi) / R_eval_arr) # T, toroidal magnetic field
+
+        self.B = np.sqrt(B_R**2 + B_Z**2 + B_phi**2) # T, total magnetic field at each R_eval, Z_eval
 
     def mhd_load(self,mhd_loc,fp):
         """Load and calculate various MHD equilibrium parameters using method specified by mhd_eq_loc flag. 
@@ -353,6 +357,36 @@ class saarelma_connor:
 
         if self.T_rat_flag:
             self.T_i = self.T_e * self.T_rat
+
+    def cross_sections(self,species='D'):
+        """Calculate the cross-sections for the ionization and charge-exchange cross-sections
+        Uses ADAS ADF01 qcx#h0_ex3#h1.dat to interpolate the charge-exchange cross-sections as a function of energy
+        Uses ADAS ADF23  to interpolate the ionization cross-sections as a function of energy
+        This is for deuterium only
+
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+        species : string
+            species of ions, currently supporting: D
+             
+        """     
+
+        if species == 'D':
+            
+            # charge-exchange cross-section
+            sigma_cx_perE = np.array([3.81*10**(-18), 3.85*10**(-18), 3.44*10**(-18), 2.71*10**(-18), 1.74*10**(-18), 8.10*10**(-20), 9.56*10**(-22), 1.46*10**(-23)]) # m^2
+            E = np.array([3.23*10**(-16), 9.68*10**(-16), 3.23*10**(-15), 6.45*10**(-15), 9.68*10**(-15), 3.23*10**(-14), 9.68*10**(-14), 2.26*10**(-13)]) # J
+            sigma_cx_interp = interp1d(E, sigma_cx_perE, kind='linear',fill_value='extrapolate',bounds_error=False)
+            self.sigma_cx = sigma_cx_interp(0.5 * self.M_i * self.V_cx[-1]**2) # m^2, charge-exchange cross-section evaluated at psi_N ~ 1
+        
+            # ionization cross-section
+            self.sigma_i = scd_adas(self.n_e[-1], self.T_e[-1]) # m^2, ionization cross-section evaluated at psi_N ~ 1
+        
+        else:
+            assert True, 'species not supported'
+
 
     def first_step(self):
         """Solve Equation (16) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
