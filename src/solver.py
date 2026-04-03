@@ -24,7 +24,7 @@ class saarelma_connor:
     Z_i : int
         Z of ions
     M_i : float
-        Ion mass, kg what do you do for DT?????
+        Proton mass, kg
     M_e : float
         Electron mass, kg
     sigma_i : float
