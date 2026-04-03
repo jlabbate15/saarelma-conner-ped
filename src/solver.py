@@ -51,6 +51,10 @@ class saarelma_connor:
         Filepath to kprof_loc-type file
     T_rat_flag : bool
         True if the temperature ratio is given, False if the temperature ratio is to be calculated
+    T_rat : float
+        Temperature ratio between ions and electrons, dimensionless
+        Ignored if T_rat_flag is False
+        Default is 1
     pol_norm : bool
         True if the poloidal flux is normalized by 2pi, False if the poloidal flux is not normalized by 2pi
     verbose : bool
@@ -75,6 +79,7 @@ class saarelma_connor:
         mhd_fp = None, # filepath to MHD paramter file
         kprof_fp = None, # filepath to kinetic paramter file
         T_rat_flag = True,
+        T_rat = 1,
         pol_norm = False, # True for when the poloidal flux is not normalized by 2pi. COCOS 7 convention is pol_norm=False, so poloidal flux is normalized by 2pi
         verbose = False,
         species = 'D', # species of ions, currently supporting: D, D-T
@@ -108,7 +113,9 @@ class saarelma_connor:
 
         # Diffusion coefficient setup
         c_s = (self.e_i * self.T_e / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
-        rho_s = self.V_th_i*M_i*self.M_eff / (self.e_i * self.B) # m
+        V_th_i_rz = self.psi_rz_expand(self.V_th_i, psi_N_A='T_e')
+        rho_s = V_th_i_rz*M_i*self.M_eff / (self.e_i * self.B) # m, known on each RZ grid point
+        rho_s = self.fsa(rho_s,flux_surfaces='T_e') # m, known on each flux surface
         mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
         alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * mu0 * np.gradient(self.pres) * np.sqrt(self.V_plasma / (2*self.R0*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
 
@@ -301,6 +308,7 @@ class saarelma_connor:
             self.rgrid = np.linspace(self.eq['rleft'],self.eq['rleft']+self.eq['rdim'],self.eq['nr']) # m, 1D R grid
             self.zgrid = np.linspace(self.eq['zmid']-self.eq['zdim']/2,self.eq['zmid']+self.eq['zdim']/2,self.eq['nz']) # m, 1D Z grid
             self.psi_RZ = self.eq['psirz'] # 2D poloidal flux array at each RZ grid point
+            self.psi_RZ_N = (self.psi_RZ - self.eq['psimag']) / (self.eq['psibry'] - self.eq['psimag']) # normalized poloidal flux at each RZ grid point
 
     def kprof_load(self,kprof_loc='p',kprof_fp=None):
         """Load kinetic equilibrium parameters using method specified by kprof_loc flag. 
@@ -436,36 +444,99 @@ class saarelma_connor:
         elif type == 'cx':
             self.fCX = 1
 
-    def fsa(self,A,theta,R):
-        """Flux surface average a quantity as defined by ⟨A⟩= int(R^2Adθ)/ int(R^22dθ) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
+    def fsa(self,A,flux_surfaces='T_e'):
+        """Flux surface average a quantity as defined by ⟨A⟩= int(R^2Adθ)/ int(R^2dθ) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
 
         Parameters
         ----------
         self : object
             instance of saarelma_connor class
         A : array
-            any array with an axis spanning the theta direction.
-        theta: array
-            array of theta values at which A is evaluated.
-        R: array
-            value of R at each theta along magnetic surface of interest.
+            2D array of A values at each R_grid, Z_grid.
+        flux_surfaces : string
+            which flux surface to average over, supporting: T_e
              
         """
 
-        # Interpolate to theta=0 and theta=2*pi if theta doesn't go to 0,2*np.pi
-        if 0 not in theta or 2*np.pi not in theta:
-            spline_func = scipy.interpolate.CubicSpline(theta, A, bc_type='natural')
-            A_at_0 = spline_func(0)
-            A_at_2pi = spline_func(2 * np.pi)
-            theta = np.insert(theta, 0, 0.0) # Add 0 at the beginning
-            theta = np.append(theta, 2 * np.pi) # Add 2*pi at the end
-            A = np.insert(A, 0, A_at_0) # Add f(0) at the beginning
-            A = np.append(A, A_at_2pi) # Add f(2*pi) at the end
+        R_axis = self.eq['raxis']
+        Z_axis = self.eq['zaxis']
 
-        num = scipy.integrate.simpson(y=A*R**2, x=theta)
-        den = scipy.integrate.simpson(y=R**2, x=theta)
-        
-        return num / den
+        if flux_surfaces == 'T_e':
+            psi_N_vals = self.psi_Te_eval
+        else:
+            assert False, 'valid flux_surfaces method must be provided'
+
+        A_spl = RectBivariateSpline(self.zgrid, self.rgrid, A)
+        fsa_A = np.full(len(psi_N_vals), np.nan)
+
+        fig, ax = plt.subplots()
+        for i, psi_val in enumerate(psi_N_vals):
+            if psi_val <= 0.01 or psi_val >= 0.99:
+                continue
+
+            ax.cla()
+            cs = ax.contour(self.rgrid, self.zgrid, self.psi_RZ_N,
+                            levels=[psi_val])
+
+            segs = cs.allsegs[0]
+            if not segs:
+                continue
+
+            # longest contour = the real flux surface, not islands
+            seg = max(segs, key=lambda s: len(s))
+            R_c, Z_c = seg[:, 0], seg[:, 1] # R, Z coordinates of the contour
+
+            # poloidal angle measured from the magnetic axis
+            R_c_ax = (((R_c - R_axis)**2) + ((Z_c - Z_axis)**2))**0.5
+            theta_c = np.arcsin( (Z_c - Z_axis) / R_c_ax )
+            idx = np.argsort(theta_c)
+            theta_c, R_c, Z_c = theta_c[idx], R_c[idx], Z_c[idx]
+
+            # close the contour so the integral spans a full 2*pi
+            theta_c = np.append(theta_c, theta_c[0] + 2 * np.pi)
+            R_c = np.append(R_c, R_c[0])
+            Z_c = np.append(Z_c, Z_c[0])
+
+            A_c = A_spl(Z_c, R_c, grid=False)
+
+            den = np.simpson(R_c**2, theta_c)
+            if abs(den) < 1e-30:
+                continue
+            fsa_A[i] = np.simpson(R_c**2 * A_c, theta_c) / den
+
+        plt.close(fig)
+
+        return fsa_A
+
+    def psi_rz_expand(self,A,psi_N_A='T_e'):
+        """For A defined for each psi_N, expand to all R_grid, Z_grid.
+
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+        A : array
+            1D array of A values at each psi_N.
+        psi_N_A : array
+            1D array of psi_N values at which A is defined.
+
+        Returns
+        -------
+        A_expanded : array
+            2D array of A values at each R_grid, Z_grid.
+             
+        """
+
+        # psi_N values at which A is defined
+        if psi_N_A is 'T_e':
+            psi_N_A = self.psi_Te_eval # 1D array of psi_N values at which T_e is evaluated
+        else:
+            assert False, 'valid psi_N_A method must be provided'
+
+        # Interpolate: psi_N -> A, then evaluate on the 2D psi_N map
+        A_interp = interp1d(psi_N_A, A, kind='linear',
+                            bounds_error=False, fill_value=np.nan)
+        return A_interp(self.psi_RZ_N)
     
     def feed_eped(self):
         """Once a pedestal density profile is calculated, feed this profile to EPED and run EPED or EPEDNN to determine pedestal pressure height and width
