@@ -1,7 +1,5 @@
 import numpy as np
-import scipy
 from scipy.interpolate import RectBivariateSpline, interp1d
-from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 from adas.adas_ionisation import scd_adas
 
