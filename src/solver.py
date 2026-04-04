@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.interpolate import RectBivariateSpline, interp1d
+from scipy.integrate import simpson
 import matplotlib.pyplot as plt
 from adas.adas_ionisation import scd_adas
 
@@ -84,13 +85,11 @@ class saarelma_connor:
     ):
 
         self.T_rat_flag = T_rat_flag
+        self.T_rat = T_rat
         self.verbose = verbose
+        self.pol_norm = pol_norm
 
-        self.mhd_load(mhd_loc,mhd_fp) # load in MHD quantities
-        self.kprof_load(kprof_loc,kprof_fp) # load in kinetic quantities
-        self.cross_sections(species) # load in cross-sections
-        self.calc_B(self.rgrid,self.zgrid) # calculate the magnetic field at each RZ grid point, sets self.B
-
+        self.M_i = M_i
         if species == 'D':
             self.M_eff = 2.0
         elif species == 'D-T':
@@ -98,16 +97,22 @@ class saarelma_connor:
         else:
             assert True, 'species must be D or D-T'
 
+        self.mhd_load(mhd_loc,mhd_fp) # load in MHD quantities
+        self.kprof_load(kprof_loc,kprof_fp) # load in kinetic quantities
+        self.calc_B(self.rgrid,self.zgrid) # calculate the magnetic field at each RZ grid point, sets self.B
+
         self.Z_i = Z_i
         self.e_i = Z_i * 1.602e-19 # C
         self.V_th_i = np.sqrt(2*self.T_i/(M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
         self.V_th_e = np.sqrt(2*self.T_e/M_e) # m/s, per psi_N_eval for Te
 
+        self.V_FC = np.sqrt(8*E_FC/((np.pi**2) * M_i*self.M_eff)) # m/s
+        self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
+
+        self.cross_sections(species) # load in cross-sections
+
         self.S_i = self.sigma_i * self.V_th_e # m^3/s, per psi_N_eval for Te
         self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, per psi_N_eval for Te
-
-        self.V_FC = np.sqrt(8*E_FC/((np.pi^2) * M_i*self.M_eff)) # m/s
-        self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
 
         # Diffusion coefficient setup
         c_s = (self.e_i * self.T_e / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
@@ -126,7 +131,7 @@ class saarelma_connor:
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
-    def find_boundary_points(eq):
+    def find_boundary_points(self,eq):
         """Find the top/bottom/inboard/outboard extrema of the separatrix.
 
         Parameters
@@ -222,7 +227,7 @@ class saarelma_connor:
         self.S_plasma = surface_area # m^2, total surface area of plasma
         self.V_plasma = volume # m^3, volume enclosed by the plasma per poloidal flux
 
-    def calc_B(self,eq,R_eval,Z_eval):
+    def calc_B(self,R_eval,Z_eval):
         """Calculate magnetic field at some point in the plasma
             Always use (rho,theta,var_zeta) coordinate convention as defined by https://crppwww.epfl.ch/~sauter/cocos/Sauter_COCOS_Tokamak_Coordinate_Conventions.pdf
 
@@ -238,13 +243,13 @@ class saarelma_connor:
         """
 
         F = self.eq['fpol']
-        psi_F = np.linspace(eq['psimag'], eq['psibry'], len(F))
+        psi_F = np.linspace(self.eq['psimag'], self.eq['psibry'], len(F))
 
         e_Bp = 1 if self.pol_norm else 0
 
         r = self.rgrid
         z = self.zgrid
-        spl = RectBivariateSpline(z, r, eq['psirz'])
+        spl = RectBivariateSpline(z, r, self.eq['psirz'])
 
         R_eval_arr = np.atleast_1d(R_eval)
         Z_eval_arr = np.atleast_1d(Z_eval)
@@ -277,7 +282,7 @@ class saarelma_connor:
             from OpenFUSIONToolkit.TokaMaker.util import read_eqdsk
             self.eq = read_eqdsk(fp)
 
-            bdry = self.find_boundary_points(self.eq)
+            bdry = self.find_boundary_points(eq=self.eq)
 
             rmax_top = bdry['top'][0]
             rmax_bottom = bdry['bottom'][0]
@@ -385,7 +390,7 @@ class saarelma_connor:
             sigma_cx_perE = np.array([3.81*10**(-18), 3.85*10**(-18), 3.44*10**(-18), 2.71*10**(-18), 1.74*10**(-18), 8.10*10**(-20), 9.56*10**(-22), 1.46*10**(-23)]) # m^2
             E = np.array([3.23*10**(-16), 9.68*10**(-16), 3.23*10**(-15), 6.45*10**(-15), 9.68*10**(-15), 3.23*10**(-14), 9.68*10**(-14), 2.26*10**(-13)]) # J
             sigma_cx_interp = interp1d(E, sigma_cx_perE, kind='linear',fill_value='extrapolate',bounds_error=False)
-            self.sigma_cx = sigma_cx_interp(0.5 * self.M_i * self.V_cx[-1]**2) # m^2, charge-exchange cross-section evaluated at psi_N ~ 1
+            self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i*self.M_eff) * self.V_cx[-1]**2) # m^2, charge-exchange cross-section evaluated at psi_N ~ 1
         
             # ionization cross-section
             self.sigma_i = scd_adas(self.n_e[-1], self.T_e[-1]) # m^2, ionization cross-section evaluated at psi_N ~ 1
@@ -403,6 +408,7 @@ class saarelma_connor:
             info.
              
         """   
+        print('heheheha')
 
     def solve(self):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -420,7 +426,8 @@ class saarelma_connor:
 
         self.first_step()
 
-        self.neped =  # solution of SC model
+        # self.neped =  # solution of SC model
+        print('solution of SC model not implemented yet')
 
     def form_factor(self,type = 'ex'):
         """Calculate the form factor for FC or charge-exchange cases
@@ -497,10 +504,10 @@ class saarelma_connor:
 
             A_c = A_spl(Z_c, R_c, grid=False)
 
-            den = np.simpson(R_c**2, theta_c)
+            den = simpson(R_c**2, theta_c)
             if abs(den) < 1e-30:
                 continue
-            fsa_A[i] = np.simpson(R_c**2 * A_c, theta_c) / den
+            fsa_A[i] = simpson(R_c**2 * A_c, theta_c) / den
 
         plt.close(fig)
 
@@ -526,7 +533,7 @@ class saarelma_connor:
         """
 
         # psi_N values at which A is defined
-        if psi_N_A is 'T_e':
+        if psi_N_A == 'T_e':
             psi_N_A = self.psi_Te_eval # 1D array of psi_N values at which T_e is evaluated
         else:
             assert False, 'valid psi_N_A method must be provided'
