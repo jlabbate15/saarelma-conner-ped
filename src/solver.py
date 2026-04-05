@@ -1,7 +1,7 @@
 from typing import Self
 import numpy as np
 from scipy.interpolate import RectBivariateSpline, interp1d
-from scipy.integrate import simpson
+from scipy.integrate import simpson, solve_bvp, cumulative_trapezoid
 import matplotlib.pyplot as plt
 from adas.adas_ionisation import scd_adas
 
@@ -41,6 +41,12 @@ class saarelma_connor:
         FREE PARAMETER, KBM diffusion coefficient, m^2/s CHECK UNITS?????
     De_chie_etg : float
         FREE PARAMETER, ETG diffusion coefficient, m^2/s CHECK UNITS?????
+    ne_x0 : float
+        m^-3, electron density at the separatrix (boundary condition)
+    dne_dx0 : float
+        m^-3, gradient of electron density at the separatrix (boundary condition)
+    nFC_x0 : float
+        m^-3, Franck-Condon neutral density at the separatrix (boundary condition)
     mhd_loc : string
         Location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
     kprof_loc : string
@@ -74,6 +80,9 @@ class saarelma_connor:
         alpha_crit = None,
         C_KBM = None,
         De_chie_etg = None,
+        ne_x0 = None, # m^-3,electron density at the separatrix
+        dne_dx0 = None, # m^-3, gradient of electron density at the separatrix
+        nFC_x0 = None, # m^-3, Franck-Condon neutral density at the separatrix
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
         kprof_loc = 'p', # location of kinetic parameters, currently supporting: p-file
         mhd_fp = None, # filepath to MHD paramter file
@@ -139,6 +148,11 @@ class saarelma_connor:
         D_ETG = De_chie_etg * P_tot_e / (self.S_plasma[-1] * np.gradient(T_e_pres,self.psi_N_pres) ) # evaluated at each psi_N_pres
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
+
+        # boundary conditions - will be updated with a more comprehensive model in the future
+        self.ne_x0 = ne_x0
+        self.dne_dx0 = dne_dx0
+        self.nFC_x0 = nFC_x0
 
     def find_boundary_points(self,eq):
         """Find the top/bottom/inboard/outboard extrema of the separatrix.
@@ -449,6 +463,8 @@ class saarelma_connor:
             radial grid (shifted so zero is at the separatrix) only at midplane
         self.gradr : array
             radial gradient flux surface-averaged
+        self.gradr2 : array
+            radial gradient flux surface-averaged squared
         """
         self.rmid = np.linspace(0, self.rsep_mid, res) # m, radial grid (shifted so zero is at the magnetic axis)
         self.xmid = self.rmid - self.rsep_mid # m, radial grid (shifted so zero is at the separatrix)
@@ -477,6 +493,8 @@ class saarelma_connor:
             |grad(r)| at each contour point on each flux surface.
         self.gradr_fsa : ndarray, shape (n_psi,)
             Flux-surface-averaged |grad(r)| at each psi_N_pres surface.
+        self.gradr2_fsa : ndarray, shape (n_psi,)
+            Flux-surface-averaged |grad(r)|^2 at each psi_N_pres surface.
         """
         R_axis = self.eq['raxis']
         Z_axis = self.eq['zaxis']
@@ -499,6 +517,7 @@ class saarelma_connor:
         dr_dpsi = np.gradient(self.r_psi, self.psi_N_pres) # (m) / (dimensionless), change in r_midplane(psi_N) over psi_N
 
         self.gradr_fsa = np.zeros(n_psi)
+        self.gradr2_fsa = np.zeros(n_psi)
         fig, ax = plt.subplots()
         for i, psi_val in enumerate(self.psi_N_pres):
             ax.cla()
@@ -507,13 +526,12 @@ class saarelma_connor:
             segs = cs.allsegs[0]
             if not segs:
                 self.gradr_fsa[i] = np.nan
+                self.gradr2_fsa[i] = np.nan
                 continue
 
             seg = max(segs, key=lambda s: len(s)) # longest contour = the real flux surface, not islands
             R_c, Z_c = seg[:, 0], seg[:, 1]
 
-            # R_c_ax = (((R_c - R_axis)**2) + ((Z_c - Z_axis)**2))**0.5
-            # theta_c = np.arcsin( (Z_c - Z_axis) / R_c_ax ) # theta at all points on contour
             theta_c = np.arctan2(Z_c - Z_axis, R_c - R_axis) # theta at all points on contour
             idx = np.argsort(theta_c)
             theta_c, R_c, Z_c = theta_c[idx], R_c[idx], Z_c[idx]
@@ -528,58 +546,206 @@ class saarelma_connor:
             grad_psi_mag = np.sqrt(dpsi_dR**2 + dpsi_dZ**2) # value at each point on the contour
 
             # |grad(r)| = |dr/dpsi| * |grad(psi)| at each contour point on each flux surface i
-            self.gradr_c[i] = np.abs(dr_dpsi[i]) * grad_psi_mag # value at each point on the contour per flux surface i
+            gradr_c = np.abs(dr_dpsi[i]) * grad_psi_mag
 
-            den = np.trapz(R_c**2, theta_c) # denominator of the flux surface average
-            self.gradr_fsa[i] = np.trapz(R_c**2 * self.gradr_c[i], theta_c) / den # flux surface-averaged |grad(r)| at each psi_N_pres surface
+            den = simpson(R_c**2, theta_c)
+            self.gradr_fsa[i] = simpson(R_c**2 * gradr_c, theta_c) / den
+            self.gradr2_fsa[i] = simpson(R_c**2 * gradr_c**2, theta_c) / den
         plt.close(fig)
 
 
-    def first_step(self,soln_method='sc_2order'):
+    def first_step(self):
         """Solve Equation (16) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
+        This is the simplified BVP (no charge-exchange neutrals) used as the
+        initial guess for the full iterative solve of Equation (15).
 
         Parameters
         ----------
         self : object
             instance of saarelma_connor class
-        soln_method : string
-            method to use to determine the first step, supporting: sc_2order
 
-        Returns
-        -------
-        ne_x : array
-            electron density evaluated at each x
-             
-        """   
-        print('heheheha')
 
-    def solve(self,soln_method='sc_2order'):
+        Boundary conditions:
+            dn_e/dx = dne_dx_neginf  at x_inner (psi_N = 0.85)
+            n_e     = ne_x0          at x = 0   (separatrix)
+
+        Uses coefficient interpolators set up by solve() and stored as
+        self._D_ped_x, self._gradr2_x, self._Si_x, self._Scx_x,
+        self._P_x, self._dPdx_x, self._x_inner.
+
+        Sets
+        ----
+        self.ne_first_sol : BVP solution object from solve_bvp.
+        """
+        x_inner = self._x_inner
+        D_ped_x = self._D_ped_x
+        Si_x = self._Si_x
+        Scx_x = self._Scx_x
+        # P_x = self._P_x
+        # dPdx_x = self._dPdx_x
+
+        def ode(x, Y):
+            ne, dne = Y
+            D = D_ped_x(x)
+            Si = Si_x(x)
+            Scx = Scx_x(x)
+            P = P_x(x)
+            dP = dPdx_x(x)
+            rhs = ne * D * (Si + Scx) / self.V_FC * (dne - self.dne_dx_neginf)
+            d2ne = (rhs - dP * dne) / P
+            return np.vstack([dne, d2ne])
+
+        def bc(Ya, Yb):
+            return np.array([
+                Ya[1] - self.dne_dx_neginf,
+                Yb[0] - self.ne_x0,
+            ])
+
+        N = 200
+        x_grid = np.linspace(x_inner, 0, N)
+        ne_guess = self.ne_x0 + self.dne_dx_neginf * x_grid
+        ne_guess = np.maximum(ne_guess, self.ne_x0 * 0.1)
+        dne_guess = np.full_like(x_grid, self.dne_dx_neginf)
+        Y_guess = np.vstack([ne_guess, dne_guess])
+
+        sol = solve_bvp(ode, bc, x_grid, Y_guess, verbose=2)
+        if not sol.success:
+            raise RuntimeError(f"first_step BVP failed: {sol.message}")
+
+        self.ne_first_sol = sol
+
+
+    def solve(self,soln_method='sc_2order',tol=1e-4,max_iter=50,x_res=100):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
 
+        1. Sets up coefficient interpolators mapping psi_N quantities to x.
+        2. Calls first_step() to solve the simplified Eq 16 (no CX neutrals).
+        3. Iterates the full Eq 15 (with CX neutrals and the integral term)
+           until the n_e profile converges.
+
         Parameters
         ----------
         self : object
             instance of saarelma_connor class
         soln_method : string
-            method to use to determine the first step, supporting: sc_2order
+            method to use to determine the solution, supporting: sc_2order
+        tol : float
+            Relative convergence tolerance on n_e.
+        max_iter : int
+            Maximum number of Picard iterations.
 
-             
+        Sets
+        ----
+        self.ne_sol : ndarray
+            Converged electron density profile on self.x_sol.
+        self.x_sol : ndarray
+            Radial grid (x = 0 at separatrix, x < 0 inside).
         """
 
         # form factors are currently set to 1, assuming poloidal symmetry as done in S. Saarelma et al 2024 Nucl. Fusion 64 076025 Section 3
         self.form_factor('FC')
         self.form_factor('cx')
+        self.setup_solver_grids(res=x_res)
 
-        # setup grids
-        self.setup_solver_grids(res = self.eq['nr'])
-        r = np.linspace(0, self.rsep_mid, self.eq['nr']) # m, radial grid (shifted so zero is at the magnetic axis)
-        x = r - self.rsep_mid # m, radial grid (shifted so zero is at the separatrix)
-        gradr = np.gradient(r) # m, radial gradient
+        # --- build coefficient interpolators (psi_N → x) ---
+        kw = dict(kind='linear', bounds_error=False, fill_value='extrapolate')
+        psiN_to_x = interp1d(self.psi_N_pres, self.xmid, **kw)
 
-        self.first_step(soln_method=soln_method)
+        self._x_inner = float(psiN_to_x(0.85))
+        self._D_ped_x = interp1d(self.xmid, self.D_ped, **kw)
+        self._gradr2_x = interp1d(self.xmid, self.gradr2_fsa, **kw)
 
-        # self.neped =  # solution of SC model
-        print('solution of SC model not implemented yet')
+        x_Te = psiN_to_x(self.psi_Te_eval)
+        self._Si_x = interp1d(x_Te, self.S_i, **kw)
+        self._Scx_x = interp1d(x_Te, self.S_cx, **kw)
+        self._Vcx_x = interp1d(x_Te, np.abs(self.V_cx), **kw)
+
+        # # P(x) = <|grad(r)|^2> * D_ped and dP/dx
+        # x_fine = np.linspace(self._x_inner, 0, 500)
+        # P_arr = self._gradr2_x(x_fine) * self._D_ped_x(x_fine)
+        # dP_arr = np.gradient(P_arr, x_fine)
+        # self._P_x = interp1d(x_fine, P_arr, **kw)
+        # self._dPdx_x = interp1d(x_fine, dP_arr, **kw)
+
+        if soln_method == 'sc_2order':
+            # --- Step 1: first step (Eq 16, no CX neutrals) ---
+            self.first_step()
+
+            # --- Step 2: iterate full Eq 15 ---
+            sol = self.ne_first_sol
+            x_grid = sol.x
+            ne_prev = sol.y[0].copy()
+
+            for iteration in range(max_iter):
+                # cumulative integral: int_0^x n_e(x')*(S_i+S_cx)/(f_FC*V_FC) dx'
+                integrand = ne_prev * (self._Si_x(x_grid) + self._Scx_x(x_grid)) \
+                            / (self.fFC * self.V_FC)
+                cum_from_left = cumulative_trapezoid(integrand, x_grid, initial=0)
+                integral_from_0 = cum_from_left - cum_from_left[-1]
+
+                exp_term = np.exp(integral_from_0)
+                exp_interp = interp1d(x_grid, exp_term, **kw)
+
+                # prefactor C(x) = 1 - |V_FC|*f_FC*(S_i+S_cx/2) / (|V_cx|*f_cx*(S_i+S_cx))
+                Si_arr = self._Si_x(x_grid)
+                Scx_arr = self._Scx_x(x_grid)
+                Vcx_arr = self._Vcx_x(x_grid)
+                C_arr = 1.0 - (np.abs(self.V_FC) * self.fFC * (Si_arr + Scx_arr / 2.0)) \
+                            / (Vcx_arr * self.fCX * (Si_arr + Scx_arr))
+                C_interp = interp1d(x_grid, C_arr, **kw)
+
+                D_ped_x = self._D_ped_x
+                Si_x = self._Si_x
+                Scx_x = self._Scx_x
+                P_x = self._P_x
+                dPdx_x = self._dPdx_x
+
+                def ode_full(x, Y):
+                    ne, dne = Y
+                    D = D_ped_x(x)
+                    Si = Si_x(x)
+                    Scx = Scx_x(x)
+                    P = P_x(x)
+                    dP = dPdx_x(x)
+                    C = C_interp(x)
+                    E = exp_interp(x)
+
+                    bracket = -D * (dne - self.dne_dx_neginf) \
+                            + C * self.nFC_x0 * E
+                    rhs = -ne * Si * bracket
+                    d2ne = (rhs - dP * dne) / P
+                    return np.vstack([dne, d2ne])
+
+                def bc(Ya, Yb):
+                    return np.array([
+                        Ya[1] - self.dne_dx_neginf,
+                        Yb[0] - self.ne_x0,
+                    ])
+
+                Y_guess = sol.y
+                sol = solve_bvp(ode_full, bc, x_grid, Y_guess, verbose=0)
+                if not sol.success:
+                    raise RuntimeError(
+                        f"Eq 15 BVP failed at iteration {iteration}: {sol.message}")
+
+                x_grid_new = sol.x
+                ne_new = sol.y[0]
+
+                ne_prev_on_new = interp1d(x_grid, ne_prev, **kw)(x_grid_new)
+                residual = np.max(np.abs(ne_new - ne_prev_on_new)) / np.max(np.abs(ne_new))
+                if self.verbose:
+                    print(f"  Eq 15 iteration {iteration}: residual = {residual:.2e}")
+
+                x_grid = x_grid_new
+                ne_prev = ne_new.copy()
+
+                if residual < tol:
+                    break
+
+            self.x_sol = sol.x
+            self.ne_sol = sol.y[0]
+            self.dne_dx_sol = sol.y[1]
+
 
     def form_factor(self,type = 'ex'):
         """Calculate the form factor for FC or charge-exchange cases
