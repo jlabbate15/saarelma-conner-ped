@@ -1,3 +1,4 @@
+from typing import Self
 import numpy as np
 from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.integrate import simpson
@@ -318,7 +319,7 @@ class saarelma_connor:
             zmax_bottom = bdry['bottom'][1]
             rmax_outboard = bdry['outboard'][0]
             rmax_inboard = bdry['inboard'][0]
-            # zmax_outboard = bdry['outboard'][1]
+            z_outboard = bdry['outboard'][1]
             # zmax_inboard = bdry['inboard'][1]
 
             # Geometric parameters
@@ -341,6 +342,7 @@ class saarelma_connor:
             self.zgrid = np.linspace(self.eq['zmid']-self.eq['zdim']/2,self.eq['zmid']+self.eq['zdim']/2,self.eq['nz']) # m, 1D Z grid
             self.psi_RZ = self.eq['psirz'] # 2D poloidal flux array at each RZ grid point
             self.psi_RZ_N = (self.psi_RZ - self.eq['psimag']) / (self.eq['psibry'] - self.eq['psimag']) # normalized poloidal flux at each RZ grid point
+            self.rsep_mid = (((rmax_outboard - self.Raxis)**2) + ((z_outboard - self.eq['zaxis'])**2))**5 # separatrix radius at midplane
 
             self.plasma_surface_area_and_volume()
 
@@ -430,24 +432,137 @@ class saarelma_connor:
             assert True, 'species not supported'
 
 
-    def first_step(self):
+    def setup_solver_grids(self,res = 100):
+        """Setup the grids for the solver
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+        res : int
+            number of points to use in the radial grid
+
+        Returns
+        -------
+        self.r : array
+            radial grid (shifted so zero is at the magnetic axis) only at midplane
+        self.x : array
+            radial grid (shifted so zero is at the separatrix) only at midplane
+        self.gradr : array
+            radial gradient flux surface-averaged
+        """
+        self.rmid = np.linspace(0, self.rsep_mid, res) # m, radial grid (shifted so zero is at the magnetic axis)
+        self.xmid = self.rmid - self.rsep_mid # m, radial grid (shifted so zero is at the separatrix)
+
+        self.calc_gradr()
+
+    def calc_gradr(self):
+        """Compute <|grad(r)|> at each flux surface.
+
+        r is defined as the outboard-midplane minor radius for each flux
+        surface, making it a proper flux-surface label (one value per surface).
+        By the chain rule:
+            |grad(r)| = |dr/dpsi| * |grad(psi)|
+        This varies poloidally because |grad(psi)| is larger where flux
+        surfaces are compressed (inboard side) and smaller where they are
+        spread apart (outboard side).
+
+        The flux surface average is:
+            <|grad(r)|> = ∮ R² |grad(r)| dθ / ∮ R² dθ
+
+        Sets
+        ----
+        self.r_psi : ndarray, shape (n_psi,)
+            Outboard midplane minor radius for each flux surface (m).
+        self.gradr_c : ndarray, shape (n_psi,)
+            |grad(r)| at each contour point on each flux surface.
+        self.gradr_fsa : ndarray, shape (n_psi,)
+            Flux-surface-averaged |grad(r)| at each psi_N_pres surface.
+        """
+        R_axis = self.eq['raxis']
+        Z_axis = self.eq['zaxis']
+
+        psi_spl = RectBivariateSpline(self.zgrid, self.rgrid, self.psi_RZ)
+        n_psi = len(self.psi_N_pres)
+
+        # r(psi): find outboard midplane crossing for each flux surface
+        R_out = np.linspace(R_axis, self.rgrid[-1], 500)
+        Z_mid = np.full_like(R_out, Z_axis)
+        psi_mid = psi_spl(Z_mid, R_out, grid=False)
+        sort_idx = np.argsort(psi_mid)
+        psi_to_R = interp1d(psi_mid[sort_idx], R_out[sort_idx], kind='linear',
+                            bounds_error=False, fill_value=np.nan)
+
+        self.r_psi = np.zeros(n_psi)
+        for i, psi_val in enumerate(self.psi_N_pres):
+            self.r_psi[i] = psi_to_R(psi_val) - R_axis
+
+        dr_dpsi = np.gradient(self.r_psi, self.psi_N_pres) # (m) / (dimensionless), change in r_midplane(psi_N) over psi_N
+
+        self.gradr_fsa = np.zeros(n_psi)
+        fig, ax = plt.subplots()
+        for i, psi_val in enumerate(self.psi_N_pres):
+            ax.cla()
+            cs = ax.contour(self.rgrid, self.zgrid, self.psi_RZ,
+                            levels=[psi_val])
+            segs = cs.allsegs[0]
+            if not segs:
+                self.gradr_fsa[i] = np.nan
+                continue
+
+            seg = max(segs, key=lambda s: len(s)) # longest contour = the real flux surface, not islands
+            R_c, Z_c = seg[:, 0], seg[:, 1]
+
+            # R_c_ax = (((R_c - R_axis)**2) + ((Z_c - Z_axis)**2))**0.5
+            # theta_c = np.arcsin( (Z_c - Z_axis) / R_c_ax ) # theta at all points on contour
+            theta_c = np.arctan2(Z_c - Z_axis, R_c - R_axis) # theta at all points on contour
+            idx = np.argsort(theta_c)
+            theta_c, R_c, Z_c = theta_c[idx], R_c[idx], Z_c[idx]
+
+            theta_c = np.append(theta_c, theta_c[0] + 2 * np.pi)
+            R_c = np.append(R_c, R_c[0])
+            Z_c = np.append(Z_c, Z_c[0])
+
+            # |grad(psi)| at each contour point from the equilibrium spline
+            dpsi_dR = psi_spl(Z_c, R_c, dx=0, dy=1, grid=False) # value at each point on the contour
+            dpsi_dZ = psi_spl(Z_c, R_c, dx=1, dy=0, grid=False) # value at each point on the contour
+            grad_psi_mag = np.sqrt(dpsi_dR**2 + dpsi_dZ**2) # value at each point on the contour
+
+            # |grad(r)| = |dr/dpsi| * |grad(psi)| at each contour point on each flux surface i
+            self.gradr_c[i] = np.abs(dr_dpsi[i]) * grad_psi_mag # value at each point on the contour per flux surface i
+
+            den = np.trapz(R_c**2, theta_c) # denominator of the flux surface average
+            self.gradr_fsa[i] = np.trapz(R_c**2 * self.gradr_c[i], theta_c) / den # flux surface-averaged |grad(r)| at each psi_N_pres surface
+        plt.close(fig)
+
+
+    def first_step(self,soln_method='sc_2order'):
         """Solve Equation (16) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
 
         Parameters
         ----------
-        parm : bool, optional
-            info.
+        self : object
+            instance of saarelma_connor class
+        soln_method : string
+            method to use to determine the first step, supporting: sc_2order
+
+        Returns
+        -------
+        ne_x : array
+            electron density evaluated at each x
              
         """   
         print('heheheha')
 
-    def solve(self):
+    def solve(self,soln_method='sc_2order'):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
 
         Parameters
         ----------
-        parm : bool, optional
-            info.
+        self : object
+            instance of saarelma_connor class
+        soln_method : string
+            method to use to determine the first step, supporting: sc_2order
+
              
         """
 
@@ -455,7 +570,13 @@ class saarelma_connor:
         self.form_factor('FC')
         self.form_factor('cx')
 
-        self.first_step()
+        # setup grids
+        self.setup_solver_grids(res = self.eq['nr'])
+        r = np.linspace(0, self.rsep_mid, self.eq['nr']) # m, radial grid (shifted so zero is at the magnetic axis)
+        x = r - self.rsep_mid # m, radial grid (shifted so zero is at the separatrix)
+        gradr = np.gradient(r) # m, radial gradient
+
+        self.first_step(soln_method=soln_method)
 
         # self.neped =  # solution of SC model
         print('solution of SC model not implemented yet')
@@ -490,7 +611,7 @@ class saarelma_connor:
         A : array
             2D array of A values at each R_grid, Z_grid.
         flux_surfaces : string
-            which flux surface to average over, supporting: T_e
+            which flux surface to average over, supporting: T_e, psi_N_pres
              
         """
 
@@ -499,6 +620,8 @@ class saarelma_connor:
 
         if flux_surfaces == 'T_e':
             psi_N_vals = self.psi_Te_eval
+        elif flux_surfaces == 'psi_N_pres':
+            psi_N_vals = self.psi_N_pres
         else:
             assert False, 'valid flux_surfaces method must be provided'
 
@@ -523,8 +646,9 @@ class saarelma_connor:
             R_c, Z_c = seg[:, 0], seg[:, 1] # R, Z coordinates of the contour
 
             # poloidal angle measured from the magnetic axis
-            R_c_ax = (((R_c - R_axis)**2) + ((Z_c - Z_axis)**2))**0.5
-            theta_c = np.arcsin( (Z_c - Z_axis) / R_c_ax )
+            # R_c_ax = (((R_c - R_axis)**2) + ((Z_c - Z_axis)**2))**0.5
+            # theta_c = np.arcsin( (Z_c - Z_axis) / R_c_ax )
+            theta_c = np.arctan2(Z_c - Z_axis, R_c - R_axis) # theta at all points on contour
             idx = np.argsort(theta_c)
             theta_c, R_c, Z_c = theta_c[idx], R_c[idx], Z_c[idx]
 
