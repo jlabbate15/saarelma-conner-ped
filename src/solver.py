@@ -135,7 +135,7 @@ class saarelma_connor:
             alpha > alpha_crit,
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * np.gradient(T_e_pres,self.psi_N_pres) ) # evaluated at each psi_N_pres
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma[-1] * np.gradient(T_e_pres,self.psi_N_pres) ) # evaluated at each psi_N_pres
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
