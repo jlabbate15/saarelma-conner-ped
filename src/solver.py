@@ -120,14 +120,22 @@ class saarelma_connor:
         rho_s = V_th_i_rz*M_i*self.M_eff / (self.e_i * self.B) # m, known on each RZ grid point
         rho_s = self.fsa(rho_s,flux_surfaces='T_e') # m, known on each flux surface
         mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
-        alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * mu0 * np.gradient(self.pres) * np.sqrt(self.V_plasma / (2*self.R0*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
+        alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * mu0 * np.gradient(self.pres) * np.sqrt(self.V_plasma / (2*self.Rmajor*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
+
+        # Interpolate T_e, c_s, rho_s from psi_Te_eval onto the pressure psi_N grid
+        T_e_pres = interp1d(self.psi_Te_eval, self.T_e, kind='linear',
+                            bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        c_s = interp1d(self.psi_Te_eval, c_s, kind='linear',
+                       bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        rho_s = interp1d(self.psi_Te_eval, rho_s, kind='linear',
+                         bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
 
         # Diffusion coefficient computation
         D_KBM = np.where(
             alpha > alpha_crit,
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * np.gradient(self.T_e,self.psi_Te_eval) ) # evaluated at each psi_Te_eval
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * np.gradient(T_e_pres,self.psi_N_pres) ) # evaluated at each psi_N_pres
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
@@ -183,49 +191,69 @@ class saarelma_connor:
             'inboard': inboard,
         }
 
-    def plasma_surface_area_and_volume(self,eq):
-        """Compute the surface area and volume of the plasma bounded by the separatrix.
+    def plasma_surface_area_and_volume(self):
+        """Compute the plasma surface area and enclosed volume at each flux surface.
 
-        Treats the boundary as a closed polygon in (R, Z) revolved around the
-        Z-axis (toroidal symmetry).  Uses eq['rzout'] as the boundary points.
-
-        Uses Pappus' theorem to compute the surface area of the plasma.
-        Takes exact integral of pi*R^2 dZ for piecewise-linear boundary segments to compute the volume of the plasma.
+        For each psi in np.linspace(psimag, psibry, len(self.pres)), extracts
+        the flux surface contour from the 2D psi grid, then computes the
+        toroidal surface area (Pappus' theorem) and volume (exact
+        piecewise-linear revolution integral) of the surface of revolution.
 
         Parameters
         ----------
-        eq : dict
-            Equilibrium dictionary from read_eqdsk (must contain 'rzout').
+        self : object
+            instance of saarelma_connor class
 
+        Sets
+        ----
+        self.S_plasma : ndarray, shape (n_psi,)
+            Toroidal surface area (m^2) at each flux surface.
+        self.V_plasma : ndarray, shape (n_psi,)
+            Enclosed toroidal volume (m^3) at each flux surface.
         """
-        bdy = eq['rzout']
-        R = bdy[:, 0]
-        Z = bdy[:, 1]
 
-        # Close the polygon if the first and last points don't match
-        if not (np.isclose(R[0], R[-1]) and np.isclose(Z[0], Z[-1])):
-            R = np.append(R, R[0])
-            Z = np.append(Z, Z[0])
+        n_psi = len(self.pres)
 
-        dZ = np.diff(Z)
-        dR = np.diff(R)
+        self.S_plasma = np.zeros(n_psi)
+        self.V_plasma = np.zeros(n_psi)
 
-        R_i  = R[:-1]
-        R_ip = R[1:]
+        # Extract the flux surface contour from the 2D psi grid
+        fig, ax = plt.subplots()
+        for i in range(n_psi):
+            ax.cla()
+            cs = ax.contour(self.rgrid, self.zgrid, self.psi_RZ,
+                            levels=[self.psi_N_pres[i]])
 
-        # Poloidal cross-section area  (shoelace formula - general to any polygon)
-        # cross_section_area = 0.5 * abs(np.sum(R_i * Z[1:] - R_ip * Z[:-1]))
+            segs = cs.allsegs[0]
+            if not segs:
+                self.S_plasma[i] = np.nan
+                self.V_plasma[i] = np.nan
+                continue
 
-        # Toroidal volume:  V = (pi/3) |sum (Z_{i+1}-Z_i)(R_i^2 + R_i*R_{i+1} + R_{i+1}^2)|
-        # Exact integral of pi*R^2 dZ for piecewise-linear boundary segments
-        volume = (np.pi / 3.0) * abs(np.sum(dZ * (R_i**2 + R_i * R_ip + R_ip**2)))
+            # Longest contour = the real flux surface, not islands
+            seg = max(segs, key=lambda s: len(s))
+            R = seg[:, 0]
+            Z = seg[:, 1]
 
-        # Toroidal surface area:  S = 2*pi * sum  R_avg * dl   (Pappus' theorem)
-        dl = np.sqrt(dR**2 + dZ**2)
-        surface_area = 2.0 * np.pi * np.sum(0.5 * (R_i + R_ip) * dl)
+            # Close the contour so the integral spans a full 2*pi
+            if not (np.isclose(R[0], R[-1]) and np.isclose(Z[0], Z[-1])):
+                R = np.append(R, R[0])
+                Z = np.append(Z, Z[0])
 
-        self.S_plasma = surface_area # m^2, total surface area of plasma
-        self.V_plasma = volume # m^3, volume enclosed by the plasma per poloidal flux
+            dZ = np.diff(Z)
+            dR = np.diff(R)
+            R_i  = R[:-1]
+            R_ip = R[1:]
+
+            # Toroidal volume:  V = (pi/3) |sum (Z_{i+1}-Z_i)(R_i^2 + R_i*R_{i+1} + R_{i+1}^2)|
+            # Exact integral of pi*R^2 dZ for piecewise-linear boundary segments
+            self.V_plasma[i] = (np.pi / 3.0) * abs(np.sum(dZ * (R_i**2 + R_i * R_ip + R_ip**2))) # m^3, volume enclosed by the plasma per poloidal flux
+
+            # Poloidal cross-section area: Shoelace formula - general to any polygon (Pappus' theorem)
+            dl = np.sqrt(dR**2 + dZ**2)
+            self.S_plasma[i] = 2.0 * np.pi * np.sum(0.5 * (R_i + R_ip) * dl) # m^2, total surface area of plasma
+
+        plt.close(fig)
 
     def calc_B(self,R_eval,Z_eval):
         """Calculate magnetic field at some point in the plasma
@@ -301,17 +329,20 @@ class saarelma_connor:
             delta_l = (self.Rmajor - rmax_bottom) / self.a
             self.delta = (delta_u + delta_l) / 2 # dimensionless, total triangularity
             self.kappa = (zmax_top - zmax_bottom) / (2*self.a) # dimensionless, elongation
-            self.plasma_surface_area_and_volume(self.eq)
 
-            # Plasma parameters
+            # Plasma parameters (skip the magnetic axis to avoid degenerate zero-area/volume flux surface)
             self.Ip = self.eq['ip'] # MA, Plasma current
-            self.pres = self.eq['pres'] # pressure evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
+            psi_N_full = np.linspace(self.eq['psimag'], self.eq['psibry'], len(self.eq['pres']))
+            self.pres = self.eq['pres'][1:]
+            self.psi_N_pres = psi_N_full[1:]
 
             # Grids
             self.rgrid = np.linspace(self.eq['rleft'],self.eq['rleft']+self.eq['rdim'],self.eq['nr']) # m, 1D R grid
             self.zgrid = np.linspace(self.eq['zmid']-self.eq['zdim']/2,self.eq['zmid']+self.eq['zdim']/2,self.eq['nz']) # m, 1D Z grid
             self.psi_RZ = self.eq['psirz'] # 2D poloidal flux array at each RZ grid point
             self.psi_RZ_N = (self.psi_RZ - self.eq['psimag']) / (self.eq['psibry'] - self.eq['psimag']) # normalized poloidal flux at each RZ grid point
+
+            self.plasma_surface_area_and_volume()
 
     def kprof_load(self,kprof_loc='p',kprof_fp=None):
         """Load kinetic equilibrium parameters using method specified by kprof_loc flag. 
