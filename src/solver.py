@@ -356,7 +356,7 @@ class saarelma_connor:
             self.zgrid = np.linspace(self.eq['zmid']-self.eq['zdim']/2,self.eq['zmid']+self.eq['zdim']/2,self.eq['nz']) # m, 1D Z grid
             self.psi_RZ = self.eq['psirz'] # 2D poloidal flux array at each RZ grid point
             self.psi_RZ_N = (self.psi_RZ - self.eq['psimag']) / (self.eq['psibry'] - self.eq['psimag']) # normalized poloidal flux at each RZ grid point
-            self.rsep_mid = (((rmax_outboard - self.Raxis)**2) + ((z_outboard - self.eq['zaxis'])**2))**5 # separatrix radius at midplane
+            # self.rsep_mid = (((rmax_outboard - self.Raxis)**2) + ((z_outboard - self.eq['zaxis'])**2))**5 # separatrix radius at midplane
 
             self.plasma_surface_area_and_volume()
 
@@ -447,29 +447,47 @@ class saarelma_connor:
 
 
     def setup_solver_grids(self,res = 100):
-        """Setup the grids for the solver
+        """Setup the grids for the solver and calculates the flux surface-averaged |grad(r)| and |grad(r)|^2
         Parameters
         ----------
         self : object
             instance of saarelma_connor class
-        res : int
-            number of points to use in the radial grid
+        res : int, optional
+            number of points to use in the radial grid if using the first method of defining the radial grid
 
         Returns
         -------
-        self.r : array
-            radial grid (shifted so zero is at the magnetic axis) only at midplane
-        self.x : array
-            radial grid (shifted so zero is at the separatrix) only at midplane
-        self.gradr : array
-            radial gradient flux surface-averaged
-        self.gradr2 : array
-            radial gradient flux surface-averaged squared
+        self.x_pres : ndarray, shape (n_psi,)
+            Radial grid (shifted so zero is at the separatrix) only at midplane, defined on the psi_N_pres grid.
+        self.gradr_fsa : ndarray, shape (n_psi,)
+            Flux-surface-averaged |grad(r)| at each psi_N_pres surface.
+        self.gradr2_fsa : ndarray, shape (n_psi,)
+            Flux-surface-averaged |grad(r)|^2 at each psi_N_pres surface.
+        self.S_i_pres : ndarray, shape (n_psi,)
+            Ionization cross-section at each psi_N_pres surface.
+        self.S_cx_pres : ndarray, shape (n_psi,)
+            Charge-exchange cross-section at each psi_N_pres surface.
+        self.V_cx_pres : ndarray, shape (n_psi,)
+            Volume of the charge-exchange neutral at each psi_N_pres surface.
         """
-        self.rmid = np.linspace(0, self.rsep_mid, res) # m, radial grid (shifted so zero is at the magnetic axis)
-        self.xmid = self.rmid - self.rsep_mid # m, radial grid (shifted so zero is at the separatrix)
 
+        # one method of defining the radial grid, requires uncommenting the rsep_mid definition in the mhd_load function
+        # self.rmid = np.linspace(0, self.rsep_mid, res) # m, radial grid (shifted so zero is at the magnetic axis)
+        # self.xmid = self.rmid - self.rsep_mid # m, radial grid (shifted so zero is at the separatrix)
+
+        # another method of defining the radial grid
+        # self.r_psi is the outboard midplane minor radius for each flux surface for the psi_N_pres grid
+        self.x_pres = self.r_psi - self.r_psi[-1] # m, radial grid (shifted so zero is at the separatrix) only at midplane, defined on the psi_N_pres grid
+
+        # calculate the flux surface-averaged |grad(r)| and |grad(r)|^2
         self.calc_gradr()
+
+        # interpolate quantities on Te grid to psi_N_pres grid
+        self.S_i_pres = interp1d(self.psi_Te_eval, self.S_i, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        self.S_cx_pres = interp1d(self.psi_Te_eval, self.S_cx, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        self.V_cx_pres = interp1d(self.psi_Te_eval, np.abs(self.V_cx), kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+
+        # note all 1D quantities are now defined on the psi_N_pres grid, which is the same as the x_pres grid
 
     def calc_gradr(self):
         """Compute <|grad(r)|> at each flux surface.
@@ -646,19 +664,6 @@ class saarelma_connor:
         self.form_factor('FC')
         self.form_factor('cx')
         self.setup_solver_grids(res=x_res)
-
-        # --- build coefficient interpolators (psi_N → x) ---
-        kw = dict(kind='linear', bounds_error=False, fill_value='extrapolate')
-        psiN_to_x = interp1d(self.psi_N_pres, self.xmid, **kw)
-
-        self._x_inner = float(psiN_to_x(0.85))
-        self._D_ped_x = interp1d(self.xmid, self.D_ped, **kw)
-        self._gradr2_x = interp1d(self.xmid, self.gradr2_fsa, **kw)
-
-        x_Te = psiN_to_x(self.psi_Te_eval)
-        self._Si_x = interp1d(x_Te, self.S_i, **kw)
-        self._Scx_x = interp1d(x_Te, self.S_cx, **kw)
-        self._Vcx_x = interp1d(x_Te, np.abs(self.V_cx), **kw)
 
         # # P(x) = <|grad(r)|^2> * D_ped and dP/dx
         # x_fine = np.linspace(self._x_inner, 0, 500)
