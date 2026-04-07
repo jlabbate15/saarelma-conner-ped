@@ -47,6 +47,8 @@ class saarelma_connor:
         m^-3, gradient of electron density at the separatrix (boundary condition)
     nFC_x0 : float
         m^-3, Franck-Condon neutral density at the separatrix (boundary condition)
+    psi_N_inner_boundary : float
+        normalized poloidal flux at the inner boundary (boundary condition)
     mhd_loc : string
         Location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
     kprof_loc : string
@@ -83,6 +85,7 @@ class saarelma_connor:
         ne_x0 = None, # m^-3,electron density at the separatrix
         dne_dx0 = None, # m^-3, gradient of electron density at the separatrix
         nFC_x0 = None, # m^-3, Franck-Condon neutral density at the separatrix
+        psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition)
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
         kprof_loc = 'p', # location of kinetic parameters, currently supporting: p-file
         mhd_fp = None, # filepath to MHD paramter file
@@ -409,7 +412,7 @@ class saarelma_connor:
 
             # Create the interpolation function
             dne_dx_interp = interp1d(self.psi_ne_eval, self.dne_dx, kind='linear')
-            self.dne_dx_neginf = dne_dx_interp(0.85) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
+            self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
         else:
             assert True, 'kprof_loc method not supported'
 
@@ -488,6 +491,8 @@ class saarelma_connor:
         self.V_cx_pres = interp1d(self.psi_Te_eval, np.abs(self.V_cx), kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
 
         # note all 1D quantities are now defined on the psi_N_pres grid, which is the same as the x_pres grid
+
+        self.x_inner = interp1d(self.psi_N_pres, self.x_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_inner_boundary)
 
     def calc_gradr(self):
         """Compute <|grad(r)|> at each flux surface.
@@ -572,7 +577,7 @@ class saarelma_connor:
         plt.close(fig)
 
 
-    def first_step(self):
+    def first_step(self,resolution=200):
         """Solve Equation (16) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
         This is the simplified BVP (no charge-exchange neutrals) used as the
         initial guess for the full iterative solve of Equation (15).
@@ -581,7 +586,8 @@ class saarelma_connor:
         ----------
         self : object
             instance of saarelma_connor class
-
+        resolution : int, optional
+            number of points to use in the radial grid solve_bvp() call
 
         Boundary conditions:
             dn_e/dx = dne_dx_neginf  at x_inner (psi_N = 0.85)
@@ -595,38 +601,39 @@ class saarelma_connor:
         ----
         self.ne_first_sol : BVP solution object from solve_bvp.
         """
-        x_inner = self._x_inner
-        D_ped_x = self._D_ped_x
-        Si_x = self._Si_x
-        Scx_x = self._Scx_x
-        # P_x = self._P_x
-        # dPdx_x = self._dPdx_x
+        x_inner = self.x_inner
+        D_ped_x = self.D_ped
+        Si_x = self.S_i_pres
+        Scx_x = self.S_cx_pres
+
+        # f(x) = <|grad(r)|^2> * D_ped
+        f_x = self.gradr_fsa * self.D_ped
+        df_dx = np.gradient(f_x, self.x_pres) # df/dx
 
         def ode(x, Y):
-            ne, dne = Y
+            ne, dnedx = Y
             D = D_ped_x(x)
             Si = Si_x(x)
             Scx = Scx_x(x)
-            P = P_x(x)
-            dP = dPdx_x(x)
-            rhs = ne * D * (Si + Scx) / self.V_FC * (dne - self.dne_dx_neginf)
-            d2ne = (rhs - dP * dne) / P
-            return np.vstack([dne, d2ne])
+            f = f_x(x)
+            dfdx = df_dx(x)
+            rhs = (ne * D * (Si + Scx) / self.V_FC) * (dnedx - self.dne_dx_neginf)
+            d2nedx2 = (rhs - (dfdx * dnedx * dfdx)) / f
+            return np.vstack([dnedx, d2nedx2])
 
         def bc(Ya, Yb):
             return np.array([
-                Ya[1] - self.dne_dx_neginf,
-                Yb[0] - self.ne_x0,
+                Ya[1] - self.dne_dx_neginf, # Neumann boundary condition at x_inner
+                Yb[0] - self.ne_x0, # Dirichlet boundary condition at x = 0
             ])
 
-        N = 200
-        x_grid = np.linspace(x_inner, 0, N)
+        x_grid = np.linspace(x_inner, 0, resolution)
         ne_guess = self.ne_x0 + self.dne_dx_neginf * x_grid
         ne_guess = np.maximum(ne_guess, self.ne_x0 * 0.1)
         dne_guess = np.full_like(x_grid, self.dne_dx_neginf)
         Y_guess = np.vstack([ne_guess, dne_guess])
 
-        sol = solve_bvp(ode, bc, x_grid, Y_guess, verbose=2)
+        sol = solve_bvp(ode, bc, x_grid, Y_guess)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
@@ -664,13 +671,6 @@ class saarelma_connor:
         self.form_factor('FC')
         self.form_factor('cx')
         self.setup_solver_grids(res=x_res)
-
-        # # P(x) = <|grad(r)|^2> * D_ped and dP/dx
-        # x_fine = np.linspace(self._x_inner, 0, 500)
-        # P_arr = self._gradr2_x(x_fine) * self._D_ped_x(x_fine)
-        # dP_arr = np.gradient(P_arr, x_fine)
-        # self._P_x = interp1d(x_fine, P_arr, **kw)
-        # self._dPdx_x = interp1d(x_fine, dP_arr, **kw)
 
         if soln_method == 'sc_2order':
             # --- Step 1: first step (Eq 16, no CX neutrals) ---
