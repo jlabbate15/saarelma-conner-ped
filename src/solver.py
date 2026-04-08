@@ -129,10 +129,13 @@ class saarelma_connor:
         self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, per psi_N_eval for Te
 
         # Diffusion coefficient setup
-        c_s = (self.e_i * self.T_e / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
+        # c_s = (self.e_i * self.T_e / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
+        c_s = (self.T_e / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005        
         V_th_i_rz = self.psi_rz_expand(self.V_th_i, psi_N_A='T_e')
         rho_s = V_th_i_rz*M_i*self.M_eff / (self.e_i * self.B) # m, known on each RZ grid point
-        rho_s = self.fsa(rho_s,flux_surfaces='T_e') # m, known on each flux surface
+        rho_s = self.fsa(rho_s,flux_surfaces='T_e') # m, known on each flux surface, outputs nan for psi_N < 0.01 or psi_N > 0.99
+        valid = ~np.isnan(rho_s)
+        rho_s = interp1d(self.psi_Te_eval[valid], rho_s[valid], kind='linear',bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval) # removes nan values from rho_s
         self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
         alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * self.mu0 * np.gradient(self.pres) * np.sqrt(self.V_plasma / (2*self.Rmajor*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
 
@@ -149,7 +152,9 @@ class saarelma_connor:
             alpha > alpha_crit,
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma[-1] * abs(np.gradient(T_e_pres,self.psi_N_pres)) ) # evaluated at each psi_N_pres
+        dTe_dpsi = np.gradient(T_e_pres, self.psi_N_pres)
+        dTe_dpsi_abs = np.maximum(np.abs(dTe_dpsi), np.max(np.abs(dTe_dpsi)) * 1e-3) # clamp to prevent division by zero
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma[-1] * dTe_dpsi_abs) # evaluated at each psi_N_pres
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
@@ -404,9 +409,9 @@ class saarelma_connor:
 
             # Extract profiles
             pf = read_pfile(kprof_fp)
-            self.n_e = pf['ne(10^20/m^3)'] # n_e values (10^20/m^3) evaluated at psi_ne_eval
+            self.n_e = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
             self.T_e = pf['te(KeV)'] * 1.60218e-16 # T_e values (KeV -> J) evaluated at psi_Te_eval
-            self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] * 1e20 # psi_N values at which n_e is evaluated, convert to m^-3
+            self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated]
             self.psi_Te_eval = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
 
         else:
@@ -636,6 +641,14 @@ class saarelma_connor:
             self.gradr2_fsa[i] = simpson(R_c**2 * gradr_c**2, theta_c) / den
         plt.close(fig)
 
+        # Fill NaN/zero entries (near-axis or separatrix edge cases) by extrapolating from the nearest valid neighbours.
+        for arr in (self.r_psi, self.gradr_fsa, self.gradr2_fsa):
+            valid = np.isfinite(arr) & (arr != 0)
+            if valid.any() and not valid.all():
+                arr[:] = interp1d(self.psi_N_pres[valid], arr[valid],
+                                  kind='linear', bounds_error=False,
+                                  fill_value='extrapolate')(self.psi_N_pres)
+
 
     def first_step(self,resolution=200):
         """Solve Equation (16) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -702,7 +715,7 @@ class saarelma_connor:
         dne_guess = np.full_like(x_grid, self.dne_dx_neginf)
         Y_guess = np.vstack([ne_guess, dne_guess])
 
-        sol = solve_bvp(ode, bc, x_grid, Y_guess)
+        sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
@@ -798,7 +811,7 @@ class saarelma_connor:
                 dne_guess = np.gradient(ne_guess, x_grid)
                 Y_guess = np.vstack([ne_guess, dne_guess])
 
-                self.sol = solve_bvp(ode, bc, x_grid, Y_guess)
+                self.sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000)
                 if not self.sol.success:
                     raise RuntimeError(f"step {i} BVP failed: {self.sol.message}")
 
@@ -838,7 +851,8 @@ class saarelma_connor:
         else:
             assert False, 'valid flux_surfaces method must be provided'
 
-        A_spl = RectBivariateSpline(self.zgrid, self.rgrid, A)
+        A_clean = np.where(np.isfinite(A), A, 0.0) # replace nan values with 0.0
+        A_spl = RectBivariateSpline(self.zgrid, self.rgrid, A_clean)
         fsa_A = np.full(len(psi_N_vals), np.nan)
 
         fig, ax = plt.subplots()
