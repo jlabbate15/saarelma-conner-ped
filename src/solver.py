@@ -460,7 +460,7 @@ class saarelma_connor:
 
         Returns
         -------
-        self.x_pres : ndarray, shape (n_psi,)
+        self.x_prev : ndarray, shape (n_psi,)
             Radial grid (shifted so zero is at the separatrix) only at midplane, defined on the psi_N_pres grid.
         self.gradr_fsa : ndarray, shape (n_psi,)
             Flux-surface-averaged |grad(r)| at each psi_N_pres surface.
@@ -480,7 +480,7 @@ class saarelma_connor:
 
         # another method of defining the radial grid
         # self.r_psi is the outboard midplane minor radius for each flux surface for the psi_N_pres grid
-        self.x_pres = self.r_psi - self.r_psi[-1] # m, radial grid (shifted so zero is at the separatrix) only at midplane, defined on the psi_N_pres grid
+        self.x_prev = self.r_psi - self.r_psi[-1] # m, radial grid (shifted so zero is at the separatrix) only at midplane, defined on the psi_N_pres grid
 
         # calculate the flux surface-averaged |grad(r)| and |grad(r)|^2
         self.calc_gradr()
@@ -490,9 +490,9 @@ class saarelma_connor:
         self.S_cx_pres = interp1d(self.psi_Te_eval, self.S_cx, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         self.V_cx_pres = interp1d(self.psi_Te_eval, np.abs(self.V_cx), kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
 
-        # note all 1D quantities are now defined on the psi_N_pres grid, which is the same as the x_pres grid
+        # note all 1D quantities are now defined on the psi_N_pres grid, which is the same as the x_prev grid
 
-        self.x_inner = interp1d(self.psi_N_pres, self.x_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_inner_boundary)
+        self.x_inner = interp1d(self.psi_N_pres, self.x_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_inner_boundary)
 
     def calc_gradr(self):
         """Compute <|grad(r)|> at each flux surface.
@@ -608,7 +608,7 @@ class saarelma_connor:
 
         # f(x) = <|grad(r)|^2> * D_ped
         f_x = self.gradr_fsa * self.D_ped
-        df_dx = np.gradient(f_x, self.x_pres) # df/dx
+        df_dx = np.gradient(f_x, self.x_prev) # df/dx
 
         def ode(x, Y):
             ne, dnedx = Y
@@ -678,78 +678,66 @@ class saarelma_connor:
 
             # --- Step 2: iterate full Eq 15 ---
             sol = self.ne_first_sol
-            x_grid = sol.x
-            ne_prev = sol.y[0].copy()
 
-            for iteration in range(max_iter):
-                # cumulative integral: int_0^x n_e(x')*(S_i+S_cx)/(f_FC*V_FC) dx'
-                integrand = ne_prev * (self._Si_x(x_grid) + self._Scx_x(x_grid)) \
-                            / (self.fFC * self.V_FC)
-                cum_from_left = cumulative_trapezoid(integrand, x_grid, initial=0)
-                integral_from_0 = cum_from_left - cum_from_left[-1]
+            for i in range(max_iter):
 
-                exp_term = np.exp(integral_from_0)
-                exp_interp = interp1d(x_grid, exp_term, **kw)
+                # Interpolate required parameters to x_sol_prev grid (interpolating from initial grid to minimize errors)
+                x_sol_prev = sol.x # not gauranteed to be the same grid as inputted to solve_bvp()
+                ne_sol_prev = sol.y # not gauranteed to be the same grid as inputted to solve_bvp()
+                self.D_ped_sol_prev = interp1d(self.x_prev, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')(x_sol_prev)
+                self.S_i_sol_prev = interp1d(self.x_prev, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_sol_prev)
+                self.S_cx_sol_prev = interp1d(self.x_prev, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_sol_prev)
+                self.gradr_fsa_sol_prev = interp1d(self.x_prev, self.gradr_fsa, kind='linear', bounds_error=False, fill_value='extrapolate')(x_sol_prev)
+                self.V_CX_sol_prev = interp1d(self.x_prev, self.V_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_sol_prev)
 
-                # prefactor C(x) = 1 - |V_FC|*f_FC*(S_i+S_cx/2) / (|V_cx|*f_cx*(S_i+S_cx))
-                Si_arr = self._Si_x(x_grid)
-                Scx_arr = self._Scx_x(x_grid)
-                Vcx_arr = self._Vcx_x(x_grid)
-                C_arr = 1.0 - (np.abs(self.V_FC) * self.fFC * (Si_arr + Scx_arr / 2.0)) \
-                            / (Vcx_arr * self.fCX * (Si_arr + Scx_arr))
-                C_interp = interp1d(x_grid, C_arr, **kw)
+                integrand = (ne_sol_prev * self.S_i_sol_prev + self.S_cx_sol_prev) / (self.fFC * self.V_FC) # iterative integral: int_0^x n_e(x')*(S_i+S_cx)/(f_FC*V_FC) dx'
+                int_from_left = cumulative_trapezoid(integrand, x_sol_prev, initial=0) # want integral output to be calculated from 0 to x
+                integral_from_0 = int_from_left - int_from_left[-1] # want integral output to be calculated from 0 to x and cumulative_trapezoid gives integral from x_sol to 0 since x_sol<0
+                exp_term_prev = np.exp(integral_from_0)
 
-                D_ped_x = self._D_ped_x
-                Si_x = self._Si_x
-                Scx_x = self._Scx_x
-                P_x = self._P_x
-                dPdx_x = self._dPdx_x
+                # f(x) = <|grad(r)|^2> * D_ped
+                f_x = self.gradr_fsa_sol_prev * self.D_ped_sol_prev
+                df_dx = np.gradient(f_x, self.x_prev) # df/dx
 
-                def ode_full(x, Y):
-                    ne, dne = Y
-                    D = D_ped_x(x)
-                    Si = Si_x(x)
-                    Scx = Scx_x(x)
-                    P = P_x(x)
-                    dP = dPdx_x(x)
-                    C = C_interp(x)
-                    E = exp_interp(x)
+                def ode(x, Y):
+                    ne, dnedx = Y
+                    D = self.D_ped_sol_prev(x)
+                    Si = self.S_i_sol_prev(x)
+                    Scx = self.S_cx_sol_prev(x)
+                    Vcx = self.V_CX_sol_prev(x)
+                    f = f_x(x)
+                    dfdx = df_dx(x)
+                    exp_term = exp_term_prev(x)
 
-                    bracket = -D * (dne - self.dne_dx_neginf) \
-                            + C * self.nFC_x0 * E
-                    rhs = -ne * Si * bracket
-                    d2ne = (rhs - dP * dne) / P
-                    return np.vstack([dne, d2ne])
+                    rhs = -ne*Si * ( -D*(dnedx-self.dne_dx_neginf) + ( 1 - (abs(self.V_FC)*self.fFC/(Vcx*self.fCX)) * ((Si+Scx/2)/(Si+Scx)) )*(self.nFC_x0*exp_term) )
+                    d2nedx2 = (rhs - (dfdx * dnedx * dfdx)) / f
+                    return np.vstack([dnedx, d2nedx2])
 
                 def bc(Ya, Yb):
                     return np.array([
-                        Ya[1] - self.dne_dx_neginf,
-                        Yb[0] - self.ne_x0,
+                        Ya[1] - self.dne_dx_neginf, # Neumann boundary condition at x_inner
+                        Yb[0] - self.ne_x0, # Dirichlet boundary condition at x = 0
                     ])
 
-                Y_guess = sol.y
-                sol = solve_bvp(ode_full, bc, x_grid, Y_guess, verbose=0)
+                x_grid = np.linspace(self.x_inner, 0, x_res)
+                ne_guess = ne_sol_prev
+                dne_guess = np.gradient(ne_guess, x_grid)
+                Y_guess = np.vstack([ne_guess, dne_guess])
+
+                sol = solve_bvp(ode, bc, x_grid, Y_guess)
                 if not sol.success:
-                    raise RuntimeError(
-                        f"Eq 15 BVP failed at iteration {iteration}: {sol.message}")
+                    raise RuntimeError(f"step {i} BVP failed: {sol.message}")
 
-                x_grid_new = sol.x
-                ne_new = sol.y[0]
-
-                ne_prev_on_new = interp1d(x_grid, ne_prev, **kw)(x_grid_new)
-                residual = np.max(np.abs(ne_new - ne_prev_on_new)) / np.max(np.abs(ne_new))
-                if self.verbose:
-                    print(f"  Eq 15 iteration {iteration}: residual = {residual:.2e}")
-
-                x_grid = x_grid_new
-                ne_prev = ne_new.copy()
+                ne_sol_prev = interp1d(self.x_prev, ne_sol_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(sol.x)
+                residual = np.max(np.abs(sol.y - ne_sol_prev)) / np.max(np.abs(sol.y))
+                print(f"  Eq 15 iteration {i}: residual = {residual:.2e}")
 
                 if residual < tol:
                     break
 
             self.x_sol = sol.x
-            self.ne_sol = sol.y[0]
-            self.dne_dx_sol = sol.y[1]
+            self.ne_sol = sol.y
+            self.dne_dx_sol = sol.yp
 
 
     def form_factor(self,type = 'ex'):
@@ -938,7 +926,7 @@ class saarelma_connor:
             "kappa": self.kappa,       # Elongation
             "m": self.M_eff,           # Effective mass (must be 2.0 for D or 2.5 for D-T)
             "neped": self.neped,       # Pedestal density (in 10^19 m^-3)
-            "r": self.R0,           # Major radius (m)
+            "r": self.Rmajor,           # Major radius (m)
             "zeffped": self.Z_i      # Effective charge
         }
 
