@@ -405,8 +405,8 @@ class saarelma_connor:
             # Extract profiles
             pf = read_pfile(kprof_fp)
             self.n_e = pf['ne(10^20/m^3)'] # n_e values (10^20/m^3) evaluated at psi_ne_eval
-            self.T_e = pf['te(KeV)'] # T_e values (KeV) evaluated at psi_Te_eval
-            self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated
+            self.T_e = pf['te(KeV)'] * 1.60218e-16 # T_e values (KeV -> J) evaluated at psi_Te_eval
+            self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] * 1e20 # psi_N values at which n_e is evaluated, convert to m^-3
             self.psi_Te_eval = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
 
         else:
@@ -664,9 +664,9 @@ class saarelma_connor:
         x_inner = self.x_inner
 
         # Calculate boundary condition from profiles at psi_N = 0.85
-        n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_pres)
+        n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         self.dne_dx = np.gradient(n_e_pres, self.x_init) # (particles/m^3) / m, electron density gradient
-        dne_dx_interp = interp1d(self.psi_pres, self.dne_dx, kind='linear', bounds_error=False, fill_value='extrapolate')
+        dne_dx_interp = interp1d(self.psi_N_pres, self.dne_dx, kind='linear', bounds_error=False, fill_value='extrapolate')
         self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
 
         D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
