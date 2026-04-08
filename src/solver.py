@@ -1,4 +1,4 @@
-from typing import Self
+# from typing import Self
 import numpy as np
 from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.integrate import simpson, solve_bvp, cumulative_trapezoid
@@ -132,7 +132,7 @@ class saarelma_connor:
         V_th_i_rz = self.psi_rz_expand(self.V_th_i, psi_N_A='T_e')
         rho_s = V_th_i_rz*M_i*self.M_eff / (self.e_i * self.B) # m, known on each RZ grid point
         rho_s = self.fsa(rho_s,flux_surfaces='T_e') # m, known on each flux surface
-        mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
+        self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
         alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * mu0 * np.gradient(self.pres) * np.sqrt(self.V_plasma / (2*self.Rmajor*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
 
         # Interpolate T_e, c_s, rho_s from psi_Te_eval onto the pressure psi_N grid
@@ -309,6 +309,7 @@ class saarelma_connor:
         B_phi = (F_interp(psi) / R_eval_arr) # T, toroidal magnetic field
 
         self.B = np.sqrt(B_R**2 + B_Z**2 + B_phi**2) # T, total magnetic field at each R_eval, Z_eval
+        return self.B, [B_R, B_Z, B_phi]
 
     def mhd_load(self,mhd_loc,fp):
         """Load and calculate various MHD equilibrium parameters using method specified by mhd_eq_loc flag. 
@@ -447,6 +448,69 @@ class saarelma_connor:
         
         else:
             assert True, 'species not supported'
+
+    def calc_volavgP(self):
+        """Calculate the volume-averaged pressure
+
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+
+        Sets
+        ----
+        self.volavgP : float
+            Volume-averaged pressure (same units as self.pres).
+        """
+        dV_dpsi = np.gradient(self.V_plasma, self.psi_N_pres)
+        self.volavgP = (simpson(self.pres * dV_dpsi, self.psi_N_pres)
+                        / simpson(dV_dpsi, self.psi_N_pres))
+
+    def calc_betan(self):
+        """Calculate the normalized beta
+
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+
+        Sets
+        -------
+        self.Betan : float
+            Normalized beta, dimensionless
+        """
+
+        self.calc_volavgP()
+
+        _, [B_R, B_Z, _] = self.calc_B(self.eq['rzout'][:, 0], self.eq['rzout'][:, 1])
+        bp_lcfs = np.sqrt(B_R**2 + B_Z**2)
+        bp_avg = np.mean(bp_lcfs)
+
+        betat = self.volavgP / (self.bt**2 / (2 * self.mu0))
+        betap = self.volavgP / (bp_avg**2 / (2 * self.mu0))
+
+        beta = ((1/betat) - (1/betap))**(-1)
+        self.betan = beta * (self.a*self.bt/self.Ip)
+
+    def form_factor(self,type = 'ex'):
+        """Calculate the form factor for FC or charge-exchange cases
+        Currently just sets to 1, but can be updated to use a more sophisticated to account for poloidal asymmetries in the FC and CX neutral profiles.
+
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+        type : string
+            type of form factor to calculate, supporting: FC, cx
+        """
+        assert type != 'FC' or type != 'cx', 'form factor must be for FC or cx'
+
+        # grad(r) and nFC or nCX are needed
+
+        if type == 'FC':
+            self.fFC = 1
+        elif type == 'cx':
+            self.fCX = 1
 
 
     def setup_solver_grids(self,res = 100):
@@ -639,7 +703,6 @@ class saarelma_connor:
 
         self.ne_first_sol = sol
 
-
     def solve(self,soln_method='sc_2order',tol=1e-4,max_iter=50,x_res=100):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
 
@@ -739,26 +802,6 @@ class saarelma_connor:
             self.ne_sol = sol.y
             self.dne_dx_sol = sol.yp
 
-
-    def form_factor(self,type = 'ex'):
-        """Calculate the form factor for FC or charge-exchange cases
-        Currently just sets to 1, but can be updated to use a more sophisticated to account for poloidal asymmetries in the FC and CX neutral profiles.
-
-        Parameters
-        ----------
-        self : object
-            instance of saarelma_connor class
-        type : string
-            type of form factor to calculate, supporting: FC, cx
-        """
-        assert type != 'FC' or type != 'cx', 'form factor must be for FC or cx'
-
-        # grad(r) and nFC or nCX are needed
-
-        if type == 'FC':
-            self.fFC = 1
-        elif type == 'cx':
-            self.fCX = 1
 
     def fsa(self,A,flux_surfaces='T_e'):
         """Flux surface average a quantity as defined by ⟨A⟩= int(R^2Adθ)/ int(R^2dθ) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -917,10 +960,13 @@ class saarelma_connor:
 
         # 3. Define your inputs in Python
         # These map exactly to the InputEPED struct we saw in the Julia code
+        self.neped = interp1d(self.x_prev, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
+        self.bt = self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2]
+        self.calc_betan()
         inputs = {
             "a": self.a,           # Minor radius (m)
             "betan": self.betan,       # Normalized beta
-            "bt": self.Bt,          # Toroidal magnetic field (T)
+            "bt": self.bt,        # Toroidal magnetic field at the magnetic axis (T)
             "delta": self.delta,       # Effective triangularity
             "ip": self.Ip,          # Plasma current (MA)
             "kappa": self.kappa,       # Elongation
