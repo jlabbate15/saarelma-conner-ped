@@ -109,7 +109,7 @@ class saarelma_connor:
         elif species == 'D-T':
             self.M_eff = 2.5
         else:
-            assert True, 'species must be D or D-T'
+            assert False, 'species must be D or D-T'
 
         self.mhd_load(mhd_loc,mhd_fp) # load in MHD quantities
         self.kprof_load(kprof_loc,kprof_fp) # load in kinetic quantities
@@ -149,7 +149,7 @@ class saarelma_connor:
             alpha > alpha_crit,
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma[-1] * np.gradient(T_e_pres,self.psi_N_pres) ) # evaluated at each psi_N_pres
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma[-1] * abs(np.gradient(T_e_pres,self.psi_N_pres)) ) # evaluated at each psi_N_pres
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
@@ -416,7 +416,7 @@ class saarelma_connor:
             dne_dx_interp = interp1d(self.psi_ne_eval, self.dne_dx, kind='linear')
             self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
         else:
-            assert True, 'kprof_loc method not supported'
+            assert False, 'kprof_loc method not supported'
 
         if self.T_rat_flag:
             self.T_i = self.T_e * self.T_rat
@@ -448,7 +448,7 @@ class saarelma_connor:
             self.sigma_i = scd_adas(self.n_e[-1], self.T_e[-1]) # m^2, ionization cross-section evaluated at psi_N ~ 1
         
         else:
-            assert True, 'species not supported'
+            assert False, 'species not supported'
 
     def calc_volavgP(self):
         """Calculate the volume-averaged pressure
@@ -674,7 +674,7 @@ class saarelma_connor:
         Scx_x = interp1d(self.x_prev, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
 
         # f(x) = <|grad(r)|^2> * D_ped
-        f_arr = self.gradr_fsa * self.D_ped
+        f_arr = self.gradr2_fsa * self.D_ped
         df_arr = np.gradient(f_arr, self.x_prev)
         f_x = interp1d(self.x_prev, f_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
         df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
@@ -706,7 +706,7 @@ class saarelma_connor:
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
-        self.ne_first_sol = sol
+        self.sol = sol
 
     def solve(self,soln_method='sc_2order',tol=1e-4,max_iter=50,x_res=100):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -747,13 +747,11 @@ class saarelma_connor:
             self.first_step()
 
             # --- Step 2: iterate full Eq 15 ---
-            self.sol = self.ne_first_sol
-
             for i in range(max_iter):
 
                 # Interpolate required parameters to x_sol_prev grid (interpolating from initial grid to minimize errors)
                 self.x_prev = self.sol.x # not gauranteed to be the same grid as inputted to solve_bvp()
-                ne_sol_prev = self.sol.y # not gauranteed to be the same grid as inputted to solve_bvp()
+                ne_sol_prev = self.sol.y[0] # not gauranteed to be the same grid as inputted to solve_bvp()
 
                 D_ped_int = interp1d(self.x_init, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
                 S_i_int = interp1d(self.x_init, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
@@ -769,6 +767,11 @@ class saarelma_connor:
                 # f(x) = <|grad(r)|^2> * D_ped
                 f_x = gradr_fsa_int(self.x_prev) * D_ped_int(self.x_prev)
                 df_dx = np.gradient(f_x, self.x_prev) # df/dx
+
+                # change to callables to input to solve_bvp()
+                f_x = interp1d(self.x_prev, f_x, kind='linear', bounds_error=False, fill_value='extrapolate')
+                df_dx = interp1d(self.x_prev, df_dx, kind='linear', bounds_error=False, fill_value='extrapolate')
+                exp_term_prev = interp1d(self.x_prev, exp_term_prev, kind='linear', bounds_error=False, fill_value='extrapolate')
 
                 def ode(x, Y):
                     ne, dnedx = Y
@@ -800,15 +803,15 @@ class saarelma_connor:
                     raise RuntimeError(f"step {i} BVP failed: {self.sol.message}")
 
                 ne_sol_prev = interp1d(self.x_prev, ne_sol_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(self.sol.x)
-                residual = np.max(np.abs(self.sol.y - ne_sol_prev)) / np.max(np.abs(self.sol.y))
+                residual = np.max(np.abs(self.sol.y[0] - ne_sol_prev)) / np.max(np.abs(self.sol.y[0]))
                 print(f"  Eq 15 iteration {i}: residual = {residual:.2e}")
 
                 if residual < tol:
                     break
 
-            self.x_sol = sol.x
-            self.ne_sol = sol.y
-            self.dne_dx_sol = sol.yp
+            self.x_sol = self.sol.x
+            self.ne_sol = self.sol.y
+            self.dne_dx_sol = self.sol.yp
 
 
     def fsa(self,A,flux_surfaces='T_e'):
