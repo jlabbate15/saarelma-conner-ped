@@ -152,8 +152,9 @@ class saarelma_connor:
             alpha > alpha_crit,
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
-        dTe_dpsi = np.gradient(T_e_pres, self.psi_N_pres)
-        dTe_dpsi_abs = np.maximum(np.abs(dTe_dpsi), np.max(np.abs(dTe_dpsi)) * 1e-3) # clamp to prevent division by zero
+        keV_to_J = 1e3 * 1.60218e-19
+        dTe_dpsi_keV = np.gradient(T_e_pres / keV_to_J, self.psi_N_pres) # gradient in keV/psi_N (formula calibrated for keV)
+        dTe_dpsi_abs = np.maximum(np.abs(dTe_dpsi_keV), np.max(np.abs(dTe_dpsi_keV)) * 1e-3)
         D_ETG = De_chie_etg * P_tot_e / (self.S_plasma[-1] * dTe_dpsi_abs) # evaluated at each psi_N_pres
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
