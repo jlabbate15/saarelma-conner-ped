@@ -409,12 +409,6 @@ class saarelma_connor:
             self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated
             self.psi_Te_eval = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
 
-            # Calculate boundary condition from profiles at psi_N = 0.85
-            self.dne_dx = np.gradient(self.n_e, self.psi_ne_eval) # (particles/m^3) / m, electron density gradient
-
-            # Create the interpolation function
-            dne_dx_interp = interp1d(self.psi_ne_eval, self.dne_dx, kind='linear')
-            self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
         else:
             assert False, 'kprof_loc method not supported'
 
@@ -668,6 +662,12 @@ class saarelma_connor:
         self.ne_first_sol : BVP solution object from solve_bvp.
         """
         x_inner = self.x_inner
+
+        # Calculate boundary condition from profiles at psi_N = 0.85
+        n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_pres)
+        self.dne_dx = np.gradient(n_e_pres, self.x_init) # (particles/m^3) / m, electron density gradient
+        dne_dx_interp = interp1d(self.psi_pres, self.dne_dx, kind='linear', bounds_error=False, fill_value='extrapolate')
+        self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
 
         D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
         Si_x = interp1d(self.x_prev, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
