@@ -126,8 +126,8 @@ class saarelma_connor:
 
         self.cross_sections(species) # load in cross-sections
 
-        self.S_i = self.sigma_i * self.V_th_e # m^3/s, per psi_N_eval for Te
-        self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, per psi_N_eval for Te
+        self.S_i = self.sigma_i # m^3/s, scd_adas already returns <σv> rate coefficient, per psi_N_eval for Te
+        self.S_cx = self.sigma_cx * self.V_th_i[-1] # m^3/s, per psi_N_eval for Te
 
         # Diffusion coefficient setup
         c_s = (self.e_i * self.T_e * 1e3 / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2, T_e in keV -> eV via 1e3, as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
@@ -145,7 +145,7 @@ class saarelma_connor:
         # Interpolate T_e, c_s, rho_s from psi_Te_eval onto the pressure psi_N grid
         T_e_pres = interp1d(self.psi_Te_eval, self.T_e, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
-        n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
+        self.n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         c_s = interp1d(self.psi_Te_eval, c_s, kind='linear',
                        bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
@@ -158,12 +158,12 @@ class saarelma_connor:
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
         grad_Te = np.gradient(T_e_pres * (1e3) * (1.60218e-19), self.r_psi) # gradient in J/m, T_e_pres is in keV
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * abs(grad_Te) * n_e_pres) # evaluated at each psi_N_pres
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * abs(grad_Te) * self.n_e_pres) # evaluated at each psi_N_pres
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
         # boundary conditions - will be updated with a more comprehensive model in the future
-        self.ne_x0 = n_e_pres[-1]
+        self.ne_x0 = self.n_e_pres[-1]
         self.nFC_x0 = nFC_x0
 
     def find_boundary_points(self,eq):
@@ -447,7 +447,7 @@ class saarelma_connor:
             E = np.array([3.23*10**(-16), 9.68*10**(-16), 3.23*10**(-15), 6.45*10**(-15), 9.68*10**(-15), 3.23*10**(-14), 9.68*10**(-14), 2.26*10**(-13)]) # J
             sigma_cx_interp = interp1d(E, sigma_cx_perE, kind='linear',fill_value='extrapolate',bounds_error=False)
             self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i*self.M_eff) * self.V_cx[-1]**2) # m^2, charge-exchange cross-section evaluated at psi_N ~ 1
-        
+
             # ionization cross-section
             self.sigma_i = scd_adas(self.n_e[-1], self.T_e[-1] * 1e3) # m^2, ionization cross-section evaluated at psi_N ~ 1, need T_e in eV and n_e in m^-3
         
@@ -553,8 +553,8 @@ class saarelma_connor:
         self.x_prev = self.x_init.copy() # m, radial grid (shifted so zero is at the separatrix) only at midplane, defined on the psi_N_pres grid
 
         # interpolate quantities on Te grid to psi_N_pres grid
-        self.S_i_pres = interp1d(self.psi_Te_eval, self.S_i, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
-        self.S_cx_pres = interp1d(self.psi_Te_eval, self.S_cx, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        # self.S_i_pres = interp1d(self.psi_Te_eval, self.S_i, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        # self.S_cx_pres = interp1d(self.psi_Te_eval, self.S_cx, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         self.V_cx_pres = interp1d(self.psi_Te_eval, np.abs(self.V_cx), kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
 
         # note all 1D quantities are now defined on the psi_N_pres grid, which is the same as the x_prev grid
@@ -679,14 +679,14 @@ class saarelma_connor:
         x_inner = self.x_inner
 
         # Calculate boundary condition from profiles at psi_N = 0.85
-        n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
-        self.dne_dx = np.gradient(n_e_pres, self.x_init) # (particles/m^3) / m, electron density gradient
+        # self.n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        self.dne_dx = np.gradient(self.n_e_pres, self.x_init) # (particles/m^3) / m, electron density gradient
         dne_dx_interp = interp1d(self.psi_N_pres, self.dne_dx, kind='linear', bounds_error=False, fill_value='extrapolate')
         self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
 
         D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
-        Si_x = interp1d(self.x_prev, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
-        Scx_x = interp1d(self.x_prev, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
+        # Si_x = interp1d(self.x_prev, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
+        # Scx_x = interp1d(self.x_prev, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
 
         # f(x) = <|grad(r)|^2> * D_ped
         f_arr = self.gradr2_fsa * self.D_ped
@@ -694,12 +694,8 @@ class saarelma_connor:
         f_x = interp1d(self.x_prev, f_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
         df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
 
-        # # debugging
-        print('D_ped:', self.D_ped) # possible units issue
-        print('--------------------------------')
-        print('S_i:', self.S_i_pres)
-        print('--------------------------------')
-        print('S_cx:', self.S_cx_pres) # may need to switch out for Jamie's KN1D version
+        # debugging
+        print('D_ped:', self.D_ped)
         print('--------------------------------')
         print('dne_dx_neginf:', self.dne_dx_neginf)
         print('--------------------------------')
@@ -707,23 +703,17 @@ class saarelma_connor:
         print('--------------------------------')
         print('dne_dx:', self.dne_dx)
         print('--------------------------------')
-        print('V_FC:', self.V_FC)
-        print('--------------------------------')
-        print('f_arr:', f_arr)
-        print('--------------------------------')
         print('df_arr:', df_arr)
-        print('--------------------------------')
-        print('n_e_pres:', n_e_pres)
         print('--------------------------------')
 
         def ode(x, Y):
             ne, dnedx = Y
             D = D_ped_x(x)
-            Si = Si_x(x)
-            Scx = Scx_x(x)
+            # Si = Si_x(x)
+            # Scx = Scx_x(x)
             f = f_x(x)
             dfdx = df_dx(x)
-            rhs = (ne * D * (Si + Scx) / self.V_FC) * (dnedx - self.dne_dx_neginf)
+            rhs = (ne * D * (self.S_i + self.S_cx) / self.V_FC) * (dnedx - self.dne_dx_neginf)
             d2nedx2 = (rhs - dfdx * dnedx) / f
             return np.vstack([dnedx, d2nedx2])
 
@@ -734,14 +724,12 @@ class saarelma_connor:
             ])
 
         x_grid = np.linspace(x_inner, 0, resolution)
-        ne_guess = self.ne_x0 + self.dne_dx_neginf * x_grid
-        ne_guess = np.maximum(ne_guess, self.ne_x0 * 0.1)
-        dne_guess = np.full_like(x_grid, self.dne_dx_neginf)
+        ne_guess = interp1d(self.x_init, self.n_e_pres, kind='linear',
+                            bounds_error=False, fill_value='extrapolate')(x_grid)
+        dne_guess = np.gradient(ne_guess, x_grid)
         Y_guess = np.vstack([ne_guess, dne_guess])
-        plt.plot(x_grid, Y_guess[0])
-        plt.show()
 
-        sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000,verbose=2)
+        sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000, verbose=2)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
