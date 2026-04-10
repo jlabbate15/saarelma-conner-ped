@@ -83,7 +83,7 @@ class saarelma_connor:
         C_KBM = None,
         De_chie_etg = None,
         ne_x0 = 1e19, # m^-3,electron density at the separatrix
-        dne_dx0 = 1e-5, # m^-3, gradient of electron density at the separatrix
+        dne_dx0 = 0, # m^-3, gradient of electron density at the separatrix
         nFC_x0 = 0.1e19, # m^-3, Franck-Condon neutral density at the separatrix
         psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition)
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
@@ -117,11 +117,11 @@ class saarelma_connor:
 
         self.Z_i = Z_i
         self.e_i = Z_i * 1.602e-19 # C
-        self.V_th_i = np.sqrt(2*self.T_i/(M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
-        self.V_th_e = np.sqrt(2*self.T_e/M_e) # m/s, per psi_N_eval for Te
+        self.V_th_i = np.sqrt(2*self.T_i_K/(M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
+        self.V_th_e = np.sqrt(2*self.T_e_K/M_e) # m/s, per psi_N_eval for Te
 
         self.V_FC = np.sqrt(8*E_FC/((np.pi**2) * M_i*self.M_eff)) # m/s
-        self.V_cx = np.sqrt(2*self.T_i/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
+        self.V_cx = np.sqrt(2*self.T_i_K/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
 
         self.cross_sections(species) # load in cross-sections
 
@@ -130,7 +130,7 @@ class saarelma_connor:
 
         # Diffusion coefficient setup
         # c_s = (self.e_i * self.T_e / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
-        c_s = (self.T_e / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005        
+        c_s = (self.T_e_K / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005        
         V_th_i_rz = self.psi_rz_expand(self.V_th_i, psi_N_A='T_e')
         rho_s = V_th_i_rz*M_i*self.M_eff / (self.e_i * self.B) # m, known on each RZ grid point
         rho_s = self.fsa(rho_s,flux_surfaces='T_e') # m, known on each flux surface, outputs nan for psi_N < 0.01 or psi_N > 0.99
@@ -139,8 +139,13 @@ class saarelma_connor:
         self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
         alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * self.mu0 * np.gradient(self.pres) * np.sqrt(self.V_plasma / (2*self.Rmajor*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
 
+        # calculate the flux surface-averaged |grad(r)| and |grad(r)|^2 and some other quantities like r_psi (outboard midplane minor radius for each flux surface)
+        self.calc_gradr()
+
         # Interpolate T_e, c_s, rho_s from psi_Te_eval onto the pressure psi_N grid
         T_e_pres = interp1d(self.psi_Te_eval, self.T_e, kind='linear',
+                            bounds_error=False, fill_value='extrapolate')(self.r_psi)
+        n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         c_s = interp1d(self.psi_Te_eval, c_s, kind='linear',
                        bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
@@ -152,10 +157,9 @@ class saarelma_connor:
             alpha > alpha_crit,
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
-        keV_to_J = 1e3 * 1.60218e-19
-        dTe_dpsi_keV = np.gradient(T_e_pres / keV_to_J, self.psi_N_pres) # gradient in keV/psi_N (formula calibrated for keV)
-        dTe_dpsi_abs = np.maximum(np.abs(dTe_dpsi_keV), np.max(np.abs(dTe_dpsi_keV)) * 1e-3)
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma[-1] * dTe_dpsi_abs) # evaluated at each psi_N_pres
+        grad_Te = np.gradient(T_e_pres * (1e3) * (1.60218e-19), self.psi_N_pres) # gradient in J/psi_N, T_e_pres is in keV
+        grad_Te_abs = np.maximum(np.abs(grad_Te), np.max(np.abs(grad_Te)) * 1e-3) # prevent division by zero in D_ETG
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * grad_Te_abs * n_e_pres) # evaluated at each psi_N_pres
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
@@ -411,7 +415,8 @@ class saarelma_connor:
             # Extract profiles
             pf = read_pfile(kprof_fp)
             self.n_e = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
-            self.T_e = pf['te(KeV)'] * 1.60218e-16 # T_e values (KeV -> J) evaluated at psi_Te_eval
+            self.T_e = pf['te(KeV)'] # T_e values (keV) evaluated at psi_Te_eval
+            self.T_e_K = self.T_e * 1e3 * 11604.52 # T_e values (K) evaluated at psi_Te_eval
             self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated]
             self.psi_Te_eval = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
 
@@ -419,7 +424,8 @@ class saarelma_connor:
             assert False, 'kprof_loc method not supported'
 
         if self.T_rat_flag:
-            self.T_i = self.T_e * self.T_rat
+            self.T_i = self.T_e * self.T_rat # keV
+            self.T_i_K = self.T_i * 1e3 * 11604.52 # K
 
     def cross_sections(self,species='D'):
         """Calculate the cross-sections for the ionization and charge-exchange cross-sections
@@ -445,7 +451,7 @@ class saarelma_connor:
             self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i*self.M_eff) * self.V_cx[-1]**2) # m^2, charge-exchange cross-section evaluated at psi_N ~ 1
         
             # ionization cross-section
-            self.sigma_i = scd_adas(self.n_e[-1], self.T_e[-1]) # m^2, ionization cross-section evaluated at psi_N ~ 1
+            self.sigma_i = scd_adas(self.n_e[-1], self.T_e[-1] * 1e3) # m^2, ionization cross-section evaluated at psi_N ~ 1, need T_e in eV and n_e in m^-3
         
         else:
             assert False, 'species not supported'
@@ -490,7 +496,7 @@ class saarelma_connor:
         betat = self.volavgP / (self.bt**2 / (2 * self.mu0))
         betap = self.volavgP / (bp_avg**2 / (2 * self.mu0))
 
-        beta = ((1/betat) - (1/betap))**(-1)
+        beta = ((1/betat) + (1/betap))**(-1)
         self.betan = beta * (self.a*self.bt/self.Ip)
 
     def form_factor(self,type = 'ex'):
@@ -538,9 +544,6 @@ class saarelma_connor:
         self.V_cx_pres : ndarray, shape (n_psi,)
             Volume of the charge-exchange neutral at each psi_N_pres surface.
         """
-
-        # calculate the flux surface-averaged |grad(r)| and |grad(r)|^2
-        self.calc_gradr()
 
         # one method of defining the radial grid, requires uncommenting the rsep_mid definition in the mhd_load function
         # self.rmid = np.linspace(0, self.rsep_mid, res) # m, radial grid (shifted so zero is at the magnetic axis)
@@ -693,6 +696,28 @@ class saarelma_connor:
         f_x = interp1d(self.x_prev, f_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
         df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
 
+        # # debugging
+        # print('D_ped:', self.D_ped) # possible units issue
+        # print('--------------------------------')
+        # print('S_i:', self.S_i_pres)
+        # print('--------------------------------')
+        # print('S_cx:', self.S_cx_pres) # may need to switch out for Jamie's KN1D version
+        # print('--------------------------------')
+        # print('dne_dx_neginf:', self.dne_dx_neginf)
+        # print('--------------------------------')
+        # print('ne_x0:', self.ne_x0)
+        # print('--------------------------------')
+        # print('dne_dx:', self.dne_dx)
+        # print('--------------------------------')
+        # print('V_FC:', self.V_FC)
+        # print('--------------------------------')
+        # print('f_arr:', f_arr)
+        # print('--------------------------------')
+        # print('df_arr:', df_arr)
+        # print('--------------------------------')
+        # print('n_e_pres:', n_e_pres)
+        # print('--------------------------------')
+
         def ode(x, Y):
             ne, dnedx = Y
             D = D_ped_x(x)
@@ -715,8 +740,10 @@ class saarelma_connor:
         ne_guess = np.maximum(ne_guess, self.ne_x0 * 0.1)
         dne_guess = np.full_like(x_grid, self.dne_dx_neginf)
         Y_guess = np.vstack([ne_guess, dne_guess])
+        plt.plot(x_grid, Y_guess[0])
+        plt.show()
 
-        sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000)
+        sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000,verbose=2,tol=0.9)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
