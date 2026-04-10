@@ -117,11 +117,12 @@ class saarelma_connor:
 
         self.Z_i = Z_i
         self.e_i = Z_i * 1.602e-19 # C
-        self.V_th_i = np.sqrt(2*self.T_i_K/(M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
-        self.V_th_e = np.sqrt(2*self.T_e_K/M_e) # m/s, per psi_N_eval for Te
+        k_B = 1.38064852e-23 # J/K, Boltzmann constant
+        self.V_th_i = np.sqrt(2*k_B*self.T_i_K/(M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
+        self.V_th_e = np.sqrt(2*k_B*self.T_e_K/M_e) # m/s, per psi_N_eval for Te
 
         self.V_FC = np.sqrt(8*E_FC/((np.pi**2) * M_i*self.M_eff)) # m/s
-        self.V_cx = np.sqrt(2*self.T_i_K/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
+        self.V_cx = np.sqrt(2*k_B*self.T_i_K/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
 
         self.cross_sections(species) # load in cross-sections
 
@@ -129,8 +130,7 @@ class saarelma_connor:
         self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, per psi_N_eval for Te
 
         # Diffusion coefficient setup
-        # c_s = (self.e_i * self.T_e / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
-        c_s = (self.T_e_K / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2 as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005        
+        c_s = (self.e_i * self.T_e * 1e3 / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2, T_e in keV -> eV via 1e3, as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
         V_th_i_rz = self.psi_rz_expand(self.V_th_i, psi_N_A='T_e')
         rho_s = V_th_i_rz*M_i*self.M_eff / (self.e_i * self.B) # m, known on each RZ grid point
         rho_s = self.fsa(rho_s,flux_surfaces='T_e') # m, known on each flux surface, outputs nan for psi_N < 0.01 or psi_N > 0.99
@@ -144,7 +144,7 @@ class saarelma_connor:
 
         # Interpolate T_e, c_s, rho_s from psi_Te_eval onto the pressure psi_N grid
         T_e_pres = interp1d(self.psi_Te_eval, self.T_e, kind='linear',
-                            bounds_error=False, fill_value='extrapolate')(self.r_psi)
+                            bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         c_s = interp1d(self.psi_Te_eval, c_s, kind='linear',
@@ -157,15 +157,13 @@ class saarelma_connor:
             alpha > alpha_crit,
             C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
             0)
-        grad_Te = np.gradient(T_e_pres * (1e3) * (1.60218e-19), self.psi_N_pres) # gradient in J/psi_N, T_e_pres is in keV
-        grad_Te_abs = np.maximum(np.abs(grad_Te), np.max(np.abs(grad_Te)) * 1e-3) # prevent division by zero in D_ETG
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * grad_Te_abs * n_e_pres) # evaluated at each psi_N_pres
+        grad_Te = np.gradient(T_e_pres * (1e3) * (1.60218e-19), self.r_psi) # gradient in J/m, T_e_pres is in keV
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * abs(grad_Te) * n_e_pres) # evaluated at each psi_N_pres
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
         # boundary conditions - will be updated with a more comprehensive model in the future
-        self.ne_x0 = ne_x0
-        self.dne_dx0 = dne_dx0
+        self.ne_x0 = n_e_pres[-1]
         self.nFC_x0 = nFC_x0
 
     def find_boundary_points(self,eq):
@@ -697,26 +695,26 @@ class saarelma_connor:
         df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
 
         # # debugging
-        # print('D_ped:', self.D_ped) # possible units issue
-        # print('--------------------------------')
-        # print('S_i:', self.S_i_pres)
-        # print('--------------------------------')
-        # print('S_cx:', self.S_cx_pres) # may need to switch out for Jamie's KN1D version
-        # print('--------------------------------')
-        # print('dne_dx_neginf:', self.dne_dx_neginf)
-        # print('--------------------------------')
-        # print('ne_x0:', self.ne_x0)
-        # print('--------------------------------')
-        # print('dne_dx:', self.dne_dx)
-        # print('--------------------------------')
-        # print('V_FC:', self.V_FC)
-        # print('--------------------------------')
-        # print('f_arr:', f_arr)
-        # print('--------------------------------')
-        # print('df_arr:', df_arr)
-        # print('--------------------------------')
-        # print('n_e_pres:', n_e_pres)
-        # print('--------------------------------')
+        print('D_ped:', self.D_ped) # possible units issue
+        print('--------------------------------')
+        print('S_i:', self.S_i_pres)
+        print('--------------------------------')
+        print('S_cx:', self.S_cx_pres) # may need to switch out for Jamie's KN1D version
+        print('--------------------------------')
+        print('dne_dx_neginf:', self.dne_dx_neginf)
+        print('--------------------------------')
+        print('ne_x0:', self.ne_x0)
+        print('--------------------------------')
+        print('dne_dx:', self.dne_dx)
+        print('--------------------------------')
+        print('V_FC:', self.V_FC)
+        print('--------------------------------')
+        print('f_arr:', f_arr)
+        print('--------------------------------')
+        print('df_arr:', df_arr)
+        print('--------------------------------')
+        print('n_e_pres:', n_e_pres)
+        print('--------------------------------')
 
         def ode(x, Y):
             ne, dnedx = Y
@@ -743,7 +741,7 @@ class saarelma_connor:
         plt.plot(x_grid, Y_guess[0])
         plt.show()
 
-        sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000,verbose=2,tol=0.9)
+        sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000,verbose=2)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
