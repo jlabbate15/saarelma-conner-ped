@@ -694,17 +694,52 @@ class saarelma_connor:
         f_x = interp1d(self.x_prev, f_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
         df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
 
-        # debugging
-        print('D_ped:', self.D_ped)
-        print('--------------------------------')
-        print('dne_dx_neginf:', self.dne_dx_neginf)
-        print('--------------------------------')
-        print('ne_x0:', self.ne_x0)
-        print('--------------------------------')
-        print('dne_dx:', self.dne_dx)
-        print('--------------------------------')
-        print('df_arr:', df_arr)
-        print('--------------------------------')
+        def _print_scale_summary(name, values):
+            values = np.asarray(values, dtype=float)
+            finite = values[np.isfinite(values)]
+            if finite.size == 0:
+                print(f"{name}: no finite values")
+                return
+            print(
+                f"{name}: min={np.min(finite):.3e}, max={np.max(finite):.3e}, "
+                f"maxabs={np.max(np.abs(finite)):.3e}"
+            )
+
+        def _debug_first_step_guess(x, Y):
+            ne, dnedx = Y
+            D = D_ped_x(x)
+            f = f_x(x)
+            dfdx = df_dx(x)
+            delta_grad = dnedx - self.dne_dx_neginf
+            reaction_coeff = D * (self.S_i + self.S_cx) / self.V_FC
+            rhs = ne * reaction_coeff * delta_grad
+            transport_term = dfdx * dnedx
+            d2nedx2 = (rhs - transport_term) / f
+
+            x_span = np.max(x) - np.min(x)
+            eps = np.finfo(float).eps
+            ne_scale = max(np.max(np.abs(ne)), eps)
+            grad_scale = ne_scale / max(abs(x_span), eps)
+            curvature_scale = ne_scale / max(x_span**2, eps)
+
+            print("first_step initial guess diagnostics")
+            print("-----------------------------------")
+            print(f"x span: {np.min(x):.3e} -> {np.max(x):.3e} (width={x_span:.3e})")
+            print(f"S_i + S_cx: {(self.S_i + self.S_cx):.3e}")
+            print(f"V_FC: {self.V_FC:.3e}")
+            print(f"target inner gradient: {self.dne_dx_neginf:.3e}")
+            _print_scale_summary("n_e guess", ne)
+            _print_scale_summary("dn_e/dx guess", dnedx)
+            _print_scale_summary("D(x)", D)
+            _print_scale_summary("f(x)", f)
+            _print_scale_summary("df/dx", dfdx)
+            _print_scale_summary("dn_e/dx - BC slope", delta_grad)
+            _print_scale_summary("reaction coefficient", reaction_coeff)
+            _print_scale_summary("rhs term", rhs)
+            _print_scale_summary("transport term dfdx*dnedx", transport_term)
+            _print_scale_summary("d2n_e/dx2 inferred", d2nedx2)
+            print(f"dimensionless |dn_e/dx| / (n_e/L): {np.max(np.abs(dnedx)) / grad_scale:.3e}")
+            print(f"dimensionless |d2n_e/dx2| / (n_e/L^2): {np.max(np.abs(d2nedx2)) / curvature_scale:.3e}")
 
         def ode(x, Y):
             ne, dnedx = Y
@@ -713,7 +748,7 @@ class saarelma_connor:
             # Scx = Scx_x(x)
             f = f_x(x)
             dfdx = df_dx(x)
-            rhs = (ne * D * (self.S_i + self.S_cx) / self.V_FC) * (dnedx - self.dne_dx_neginf)
+            rhs = -(ne * D * (self.S_i + self.S_cx) / self.V_FC) * (dnedx - self.dne_dx_neginf)
             d2nedx2 = (rhs - dfdx * dnedx) / f
             return np.vstack([dnedx, d2nedx2])
 
@@ -727,7 +762,17 @@ class saarelma_connor:
         ne_guess = interp1d(self.x_init, self.n_e_pres, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(x_grid)
         dne_guess = np.gradient(ne_guess, x_grid)
+        dne_guess[0] = self.dne_dx_neginf
         Y_guess = np.vstack([ne_guess, dne_guess])
+
+        F = ode(x_grid, Y_guess)
+        if self.verbose:
+            _debug_first_step_guess(x_grid, Y_guess)
+            print(f"ode output shape: {F.shape}")
+            print(f"ode has nan: {np.isnan(F).any()}, inf: {np.isinf(F).any()}")
+            print(f"ode max abs: {np.max(np.abs(F)):.3e}")
+            print(f"Y_guess shape: {Y_guess.shape}")
+            print(f"BC residual: {bc(Y_guess[:, 0], Y_guess[:, -1])}")
 
         sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000, verbose=2)
         if not sol.success:
