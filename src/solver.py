@@ -651,6 +651,49 @@ class saarelma_connor:
                                   kind='linear', bounds_error=False,
                                   fill_value='extrapolate')(self.psi_N_pres)
 
+    def non_dimensionalize(self, x, y, L=None, n0=None):
+        """Non-dimensionalize the BVP variables.
+
+        Introduces xi = x / L and N = ne / n0 so that both the independent
+        and dependent variables are O(1).
+
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+        x : ndarray
+            Physical radial grid (m).
+        y : ndarray, shape (2, n_points)
+            [ne, dne/dx] guess in physical units.
+        L : float, optional
+            Length scale (m).  Default ``|x_inner|``.
+        n0 : float, optional
+            Density scale (m^-3).  Default ``ne_x0``.
+
+        Sets
+        ----
+        self._L, self._n0 : float
+            Stored scales for later de-normalization.
+        self.xi : ndarray
+            Normalized grid (dimensionless, -1 to 0).
+        self.N_guess : ndarray, shape (2, n_points)
+            [N, dN/dxi] initial guess in normalized units.
+        self.dNdxi_neginf : float
+            Normalized Neumann BC value.
+        """
+        if L is None:
+            L = abs(self.x_inner)
+        if n0 is None:
+            n0 = self.ne_x0
+        self._L = L
+        self._n0 = n0
+
+        self.xi = x / L
+        N = y[0] / n0
+        dNdxi = y[1] * (L / n0)   # dne/dx = (n0/L)*dN/dxi  =>  dN/dxi = (L/n0)*dne/dx
+        self.N_guess = np.vstack([N, dNdxi])
+
+        self.dNdxi_neginf = self.dne_dx_neginf * (L / n0)
 
     def first_step(self,resolution=200):
         """Solve Equation (16) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -685,8 +728,6 @@ class saarelma_connor:
         self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
 
         D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
-        # Si_x = interp1d(self.x_prev, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
-        # Scx_x = interp1d(self.x_prev, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
 
         # f(x) = <|grad(r)|^2> * D_ped
         f_arr = self.gradr2_fsa * self.D_ped
@@ -694,70 +735,7 @@ class saarelma_connor:
         f_x = interp1d(self.x_prev, f_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
         df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
 
-        def _print_scale_summary(name, values):
-            values = np.asarray(values, dtype=float)
-            finite = values[np.isfinite(values)]
-            if finite.size == 0:
-                print(f"{name}: no finite values")
-                return
-            print(
-                f"{name}: min={np.min(finite):.3e}, max={np.max(finite):.3e}, "
-                f"maxabs={np.max(np.abs(finite)):.3e}"
-            )
-
-        def _debug_first_step_guess(x, Y):
-            ne, dnedx = Y
-            D = D_ped_x(x)
-            f = f_x(x)
-            dfdx = df_dx(x)
-            delta_grad = dnedx - self.dne_dx_neginf
-            reaction_coeff = D * (self.S_i + self.S_cx) / self.V_FC
-            rhs = ne * reaction_coeff * delta_grad
-            transport_term = dfdx * dnedx
-            d2nedx2 = (rhs - transport_term) / f
-
-            x_span = np.max(x) - np.min(x)
-            eps = np.finfo(float).eps
-            ne_scale = max(np.max(np.abs(ne)), eps)
-            grad_scale = ne_scale / max(abs(x_span), eps)
-            curvature_scale = ne_scale / max(x_span**2, eps)
-
-            print("first_step initial guess diagnostics")
-            print("-----------------------------------")
-            print(f"x span: {np.min(x):.3e} -> {np.max(x):.3e} (width={x_span:.3e})")
-            print(f"S_i + S_cx: {(self.S_i + self.S_cx):.3e}")
-            print(f"V_FC: {self.V_FC:.3e}")
-            print(f"target inner gradient: {self.dne_dx_neginf:.3e}")
-            _print_scale_summary("n_e guess", ne)
-            _print_scale_summary("dn_e/dx guess", dnedx)
-            _print_scale_summary("D(x)", D)
-            _print_scale_summary("f(x)", f)
-            _print_scale_summary("df/dx", dfdx)
-            _print_scale_summary("dn_e/dx - BC slope", delta_grad)
-            _print_scale_summary("reaction coefficient", reaction_coeff)
-            _print_scale_summary("rhs term", rhs)
-            _print_scale_summary("transport term dfdx*dnedx", transport_term)
-            _print_scale_summary("d2n_e/dx2 inferred", d2nedx2)
-            print(f"dimensionless |dn_e/dx| / (n_e/L): {np.max(np.abs(dnedx)) / grad_scale:.3e}")
-            print(f"dimensionless |d2n_e/dx2| / (n_e/L^2): {np.max(np.abs(d2nedx2)) / curvature_scale:.3e}")
-
-        def ode(x, Y):
-            ne, dnedx = Y
-            D = D_ped_x(x)
-            # Si = Si_x(x)
-            # Scx = Scx_x(x)
-            f = f_x(x)
-            dfdx = df_dx(x)
-            rhs = -(ne * D * (self.S_i + self.S_cx) / self.V_FC) * (dnedx - self.dne_dx_neginf)
-            d2nedx2 = (rhs - dfdx * dnedx) / f
-            return np.vstack([dnedx, d2nedx2])
-
-        def bc(Ya, Yb):
-            return np.array([
-                Ya[1] - self.dne_dx_neginf, # Neumann boundary condition at x_inner
-                Yb[0] - self.ne_x0, # Dirichlet boundary condition at x = 0
-            ])
-
+        # Build physical guess, then non-dimensionalize to help solver converge
         x_grid = np.linspace(x_inner, 0, resolution)
         ne_guess = interp1d(self.x_init, self.n_e_pres, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(x_grid)
@@ -765,20 +743,90 @@ class saarelma_connor:
         dne_guess[0] = self.dne_dx_neginf
         Y_guess = np.vstack([ne_guess, dne_guess])
 
-        F = ode(x_grid, Y_guess)
-        if self.verbose:
-            _debug_first_step_guess(x_grid, Y_guess)
-            print(f"ode output shape: {F.shape}")
-            print(f"ode has nan: {np.isnan(F).any()}, inf: {np.isinf(F).any()}")
-            print(f"ode max abs: {np.max(np.abs(F)):.3e}")
-            print(f"Y_guess shape: {Y_guess.shape}")
-            print(f"BC residual: {bc(Y_guess[:, 0], Y_guess[:, -1])}")
+        self.non_dimensionalize(x=x_grid, y=Y_guess)
+        L = self._L
+        n0 = self._n0
 
-        sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000, verbose=2)
+        def ode(xi, Y):
+            N, dNdxi = Y
+            x = L * xi                          # map back to physical coordinate for interpolators
+            D = D_ped_x(x)
+            f = f_x(x)
+            dfdx = df_dx(x)
+            A = n0 * L * D * (self.S_i + self.S_cx) / (self.V_FC * f)
+            B = L**2 * self.dne_dx_neginf * D * (self.S_i + self.S_cx) / (self.V_FC * f)
+            K = L * dfdx / f
+            d2Ndxi2 = A * N * dNdxi - B * N - K * dNdxi
+            return np.vstack([dNdxi, d2Ndxi2])
+
+        def bc(Ya, Yb):
+            return np.array([
+                Ya[1] - self.dNdxi_neginf,  # Neumann BC at xi = -1
+                Yb[0] - 1.0,                # Dirichlet BC: N = ne/n0 = 1 at xi = 0
+            ])
+
+        if self.verbose:
+            self.check_normalization()
+        sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=10000, verbose=2)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
+        # De-normalize back to physical units for downstream use
+        sol.x = L * sol.x
+        sol.y[0] = n0 * sol.y[0]
+        sol.y[1] = (n0 / L) * sol.y[1]
         self.sol = sol
+
+    def check_normalization(self):
+        """Print diagnostics for the non-dimensionalized first_step ODE.
+
+        Reports the normalized coefficients A, B, K evaluated across the
+        xi grid, the boundary condition values, and the initial guess ranges.
+        All quantities should be O(1)–O(1e3) if the normalization is working.
+        """
+        L = self._L
+        n0 = self._n0
+
+        D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear',
+                           bounds_error=False, fill_value='extrapolate')
+        f_arr = self.gradr2_fsa * self.D_ped
+        df_arr = np.gradient(f_arr, self.x_prev)
+        f_x = interp1d(self.x_prev, f_arr, kind='linear',
+                       bounds_error=False, fill_value='extrapolate')
+        df_dx = interp1d(self.x_prev, df_arr, kind='linear',
+                        bounds_error=False, fill_value='extrapolate')
+
+        xi_eval = self.xi
+        x_eval = L * xi_eval
+
+        D = D_ped_x(x_eval)
+        f = f_x(x_eval)
+        dfdx = df_dx(x_eval)
+
+        A = n0 * L * D * (self.S_i + self.S_cx) / (self.V_FC * f)
+        B = L**2 * self.dne_dx_neginf * D * (self.S_i + self.S_cx) / (self.V_FC * f)
+        K = L * dfdx / f
+
+        print("=== Non-dimensionalized ODE: N'' = A*N*N' - B*N - K*N' ===")
+        print(f"  Scales:  n0 = {n0:.3e} m^-3,  L = {L:.3e} m")
+        print(f"  xi range: [{xi_eval[0]:.3f}, {xi_eval[-1]:.3f}]")
+        print(f"  A (coeff of N*N'):  min={np.min(A):.3e}, max={np.max(A):.3e}")
+        print(f"  B (coeff of N):     min={np.min(B):.3e}, max={np.max(B):.3e}")
+        print(f"  K (coeff of N'):    min={np.min(K):.3e}, max={np.max(K):.3e}")
+        print()
+        print("=== Boundary conditions ===")
+        print(f"  dN/dxi at xi=-1 (G):  {self.dNdxi_neginf:.3e}")
+        print(f"  N at xi=0:             1.0")
+        print()
+        print("=== Initial guess ranges ===")
+        print(f"  N:      min={np.min(self.N_guess[0]):.3e}, max={np.max(self.N_guess[0]):.3e}")
+        print(f"  dN/dxi: min={np.min(self.N_guess[1]):.3e}, max={np.max(self.N_guess[1]):.3e}")
+        print()
+        print("=== Physical coefficient sanity check ===")
+        print(f"  S_i = {self.S_i:.3e},  S_cx = {self.S_cx:.3e},  V_FC = {self.V_FC:.3e}")
+        print(f"  D_ped range: [{np.min(D):.3e}, {np.max(D):.3e}]")
+        print(f"  f(x) range:  [{np.min(f):.3e}, {np.max(f):.3e}]")
+        print(f"  dne_dx_neginf (physical): {self.dne_dx_neginf:.3e}")
 
     def solve(self,soln_method='sc_2order',tol=1e-4,max_iter=50,x_res=100):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -815,8 +863,9 @@ class saarelma_connor:
         self.setup_solver_grids(res=x_res)
 
         if soln_method == 'sc_2order':
+
             # --- Step 1: first step (Eq 16, no CX neutrals) ---
-            self.first_step()
+            self.first_step(resolution=x_res)
 
             # --- Step 2: iterate full Eq 15 ---
             for i in range(max_iter):
@@ -826,8 +875,6 @@ class saarelma_connor:
                 ne_sol_prev = self.sol.y[0] # not gauranteed to be the same grid as inputted to solve_bvp()
 
                 D_ped_int = interp1d(self.x_init, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
-                S_i_int = interp1d(self.x_init, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
-                S_cx_int = interp1d(self.x_init, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
                 gradr_fsa_int = interp1d(self.x_init, self.gradr_fsa, kind='linear', bounds_error=False, fill_value='extrapolate')
                 V_CX_int = interp1d(self.x_init, self.V_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
                     
