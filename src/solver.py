@@ -82,9 +82,9 @@ class saarelma_connor:
         alpha_crit = None,
         C_KBM = None,
         De_chie_etg = None,
-        ne_x0 = 1e19, # m^-3,electron density at the separatrix
+        ne_x0 = None, # m^-3,electron density at the separatrix
         dne_dx0 = 0, # m^-3, gradient of electron density at the separatrix
-        nFC_x0 = 0.1e19, # m^-3, Franck-Condon neutral density at the separatrix
+        nFC_x0 = None, # m^-3, Franck-Condon neutral density at the separatrix
         psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition)
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
         kprof_loc = 'p', # location of kinetic parameters, currently supporting: p-file
@@ -164,7 +164,11 @@ class saarelma_connor:
 
         # boundary conditions - will be updated with a more comprehensive model in the future
         self.ne_x0 = self.n_e_pres[-1]
-        self.nFC_x0 = nFC_x0
+        if nFC_x0 is None:
+            self.nFC_x0 = self.n_e_pres[-1] * 0.1
+        else:
+            self.nFC_x0 = nFC_x0
+
 
     def find_boundary_points(self,eq):
         """Find the top/bottom/inboard/outboard extrema of the separatrix.
@@ -754,8 +758,12 @@ class saarelma_connor:
             f = f_x(x)
             dfdx = df_dx(x)
             A = n0 * L * D * (self.S_i + self.S_cx) / (self.V_FC * f)
-            B = L**2 * self.dne_dx_neginf * D * (self.S_i + self.S_cx) / (self.V_FC * f)
-            K = L * dfdx / f
+            B = n0 * L * self.dNdxi_neginf * D * (self.S_i + self.S_cx) / (self.V_FC * f)
+            K = dfdx / f
+            print('iteration: ', 0)
+            print(f"A : {np.max(A)}, min: {np.min(A)}")
+            print(f"B : {np.max(B)}, min: {np.min(B)}")
+            print(f"K : {np.max(K)}, min: {np.min(K)}")
             d2Ndxi2 = A * N * dNdxi - B * N - K * dNdxi
             return np.vstack([dNdxi, d2Ndxi2])
 
@@ -777,37 +785,66 @@ class saarelma_connor:
         sol.y[1] = (n0 / L) * sol.y[1]
         self.sol = sol
 
-    def check_normalization(self):
-        """Print diagnostics for the non-dimensionalized first_step ODE.
+    def check_normalization(self, step='first', D_ped_fn=None, V_CX_fn=None,
+                            f_fn=None, df_fn=None, exp_term_fn=None):
+        """Print diagnostics for the non-dimensionalized ODE coefficients.
 
-        Reports the normalized coefficients A, B, K evaluated across the
-        xi grid, the boundary condition values, and the initial guess ranges.
-        All quantities should be O(1)–O(1e3) if the normalization is working.
+        Can diagnose both the first_step (Eq 16) and the iterative (Eq 15) BVPs.
+
+        Parameters
+        ----------
+        step : str
+            ``'first'`` for Eq 16 (default), ``'iterate'`` for Eq 15.
+        D_ped_fn, V_CX_fn, f_fn, df_fn, exp_term_fn : callable, optional
+            Interpolators used in the iterative solve loop.  Required when
+            ``step='iterate'``; ignored for ``step='first'``.
         """
         L = self._L
         n0 = self._n0
-
-        D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear',
-                           bounds_error=False, fill_value='extrapolate')
-        f_arr = self.gradr2_fsa * self.D_ped
-        df_arr = np.gradient(f_arr, self.x_prev)
-        f_x = interp1d(self.x_prev, f_arr, kind='linear',
-                       bounds_error=False, fill_value='extrapolate')
-        df_dx = interp1d(self.x_prev, df_arr, kind='linear',
-                        bounds_error=False, fill_value='extrapolate')
-
         xi_eval = self.xi
         x_eval = L * xi_eval
 
-        D = D_ped_x(x_eval)
-        f = f_x(x_eval)
-        dfdx = df_dx(x_eval)
+        if step == 'first':
+            D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear',
+                               bounds_error=False, fill_value='extrapolate')
+            f_arr = self.gradr2_fsa * self.D_ped
+            df_arr = np.gradient(f_arr, self.x_prev)
+            f_x = interp1d(self.x_prev, f_arr, kind='linear',
+                           bounds_error=False, fill_value='extrapolate')
+            df_dx_fn = interp1d(self.x_prev, df_arr, kind='linear',
+                               bounds_error=False, fill_value='extrapolate')
+            D = D_ped_x(x_eval)
+            f = f_x(x_eval)
+            dfdx = df_dx_fn(x_eval)
 
-        A = n0 * L * D * (self.S_i + self.S_cx) / (self.V_FC * f)
-        B = L**2 * self.dne_dx_neginf * D * (self.S_i + self.S_cx) / (self.V_FC * f)
-        K = L * dfdx / f
+            S_react = self.S_i + self.S_cx
+            A = n0 * L * D * S_react / (self.V_FC * f)
+            B = L**2 * self.dne_dx_neginf * D * S_react / (self.V_FC * f)
+            K = L * dfdx / f
 
-        print("=== Non-dimensionalized ODE: N'' = A*N*N' - B*N - K*N' ===")
+            print("=== first_step ODE (Eq 16): N'' = A*N*N' - B*N - K*N' ===")
+
+        else:
+            D = D_ped_fn(x_eval)
+            Vcx = V_CX_fn(x_eval)
+            f = f_fn(x_eval)
+            dfdx = df_fn(x_eval)
+            exp_term = exp_term_fn(x_eval)
+
+            C_cx = 1 - (abs(self.V_FC) * self.fFC / (Vcx * self.fCX)) \
+                   * ((self.S_i + self.S_cx / 2) / (self.S_i + self.S_cx))
+
+            A = n0 * L * self.S_i * D / f
+            B = L**2 * self.dne_dx_neginf * self.S_i * D / f
+            E_c = L**2 * self.S_i * C_cx * self.nFC_x0 / f
+            K = L * dfdx / f
+
+            print("=== iterate ODE (Eq 15): N'' = A*N*N' - B*N - Ec*N*E - K*N' ===")
+            print(f"  Ec (coeff of N*E):  min={np.min(E_c):.3e}, max={np.max(E_c):.3e}")
+            print(f"  C_cx:               min={np.min(C_cx):.3e}, max={np.max(C_cx):.3e}")
+            print(f"  exp_term:           min={np.min(exp_term):.3e}, max={np.max(exp_term):.3e}")
+            print(f"  nFC_x0:             {self.nFC_x0:.3e}")
+
         print(f"  Scales:  n0 = {n0:.3e} m^-3,  L = {L:.3e} m")
         print(f"  xi range: [{xi_eval[0]:.3f}, {xi_eval[-1]:.3f}]")
         print(f"  A (coeff of N*N'):  min={np.min(A):.3e}, max={np.max(A):.3e}")
@@ -827,6 +864,7 @@ class saarelma_connor:
         print(f"  D_ped range: [{np.min(D):.3e}, {np.max(D):.3e}]")
         print(f"  f(x) range:  [{np.min(f):.3e}, {np.max(f):.3e}]")
         print(f"  dne_dx_neginf (physical): {self.dne_dx_neginf:.3e}")
+        print()
 
     def solve(self,soln_method='sc_2order',tol=1e-4,max_iter=50,x_res=100):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -862,6 +900,10 @@ class saarelma_connor:
         self.form_factor(type='cx')
         self.setup_solver_grids(res=x_res)
 
+        D_ped_int = interp1d(self.x_init, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
+        gradr2_fsa_int = interp1d(self.x_init, self.gradr2_fsa, kind='linear', bounds_error=False, fill_value='extrapolate')
+        V_CX_int = interp1d(self.x_init, self.V_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
+
         if soln_method == 'sc_2order':
 
             # --- Step 1: first step (Eq 16, no CX neutrals) ---
@@ -870,67 +912,94 @@ class saarelma_connor:
             # --- Step 2: iterate full Eq 15 ---
             for i in range(max_iter):
 
-                # Interpolate required parameters to x_sol_prev grid (interpolating from initial grid to minimize errors)
-                self.x_prev = self.sol.x # not gauranteed to be the same grid as inputted to solve_bvp()
-                ne_sol_prev = self.sol.y[0] # not gauranteed to be the same grid as inputted to solve_bvp()
+                # Previous solution in physical units (after de-normalization)
+                self.x_prev = self.sol.x
+                ne_sol_prev = self.sol.y[0]
 
-                D_ped_int = interp1d(self.x_init, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
-                gradr_fsa_int = interp1d(self.x_init, self.gradr_fsa, kind='linear', bounds_error=False, fill_value='extrapolate')
-                V_CX_int = interp1d(self.x_init, self.V_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
-                    
-                integrand = (ne_sol_prev * S_i_int(self.x_prev) + S_cx_int(self.x_prev)) / (self.fFC * self.V_FC) # iterative integral: int_0^x n_e(x')*(S_i+S_cx)/(f_FC*V_FC) dx'
-                int_from_left = cumulative_trapezoid(integrand, self.x_prev, initial=0) # want integral output to be calculated from 0 to x
-                integral_from_0 = int_from_left - int_from_left[-1] # want integral output to be calculated from 0 to x and cumulative_trapezoid gives integral from x_sol to 0 since x_sol<0
-                exp_term_prev = np.exp(integral_from_0)
+                # Iterated exponential term (computed in physical coordinates)
+                integrand = (ne_sol_prev * (self.S_i + self.S_cx)) / (self.fFC * self.V_FC)
+                int_from_left = cumulative_trapezoid(integrand, self.x_prev, initial=0)
+                integral_from_0 = int_from_left - int_from_left[-1]
+                exp_term_arr = np.exp(integral_from_0)
 
-                # f(x) = <|grad(r)|^2> * D_ped
-                f_x = gradr_fsa_int(self.x_prev) * D_ped_int(self.x_prev)
-                df_dx = np.gradient(f_x, self.x_prev) # df/dx
+                # f(x) = <|grad(r)|^2> * D_ped on previous solution grid
+                f_arr = gradr2_fsa_int(self.x_prev) * D_ped_int(self.x_prev)
+                df_arr = np.gradient(f_arr, self.x_prev)
 
-                # change to callables to input to solve_bvp()
-                f_x = interp1d(self.x_prev, f_x, kind='linear', bounds_error=False, fill_value='extrapolate')
-                df_dx = interp1d(self.x_prev, df_dx, kind='linear', bounds_error=False, fill_value='extrapolate')
-                exp_term_prev = interp1d(self.x_prev, exp_term_prev, kind='linear', bounds_error=False, fill_value='extrapolate')
+                # Callable interpolators (all in physical x)
+                f_x = interp1d(self.x_prev, f_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+                df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+                exp_term_prev = interp1d(self.x_prev, exp_term_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
 
-                def ode(x, Y):
-                    ne, dnedx = Y
+                # Build physical guess on uniform grid, then non-dimensionalize
+                x_grid = np.linspace(self.x_inner, 0, x_res)
+                ne_guess = interp1d(self.x_prev, ne_sol_prev, kind='linear',
+                                    bounds_error=False, fill_value='extrapolate')(x_grid)
+                dne_guess = np.gradient(ne_guess, x_grid)
+                Y_guess = np.vstack([ne_guess, dne_guess])
+
+                self.non_dimensionalize(x=x_grid, y=Y_guess)
+                L = self._L
+                n0 = self._n0
+
+                def ode_solv(xi, Y):
+                    N, dNdxi = Y
+                    x = L * xi
                     D = D_ped_int(x)
-                    Si = S_i_int(x)
-                    Scx = S_cx_int(x)
                     Vcx = V_CX_int(x)
                     f = f_x(x)
                     dfdx = df_dx(x)
                     exp_term = exp_term_prev(x)
 
-                    rhs = -ne*Si * ( -D*(dnedx-self.dne_dx_neginf) + ( 1 - (abs(self.V_FC)*self.fFC/(Vcx*self.fCX)) * ((Si+Scx/2)/(Si+Scx)) )*(self.nFC_x0*exp_term) )
-                    d2nedx2 = (rhs - (dfdx * dnedx)) / f
-                    return np.vstack([dnedx, d2nedx2])
+                    A = (-1/f) * dfdx
+                    B = (1/f)*self.S_i*D*n0*L
+                    K1 = (-(L**2)/f)*self.S_i*D*self.dNdxi_neginf
+                    K2 = -self.nFC_x0*exp_term*self.S_i*(L**2)/f
+                    K3 = ((L**2)/f) * self.S_i * abs(self.V_FC/Vcx) * (self.fFC/self.fCX) * ((self.S_i+self.S_cx/2)/(self.S_i+self.S_cx)) * self.nFC_x0 * exp_term
+                    K = K1 + K2 + K3
 
-                def bc(Ya, Yb):
+                    print('iteration: ', i+1)
+                    print(f"A : {np.max(A)}, min: {np.min(A)}")
+                    print(f"B : {np.max(B)}, min: {np.min(B)}")
+                    print(f"K : {np.max(K)}, min: {np.min(K)}")
+
+                    d2Ndxi2 = A * dNdxi + B * N*dNdxi + K * N
+                    return np.vstack([dNdxi, d2Ndxi2])
+
+                def bc_solv(Ya, Yb):
                     return np.array([
-                        Ya[1] - self.dne_dx_neginf, # Neumann boundary condition at x_inner
-                        Yb[0] - self.ne_x0, # Dirichlet boundary condition at x = 0
+                        Ya[1] - self.dNdxi_neginf, # Neumann boundary condition at x_inner
+                        Yb[0] - 1.0, # Dirichlet boundary condition at x = 0
                     ])
 
-                x_grid = np.linspace(self.x_inner, 0, x_res)
-                ne_guess = ne_sol_prev
-                dne_guess = np.gradient(ne_guess, x_grid)
-                Y_guess = np.vstack([ne_guess, dne_guess])
+                # self.check_normalization(step='iterate', D_ped_fn=D_ped_int,
+                #                         V_CX_fn=V_CX_int, f_fn=f_x,
+                #                         df_fn=df_dx, exp_term_fn=exp_term_prev)
 
-                self.sol = solve_bvp(ode, bc, x_grid, Y_guess, max_nodes=10000)
-                if not self.sol.success:
-                    raise RuntimeError(f"step {i} BVP failed: {self.sol.message}")
+                sol = solve_bvp(ode_solv, bc_solv, self.xi, self.N_guess, max_nodes=10000, verbose=2)
+                if not sol.success:
+                    raise RuntimeError(f"step {i} BVP failed: {sol.message}")
 
-                ne_sol_prev = interp1d(self.x_prev, ne_sol_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(self.sol.x)
-                residual = np.max(np.abs(self.sol.y[0] - ne_sol_prev)) / np.max(np.abs(self.sol.y[0]))
+                # De-normalize back to physical units
+                sol.x = L * sol.x
+                sol.y[0] = n0 * sol.y[0]
+                sol.y[1] = (n0 / L) * sol.y[1]
+
+                # Check convergence in physical units
+                ne_sol_prev_interp = interp1d(self.x_prev, ne_sol_prev, kind='linear',
+                                              bounds_error=False, fill_value='extrapolate')(sol.x)
+                residual = np.max(np.abs(sol.y[0] - ne_sol_prev_interp)) / np.max(np.abs(sol.y[0]))
                 print(f"  Eq 15 iteration {i}: residual = {residual:.2e}")
+
+                self.sol = sol
 
                 if residual < tol:
                     break
 
+            # Final solution in physical units
             self.x_sol = self.sol.x
-            self.ne_sol = self.sol.y
-            self.dne_dx_sol = self.sol.yp
+            self.ne_sol = self.sol.y[0]
+            self.dne_dx_sol = self.sol.y[1]
 
 
     def fsa(self,A,flux_surfaces='T_e'):
