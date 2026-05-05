@@ -747,19 +747,20 @@ class saarelma_connor:
         dne_guess[0] = self.dne_dx_neginf
         Y_guess = np.vstack([ne_guess, dne_guess])
 
-        self.non_dimensionalize(x=x_grid, y=Y_guess)
+        n0_inner = interp1d(self.x_prev, self.n_e_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_inner) # use density at pedestal's inner boundary to be the density scale
+        self.non_dimensionalize(x=x_grid, y=Y_guess,n0=n0_inner)
         L = self._L
         n0 = self._n0
 
         def ode(xi, Y):
             N, dNdxi = Y
-            x = L * xi                          # map back to physical coordinate for interpolators
+            x = L * xi # map back to physical coordinate for interpolators
             D = D_ped_x(x)
             f = f_x(x)
             dfdx = df_dx(x)
-            A = n0 * L * D * (self.S_i + self.S_cx) / (self.V_FC * f)
-            B = n0 * L * self.dNdxi_neginf * D * (self.S_i + self.S_cx) / (self.V_FC * f)
-            K = dfdx / f
+            A = n0 * L * D * (self.S_i + self.S_cx) / (abs(self.V_FC) * f)
+            B = n0 * L * self.dNdxi_neginf * D * (self.S_i + self.S_cx) / (abs(self.V_FC) * f)
+            K = L * dfdx / f
             print('iteration: ', 0)
             print(f"A : {np.max(A)}, min: {np.min(A)}")
             print(f"B : {np.max(B)}, min: {np.min(B)}")
@@ -770,7 +771,7 @@ class saarelma_connor:
         def bc(Ya, Yb):
             return np.array([
                 Ya[1] - self.dNdxi_neginf,  # Neumann BC at xi = -1
-                Yb[0] - 1.0,                # Dirichlet BC: N = ne/n0 = 1 at xi = 0
+                Yb[0] - self.ne_x0/n0,      # Dirichlet BC: N = ne/n0 at xi = x = 0 (separatrix)
             ])
 
         if self.verbose:
@@ -834,8 +835,8 @@ class saarelma_connor:
             C_cx = 1 - (abs(self.V_FC) * self.fFC / (Vcx * self.fCX)) \
                    * ((self.S_i + self.S_cx / 2) / (self.S_i + self.S_cx))
 
-            A = n0 * L * self.S_i * D / f
-            B = L**2 * self.dne_dx_neginf * self.S_i * D / f
+            A = n0 * L * self.S_i * D / (self.V_FC * f)
+            B = L**2 * self.dne_dx_neginf * self.S_i * D / (self.V_FC * f)
             E_c = L**2 * self.S_i * C_cx * self.nFC_x0 / f
             K = L * dfdx / f
 
@@ -913,11 +914,17 @@ class saarelma_connor:
             for i in range(max_iter):
 
                 # Previous solution in physical units (after de-normalization)
+
+                # real
                 self.x_prev = self.sol.x
                 ne_sol_prev = self.sol.y[0]
 
+                # # test using pfile, did not work
+                # ne_sol_prev = self.n_e_pres
+                # self.x_prev = self.x_init
+
                 # Iterated exponential term (computed in physical coordinates)
-                integrand = (ne_sol_prev * (self.S_i + self.S_cx)) / (self.fFC * self.V_FC)
+                integrand = (ne_sol_prev * (self.S_i + self.S_cx)) / (self.fFC * abs(self.V_FC))
                 int_from_left = cumulative_trapezoid(integrand, self.x_prev, initial=0)
                 integral_from_0 = int_from_left - int_from_left[-1]
                 exp_term_arr = np.exp(integral_from_0)
@@ -938,7 +945,8 @@ class saarelma_connor:
                 dne_guess = np.gradient(ne_guess, x_grid)
                 Y_guess = np.vstack([ne_guess, dne_guess])
 
-                self.non_dimensionalize(x=x_grid, y=Y_guess)
+                n0_inner = interp1d(self.x_prev, ne_sol_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) # use density at pedestal's inner boundary to be the density scale
+                self.non_dimensionalize(x=x_grid, y=Y_guess,n0=n0_inner)
                 L = self._L
                 n0 = self._n0
 
@@ -951,25 +959,31 @@ class saarelma_connor:
                     dfdx = df_dx(x)
                     exp_term = exp_term_prev(x)
 
-                    A = (-1/f) * dfdx
-                    B = (1/f)*self.S_i*D*n0*L
-                    K1 = (-(L**2)/f)*self.S_i*D*self.dNdxi_neginf
-                    K2 = -self.nFC_x0*exp_term*self.S_i*(L**2)/f
-                    K3 = ((L**2)/f) * self.S_i * abs(self.V_FC/Vcx) * (self.fFC/self.fCX) * ((self.S_i+self.S_cx/2)/(self.S_i+self.S_cx)) * self.nFC_x0 * exp_term
-                    K = K1 + K2 + K3
+                    C_cx = 1 - (abs(self.V_FC) * self.fFC / (abs(Vcx) * self.fCX)) * ((self.S_i + self.S_cx / 2) / (self.S_i + self.S_cx))
+
+                    c_a = self.S_i / (abs(self.V_FC) * self.fCX)
+                    c_b = self.S_i * self.dne_dx_neginf / (abs(self.V_FC) * self.fCX)
+                    c_E = self.S_i * C_cx * self.nFC_x0 / f # nFC_x0 does not need to be non-dimensionalized
+                    c_k = dfdx / f
+
+                    A = c_a * n0 * L
+                    B = c_b * L**2
+                    C = c_E * L**2
+                    D = c_k * L
 
                     print('iteration: ', i+1)
                     print(f"A : {np.max(A)}, min: {np.min(A)}")
                     print(f"B : {np.max(B)}, min: {np.min(B)}")
-                    print(f"K : {np.max(K)}, min: {np.min(K)}")
+                    print(f"C : {np.max(C)}, min: {np.min(C)}")
+                    print(f"D : {np.max(D)}, min: {np.min(D)}")
 
-                    d2Ndxi2 = A * dNdxi + B * N*dNdxi + K * N
+                    d2Ndxi2 = A*dNdxi*N - B*N - C*N - D*dNdxi
                     return np.vstack([dNdxi, d2Ndxi2])
 
                 def bc_solv(Ya, Yb):
                     return np.array([
                         Ya[1] - self.dNdxi_neginf, # Neumann boundary condition at x_inner
-                        Yb[0] - 1.0, # Dirichlet boundary condition at x = 0
+                        Yb[0] - self.ne_x0/n0,      # Dirichlet BC: N = ne/n0 at xi = x = 0 (separatrix)
                     ])
 
                 # self.check_normalization(step='iterate', D_ped_fn=D_ped_int,
