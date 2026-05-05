@@ -1,4 +1,5 @@
 # from typing import Self
+from curses import KEY_A1
 import numpy as np
 from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.integrate import simpson, solve_bvp, cumulative_trapezoid
@@ -126,8 +127,8 @@ class saarelma_connor:
 
         self.cross_sections(species) # load in cross-sections
 
-        self.S_i = self.sigma_i # m^3/s, scd_adas already returns <σv> rate coefficient, per psi_N_eval for Te
-        self.S_cx = self.sigma_cx * self.V_th_i[-1] # m^3/s, per psi_N_eval for Te
+        self.S_i = self.sigma_i # m^3/s, ionization <sigma v> profile on psi_Te_eval (scd_adas already returns the rate coefficient)
+        self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, CX rate coefficient profile on psi_Te_eval
 
         # Diffusion coefficient setup
         c_s = (self.e_i * self.T_e * 1e3 / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2, T_e in keV -> eV via 1e3, as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
@@ -450,11 +451,17 @@ class saarelma_connor:
             sigma_cx_perE = np.array([3.81*10**(-18), 3.85*10**(-18), 3.44*10**(-18), 2.71*10**(-18), 1.74*10**(-18), 8.10*10**(-20), 9.56*10**(-22), 1.46*10**(-23)]) # m^2
             E = np.array([3.23*10**(-16), 9.68*10**(-16), 3.23*10**(-15), 6.45*10**(-15), 9.68*10**(-15), 3.23*10**(-14), 9.68*10**(-14), 2.26*10**(-13)]) # J
             sigma_cx_interp = interp1d(E, sigma_cx_perE, kind='linear',fill_value='extrapolate',bounds_error=False)
-            self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i*self.M_eff) * self.V_cx[-1]**2) # m^2, charge-exchange cross-section evaluated at psi_N ~ 1
+            self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i*self.M_eff) * self.V_cx**2) # m^2, charge-exchange cross-section
 
-            # ionization cross-section
-            self.sigma_i = scd_adas(self.n_e[-1], self.T_e[-1] * 1e3) # m^2, ionization cross-section evaluated at psi_N ~ 1, need T_e in eV and n_e in m^-3
-        
+            # ionization rate coefficient profile: scd_adas(n_e, T_e[eV]) at each psi_Te_eval point.
+            # n_e is given on psi_ne_eval, so interpolate it onto psi_Te_eval first.
+            n_e_at_Te = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
+                                 bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval)
+            T_e_eV = self.T_e * 1e3 # keV -> eV
+            self.sigma_i = np.array([
+                scd_adas(n_e_at_Te[i], T_e_eV[i]) for i in range(len(self.psi_Te_eval))
+            ]) # m^3/s, on psi_Te_eval
+
         else:
             assert False, 'species not supported'
 
@@ -557,8 +564,8 @@ class saarelma_connor:
         self.x_prev = self.x_init.copy() # m, radial grid (shifted so zero is at the separatrix) only at midplane, defined on the psi_N_pres grid
 
         # interpolate quantities on Te grid to psi_N_pres grid
-        # self.S_i_pres = interp1d(self.psi_Te_eval, self.S_i, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
-        # self.S_cx_pres = interp1d(self.psi_Te_eval, self.S_cx, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        self.S_i_pres = interp1d(self.psi_Te_eval, self.S_i, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        self.S_cx_pres = interp1d(self.psi_Te_eval, self.S_cx, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         self.V_cx_pres = interp1d(self.psi_Te_eval, np.abs(self.V_cx), kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
 
         # note all 1D quantities are now defined on the psi_N_pres grid, which is the same as the x_prev grid
@@ -739,6 +746,11 @@ class saarelma_connor:
         f_x = interp1d(self.x_prev, f_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
         df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
 
+        # x-based interpolators for the ionization and CX rate coefficient profiles,
+        # so the ODE evaluates them at the local x = L*xi rather than treating them as scalars
+        S_i_x = interp1d(self.x_prev, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
+        S_cx_x = interp1d(self.x_prev, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
+
         # Build physical guess, then non-dimensionalize to help solver converge
         x_grid = np.linspace(x_inner, 0, resolution)
         ne_guess = interp1d(self.x_init, self.n_e_pres, kind='linear',
@@ -755,11 +767,12 @@ class saarelma_connor:
         def ode(xi, Y):
             N, dNdxi = Y
             x = L * xi # map back to physical coordinate for interpolators
-            D = D_ped_x(x)
             f = f_x(x)
             dfdx = df_dx(x)
-            A = n0 * L * D * (self.S_i + self.S_cx) / (abs(self.V_FC) * f)
-            B = n0 * L * self.dNdxi_neginf * D * (self.S_i + self.S_cx) / (abs(self.V_FC) * f)
+            S_i = S_i_x(x)
+            S_cx = S_cx_x(x)
+            A = n0 * L * (S_i + S_cx) / (abs(self.V_FC) * self.fFC)
+            B = n0 * L * self.dNdxi_neginf * (S_i + S_cx) / (abs(self.V_FC) * self.fFC)
             K = L * dfdx / f
             print('iteration: ', 0)
             print(f"A : {np.max(A)}, min: {np.min(A)}")
@@ -774,8 +787,8 @@ class saarelma_connor:
                 Yb[0] - self.ne_x0/n0,      # Dirichlet BC: N = ne/n0 at xi = x = 0 (separatrix)
             ])
 
-        if self.verbose:
-            self.check_normalization()
+        # if self.verbose:
+        #     self.check_normalization()
         sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=10000, verbose=2)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
@@ -786,7 +799,7 @@ class saarelma_connor:
         sol.y[1] = (n0 / L) * sol.y[1]
         self.sol = sol
 
-    def check_normalization(self, step='first', D_ped_fn=None, V_CX_fn=None,
+    '''def check_normalization(self, step='first', D_ped_fn=None, V_CX_fn=None,
                             f_fn=None, df_fn=None, exp_term_fn=None):
         """Print diagnostics for the non-dimensionalized ODE coefficients.
 
@@ -865,9 +878,9 @@ class saarelma_connor:
         print(f"  D_ped range: [{np.min(D):.3e}, {np.max(D):.3e}]")
         print(f"  f(x) range:  [{np.min(f):.3e}, {np.max(f):.3e}]")
         print(f"  dne_dx_neginf (physical): {self.dne_dx_neginf:.3e}")
-        print()
+        print()'''
 
-    def solve(self,soln_method='sc_2order',tol=1e-4,max_iter=50,x_res=100):
+    def solve(self,soln_method='sc_2order',tol=1e-3,max_iter=50,x_res=100):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
 
         1. Sets up coefficient interpolators mapping psi_N quantities to x.
@@ -904,6 +917,8 @@ class saarelma_connor:
         D_ped_int = interp1d(self.x_init, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
         gradr2_fsa_int = interp1d(self.x_init, self.gradr2_fsa, kind='linear', bounds_error=False, fill_value='extrapolate')
         V_CX_int = interp1d(self.x_init, self.V_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
+        S_i_int = interp1d(self.x_init, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
+        S_cx_int = interp1d(self.x_init, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
 
         if soln_method == 'sc_2order':
 
@@ -923,8 +938,12 @@ class saarelma_connor:
                 # ne_sol_prev = self.n_e_pres
                 # self.x_prev = self.x_init
 
-                # Iterated exponential term (computed in physical coordinates)
-                integrand = (ne_sol_prev * (self.S_i + self.S_cx)) / (self.fFC * abs(self.V_FC))
+                # Iterated exponential term (computed in physical coordinates).
+                # Evaluate the rate coefficients on the previous-solution grid so
+                # the integrand uses S_i(x_prev), S_cx(x_prev) rather than scalars.
+                S_i_on_xprev = S_i_int(self.x_prev)
+                S_cx_on_xprev = S_cx_int(self.x_prev)
+                integrand = (ne_sol_prev * (S_i_on_xprev + S_cx_on_xprev)) / (self.fFC * abs(self.V_FC))
                 int_from_left = cumulative_trapezoid(integrand, self.x_prev, initial=0)
                 integral_from_0 = int_from_left - int_from_left[-1]
                 exp_term_arr = np.exp(integral_from_0)
@@ -958,26 +977,28 @@ class saarelma_connor:
                     f = f_x(x)
                     dfdx = df_dx(x)
                     exp_term = exp_term_prev(x)
+                    S_i = S_i_int(x)
+                    S_cx = S_cx_int(x)
 
-                    C_cx = 1 - (abs(self.V_FC) * self.fFC / (abs(Vcx) * self.fCX)) * ((self.S_i + self.S_cx / 2) / (self.S_i + self.S_cx))
+                    C_cx = 1 - (abs(self.V_FC) * self.fFC / (abs(Vcx) * self.fCX)) * ((S_i + S_cx / 2) / (S_i + S_cx))
 
-                    c_a = self.S_i / (abs(self.V_FC) * self.fCX)
-                    c_b = self.S_i * self.dne_dx_neginf / (abs(self.V_FC) * self.fCX)
-                    c_E = self.S_i * C_cx * self.nFC_x0 / f # nFC_x0 does not need to be non-dimensionalized
+                    c_a = S_i / (abs(Vcx) * self.fCX)
+                    c_b = S_i * self.dne_dx_neginf / (abs(Vcx) * self.fCX)
+                    c_E = exp_term * S_i * C_cx * self.nFC_x0 / f # nFC_x0 does not need to be non-dimensionalized
                     c_k = dfdx / f
 
                     A = c_a * n0 * L
                     B = c_b * L**2
                     C = c_E * L**2
-                    D = c_k * L
+                    K = c_k * L
 
                     print('iteration: ', i+1)
                     print(f"A : {np.max(A)}, min: {np.min(A)}")
                     print(f"B : {np.max(B)}, min: {np.min(B)}")
                     print(f"C : {np.max(C)}, min: {np.min(C)}")
-                    print(f"D : {np.max(D)}, min: {np.min(D)}")
+                    print(f"D : {np.max(K)}, min: {np.min(K)}")
 
-                    d2Ndxi2 = A*dNdxi*N - B*N - C*N - D*dNdxi
+                    d2Ndxi2 = A*dNdxi*N - B*N - C*N - K*dNdxi
                     return np.vstack([dNdxi, d2Ndxi2])
 
                 def bc_solv(Ya, Yb):
@@ -1014,6 +1035,10 @@ class saarelma_connor:
             self.x_sol = self.sol.x
             self.ne_sol = self.sol.y[0]
             self.dne_dx_sol = self.sol.y[1]
+
+            # Calculate nFC
+            self.exp_term_arr = exp_term_arr
+            self.nFC_sol = self.nFC_x0 * exp_term_arr
 
 
     def fsa(self,A,flux_surfaces='T_e'):
