@@ -166,7 +166,8 @@ class saarelma_connor:
         # boundary conditions - will be updated with a more comprehensive model in the future
         self.ne_x0 = self.n_e_pres[-1]
         if nFC_x0 is None:
-            self.nFC_x0 = self.n_e_pres[-1] * 0.1
+            self.nFC_x0 = self.n_e_pres[-1] * 1e-4 # m^-3, default to 1e-4 of the pedestal density
+            print('nFC_x0 = ',self.nFC_x0)
         else:
             self.nFC_x0 = nFC_x0
 
@@ -789,7 +790,7 @@ class saarelma_connor:
 
         # if self.verbose:
         #     self.check_normalization()
-        sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=10000, verbose=2)
+        sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=100000, verbose=2)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
@@ -944,8 +945,20 @@ class saarelma_connor:
                 S_i_on_xprev = S_i_int(self.x_prev)
                 S_cx_on_xprev = S_cx_int(self.x_prev)
                 integrand = (ne_sol_prev * (S_i_on_xprev + S_cx_on_xprev)) / (self.fFC * abs(self.V_FC))
-                int_from_left = cumulative_trapezoid(integrand, self.x_prev, initial=0)
-                integral_from_0 = int_from_left - int_from_left[-1]
+                # int_from_left = cumulative_trapezoid(integrand, self.x_prev, initial=0)
+                # integral_from_0 = int_from_left - int_from_left[-1]
+                # Eq. (11) / Eq. (15) kernel: integral from separatrix (x=0) to local x:
+                # I(x) = ∫_0^x ne(x')*(Si+Scx)/(fFC*|VFC|) dx'
+                # To make the sign unambiguous with x<0 inward, integrate on a
+                # descending-x ordering (separatrix -> core), then map back.
+                order_desc = np.argsort(self.x_prev)[::-1]
+                x_desc = self.x_prev[order_desc]
+                integrand_desc = integrand[order_desc]
+                integral_desc = cumulative_trapezoid(integrand_desc, x_desc, initial=0.0)
+                integral_from_0 = np.empty_like(integral_desc)
+                integral_from_0[order_desc] = integral_desc
+                if i == 0:
+                    self.integral_from_0 = integral_from_0 # debugging
                 exp_term_arr = np.exp(integral_from_0)
 
                 # f(x) = <|grad(r)|^2> * D_ped on previous solution grid
@@ -992,11 +1005,18 @@ class saarelma_connor:
                     C = c_E * L**2
                     K = c_k * L
 
-                    print('iteration: ', i+1)
-                    print(f"A : {np.max(A)}, min: {np.min(A)}")
-                    print(f"B : {np.max(B)}, min: {np.min(B)}")
-                    print(f"C : {np.max(C)}, min: {np.min(C)}")
-                    print(f"D : {np.max(K)}, min: {np.min(K)}")
+                    if i==0:
+                        print('iteration: ', i+1)
+                        # print(f"A : {np.max(A)}, min: {np.min(A)}")
+                        # print(f"B : {np.max(B)}, min: {np.min(B)}")
+                        print(f"C : {np.max(C)}, min: {np.min(C)}")
+                        # print(f"D : {np.max(K)}, min: {np.min(K)}")
+
+                        print("exp_term max/min", np.max(exp_term), np.min(exp_term))
+                        print("nFC_x0", self.nFC_x0)
+                        print("f max/min", np.max(f), np.min(f))
+                        print("C_cx max/min", np.max(C_cx), np.min(C_cx))
+                        print("Si max/min", np.max(S_i), np.min(S_i))
 
                     d2Ndxi2 = A*dNdxi*N - B*N - C*N - K*dNdxi
                     return np.vstack([dNdxi, d2Ndxi2])
@@ -1011,7 +1031,7 @@ class saarelma_connor:
                 #                         V_CX_fn=V_CX_int, f_fn=f_x,
                 #                         df_fn=df_dx, exp_term_fn=exp_term_prev)
 
-                sol = solve_bvp(ode_solv, bc_solv, self.xi, self.N_guess, max_nodes=10000, verbose=2)
+                sol = solve_bvp(ode_solv, bc_solv, self.xi, self.N_guess, max_nodes=100000, verbose=2)
                 if not sol.success:
                     raise RuntimeError(f"step {i} BVP failed: {sol.message}")
 
@@ -1027,6 +1047,8 @@ class saarelma_connor:
                 print(f"  Eq 15 iteration {i}: residual = {residual:.2e}")
 
                 self.sol = sol
+                if i==0:
+                    self.sol_first = sol # debugging
 
                 if residual < tol:
                     break
