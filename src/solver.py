@@ -166,7 +166,7 @@ class saarelma_connor:
         # boundary conditions - will be updated with a more comprehensive model in the future
         self.ne_x0 = self.n_e_pres[-1]
         if nFC_x0 is None:
-            self.nFC_x0 = self.n_e_pres[-1] * 1e-4 # m^-3, default to 1e-4 of the pedestal density
+            self.nFC_x0 = self.n_e_pres[-1] * 5e-4 # m^-3, default to 1e-4 of the pedestal density
             print('nFC_x0 = ',self.nFC_x0)
         else:
             self.nFC_x0 = nFC_x0
