@@ -77,25 +77,22 @@ class saarelma_connor:
         Z_i = 1, # Z of ions
         M_i = 1.673e-27, # kg, mass of hydrogen nuclei
         M_e = 9.109e-31, # kg, mass of electron
-        sigma_i = None, # m^2, ionization cross-section
-        sigma_cx = None, # m^2, charge-exchange cross-section
         P_tot_e = None, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
-        alpha_crit = None,
-        C_KBM = None,
-        De_chie_etg = None,
-        ne_x0 = None, # m^-3,electron density at the separatrix
-        dne_dx0 = 0, # m^-3, gradient of electron density at the separatrix
-        nFC_x0 = None, # m^-3, Franck-Condon neutral density at the separatrix
+        alpha_crit = None, # FREE PARAMETER
+        C_KBM = None, # FREE PARAMETER
+        De_chie_etg = None, # FREE PARAMETER
+        nFC_x0 = None, # m^-3, FREE PARAMETER, Franck-Condon neutral density at the separatrix
+        ne_x0 = None, # m^-3, electron density at the separatrix (boundary condition, default is to use from pfile)
         psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition)
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
         kprof_loc = 'p', # location of kinetic parameters, currently supporting: p-file
         mhd_fp = None, # filepath to MHD paramter file
         kprof_fp = None, # filepath to kinetic paramter file
-        T_rat_flag = True,
+        T_rat_flag = True, # True if using a temperature ratio between ions and electrons, False if doing something else
         T_rat = 1,
         pol_norm = False, # True for when the poloidal flux is not normalized by 2pi. COCOS 7 convention is pol_norm=False, so poloidal flux is normalized by 2pi
-        verbose = False,
         species = 'D', # species of ions, currently supporting: D, D-T
+        verbose = False,
     ):
 
         self.T_rat_flag = T_rat_flag
@@ -138,7 +135,8 @@ class saarelma_connor:
         valid = ~np.isnan(rho_s)
         rho_s = interp1d(self.psi_Te_eval[valid], rho_s[valid], kind='linear',bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval) # removes nan values from rho_s
         self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
-        alpha = (2 * np.gradient(self.V_plasma) / ((2*np.pi)**2)) * self.mu0 * np.gradient(self.pres) * np.sqrt(self.V_plasma / (2*self.Rmajor*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
+        alpha = -(2 * np.gradient(self.V_plasma, self.psi_pres) / ((2*np.pi)**2)) * self.mu0 * np.gradient(self.pres, self.psi_pres) * np.sqrt(self.V_plasma / (2*self.Rmajor*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
+        self.alpha = alpha # debugging
 
         # calculate the flux surface-averaged |grad(r)| and |grad(r)|^2 and some other quantities like r_psi (outboard midplane minor radius for each flux surface)
         self.calc_gradr()
@@ -166,7 +164,7 @@ class saarelma_connor:
         # boundary conditions - will be updated with a more comprehensive model in the future
         self.ne_x0 = self.n_e_pres[-1]
         if nFC_x0 is None:
-            self.nFC_x0 = self.n_e_pres[-1] * 5e-4 # m^-3, default to 1e-4 of the pedestal density
+            self.nFC_x0 = self.n_e_pres[-1] * 1e-4 # m^-3, default to 1e-4 of the pedestal density
             print('nFC_x0 = ',self.nFC_x0)
         else:
             self.nFC_x0 = nFC_x0
