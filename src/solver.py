@@ -1,10 +1,8 @@
-# from typing import Self
-from curses import KEY_A1
 import numpy as np
 from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.integrate import simpson, solve_bvp, cumulative_trapezoid
 import matplotlib.pyplot as plt
-from adas.adas_ionisation import scd_adas
+from src.adas.adas_ionisation import scd_adas
 
 
 class saarelma_connor:
@@ -30,24 +28,20 @@ class saarelma_connor:
         Proton mass, kg
     M_e : float
         Electron mass, kg
-    sigma_i : float
-        Ionization cross-section, m^2
-    sigma_cx : float
-        Charge-exchange cross-section, m^2
     P_tot_e : float
         Total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox, W
     alpha_crit : float
         FREE PARAMETER, Critical alpha value for onset of infinite-n ballooning instability, dimensionless
     C_KBM : float
-        FREE PARAMETER, KBM diffusion coefficient, m^2/s CHECK UNITS?????
+        FREE PARAMETER, KBM diffusion coefficient, m^2/s
     De_chie_etg : float
-        FREE PARAMETER, ETG diffusion coefficient, m^2/s CHECK UNITS?????
+        FREE PARAMETER, ETG diffusion coefficient, m^2/s
+    nFC_x0 : float
+        m^-3, FREE PARAMETER, Franck-Condon neutral density at the separatrix (boundary condition)
     ne_x0 : float
         m^-3, electron density at the separatrix (boundary condition)
     dne_dx0 : float
         m^-3, gradient of electron density at the separatrix (boundary condition)
-    nFC_x0 : float
-        m^-3, Franck-Condon neutral density at the separatrix (boundary condition)
     psi_N_inner_boundary : float
         normalized poloidal flux at the inner boundary (boundary condition)
     mhd_loc : string
@@ -66,10 +60,10 @@ class saarelma_connor:
         Default is 1
     pol_norm : bool
         True if the poloidal flux is normalized by 2pi, False if the poloidal flux is not normalized by 2pi
-    verbose : bool
-        True if verbose output is desired, False if verbose output is not desired
     species : string
         Species of ions, currently supporting: D, D-T
+    verbose : bool
+        True if verbose output is desired, False if verbose output is not desired
     """
     def __init__(
         self,
@@ -98,6 +92,10 @@ class saarelma_connor:
         self.T_rat_flag = T_rat_flag
         self.T_rat = T_rat
         self.verbose = verbose
+        if self.verbose:
+            self.bvp_verbose = 2
+        else:
+            self.bvp_verbose = 0
         self.pol_norm = pol_norm
         self.psi_N_inner_boundary = psi_N_inner_boundary
 
@@ -165,7 +163,8 @@ class saarelma_connor:
         self.ne_x0 = self.n_e_pres[-1]
         if nFC_x0 is None:
             self.nFC_x0 = self.n_e_pres[-1] * 1e-4 # m^-3, default to 1e-4 of the pedestal density
-            print('nFC_x0 = ',self.nFC_x0)
+            if self.verbose:
+                print('nFC_x0 = ',self.nFC_x0)
         else:
             self.nFC_x0 = nFC_x0
 
@@ -773,10 +772,11 @@ class saarelma_connor:
             A = n0 * L * (S_i + S_cx) / (abs(self.V_FC) * self.fFC)
             B = n0 * L * self.dNdxi_neginf * (S_i + S_cx) / (abs(self.V_FC) * self.fFC)
             K = L * dfdx / f
-            print('iteration: ', 0)
-            print(f"A : {np.max(A)}, min: {np.min(A)}")
-            print(f"B : {np.max(B)}, min: {np.min(B)}")
-            print(f"K : {np.max(K)}, min: {np.min(K)}")
+            if self.verbose:
+                print('iteration: ', 0)
+                print(f"A : {np.max(A)}, min: {np.min(A)}")
+                print(f"B : {np.max(B)}, min: {np.min(B)}")
+                print(f"K : {np.max(K)}, min: {np.min(K)}")
             d2Ndxi2 = A * N * dNdxi - B * N - K * dNdxi
             return np.vstack([dNdxi, d2Ndxi2])
 
@@ -788,7 +788,7 @@ class saarelma_connor:
 
         # if self.verbose:
         #     self.check_normalization()
-        sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=100000, verbose=2)
+        sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=100000, verbose=self.bvp_verbose)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
@@ -1003,7 +1003,7 @@ class saarelma_connor:
                     C = c_E * L**2
                     K = c_k * L
 
-                    if i==0:
+                    if i==0 and self.verbose:
                         print('iteration: ', i+1)
                         # print(f"A : {np.max(A)}, min: {np.min(A)}")
                         # print(f"B : {np.max(B)}, min: {np.min(B)}")
@@ -1029,7 +1029,7 @@ class saarelma_connor:
                 #                         V_CX_fn=V_CX_int, f_fn=f_x,
                 #                         df_fn=df_dx, exp_term_fn=exp_term_prev)
 
-                sol = solve_bvp(ode_solv, bc_solv, self.xi, self.N_guess, max_nodes=100000, verbose=2)
+                sol = solve_bvp(ode_solv, bc_solv, self.xi, self.N_guess, max_nodes=100000, verbose=self.bvp_verbose)
                 if not sol.success:
                     raise RuntimeError(f"step {i} BVP failed: {sol.message}")
 
@@ -1042,7 +1042,8 @@ class saarelma_connor:
                 ne_sol_prev_interp = interp1d(self.x_prev, ne_sol_prev, kind='linear',
                                               bounds_error=False, fill_value='extrapolate')(sol.x)
                 residual = np.max(np.abs(sol.y[0] - ne_sol_prev_interp)) / np.max(np.abs(sol.y[0]))
-                print(f"  Eq 15 iteration {i}: residual = {residual:.2e}")
+                if self.verbose:
+                    print(f"  Eq 15 iteration {i}: residual = {residual:.2e}")
 
                 self.sol = sol
                 if i==0:
