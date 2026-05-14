@@ -134,7 +134,7 @@ class saarelma_connor:
         rho_s = interp1d(self.psi_Te_eval[valid], rho_s[valid], kind='linear',bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval) # removes nan values from rho_s
         self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
         alpha = -(2 * np.gradient(self.V_plasma, self.psi_pres) / ((2*np.pi)**2)) * self.mu0 * np.gradient(self.pres, self.psi_pres) * np.sqrt(self.V_plasma / (2*self.Rmajor*np.pi**2)) # evaluated at each psi_N = np.linspace(eq['psimag'], eq['psibry'], len(self.pres))
-        self.alpha = alpha # debugging
+        # self.alpha = alpha # debugging
 
         # calculate the flux surface-averaged |grad(r)| and |grad(r)|^2 and some other quantities like r_psi (outboard midplane minor radius for each flux surface)
         self.calc_gradr()
@@ -735,8 +735,7 @@ class saarelma_connor:
         self.dne_dx = np.gradient(self.n_e_pres, self.x_init) # (particles/m^3) / m, electron density gradient
         dne_dx_interp = interp1d(self.psi_N_pres, self.dne_dx, kind='linear', bounds_error=False, fill_value='extrapolate')
         self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
-
-        D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
+        # D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
 
         # f(x) = <|grad(r)|^2> * D_ped
         f_arr = self.gradr2_fsa * self.D_ped
@@ -798,86 +797,6 @@ class saarelma_connor:
         sol.y[1] = (n0 / L) * sol.y[1]
         self.sol = sol
 
-    '''def check_normalization(self, step='first', D_ped_fn=None, V_CX_fn=None,
-                            f_fn=None, df_fn=None, exp_term_fn=None):
-        """Print diagnostics for the non-dimensionalized ODE coefficients.
-
-        Can diagnose both the first_step (Eq 16) and the iterative (Eq 15) BVPs.
-
-        Parameters
-        ----------
-        step : str
-            ``'first'`` for Eq 16 (default), ``'iterate'`` for Eq 15.
-        D_ped_fn, V_CX_fn, f_fn, df_fn, exp_term_fn : callable, optional
-            Interpolators used in the iterative solve loop.  Required when
-            ``step='iterate'``; ignored for ``step='first'``.
-        """
-        L = self._L
-        n0 = self._n0
-        xi_eval = self.xi
-        x_eval = L * xi_eval
-
-        if step == 'first':
-            D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear',
-                               bounds_error=False, fill_value='extrapolate')
-            f_arr = self.gradr2_fsa * self.D_ped
-            df_arr = np.gradient(f_arr, self.x_prev)
-            f_x = interp1d(self.x_prev, f_arr, kind='linear',
-                           bounds_error=False, fill_value='extrapolate')
-            df_dx_fn = interp1d(self.x_prev, df_arr, kind='linear',
-                               bounds_error=False, fill_value='extrapolate')
-            D = D_ped_x(x_eval)
-            f = f_x(x_eval)
-            dfdx = df_dx_fn(x_eval)
-
-            S_react = self.S_i + self.S_cx
-            A = n0 * L * D * S_react / (self.V_FC * f)
-            B = L**2 * self.dne_dx_neginf * D * S_react / (self.V_FC * f)
-            K = L * dfdx / f
-
-            print("=== first_step ODE (Eq 16): N'' = A*N*N' - B*N - K*N' ===")
-
-        else:
-            D = D_ped_fn(x_eval)
-            Vcx = V_CX_fn(x_eval)
-            f = f_fn(x_eval)
-            dfdx = df_fn(x_eval)
-            exp_term = exp_term_fn(x_eval)
-
-            C_cx = 1 - (abs(self.V_FC) * self.fFC / (Vcx * self.fCX)) \
-                   * ((self.S_i + self.S_cx / 2) / (self.S_i + self.S_cx))
-
-            A = n0 * L * self.S_i * D / (self.V_FC * f)
-            B = L**2 * self.dne_dx_neginf * self.S_i * D / (self.V_FC * f)
-            E_c = L**2 * self.S_i * C_cx * self.nFC_x0 / f
-            K = L * dfdx / f
-
-            print("=== iterate ODE (Eq 15): N'' = A*N*N' - B*N - Ec*N*E - K*N' ===")
-            print(f"  Ec (coeff of N*E):  min={np.min(E_c):.3e}, max={np.max(E_c):.3e}")
-            print(f"  C_cx:               min={np.min(C_cx):.3e}, max={np.max(C_cx):.3e}")
-            print(f"  exp_term:           min={np.min(exp_term):.3e}, max={np.max(exp_term):.3e}")
-            print(f"  nFC_x0:             {self.nFC_x0:.3e}")
-
-        print(f"  Scales:  n0 = {n0:.3e} m^-3,  L = {L:.3e} m")
-        print(f"  xi range: [{xi_eval[0]:.3f}, {xi_eval[-1]:.3f}]")
-        print(f"  A (coeff of N*N'):  min={np.min(A):.3e}, max={np.max(A):.3e}")
-        print(f"  B (coeff of N):     min={np.min(B):.3e}, max={np.max(B):.3e}")
-        print(f"  K (coeff of N'):    min={np.min(K):.3e}, max={np.max(K):.3e}")
-        print()
-        print("=== Boundary conditions ===")
-        print(f"  dN/dxi at xi=-1 (G):  {self.dNdxi_neginf:.3e}")
-        print(f"  N at xi=0:             1.0")
-        print()
-        print("=== Initial guess ranges ===")
-        print(f"  N:      min={np.min(self.N_guess[0]):.3e}, max={np.max(self.N_guess[0]):.3e}")
-        print(f"  dN/dxi: min={np.min(self.N_guess[1]):.3e}, max={np.max(self.N_guess[1]):.3e}")
-        print()
-        print("=== Physical coefficient sanity check ===")
-        print(f"  S_i = {self.S_i:.3e},  S_cx = {self.S_cx:.3e},  V_FC = {self.V_FC:.3e}")
-        print(f"  D_ped range: [{np.min(D):.3e}, {np.max(D):.3e}]")
-        print(f"  f(x) range:  [{np.min(f):.3e}, {np.max(f):.3e}]")
-        print(f"  dne_dx_neginf (physical): {self.dne_dx_neginf:.3e}")
-        print()'''
 
     def solve(self,soln_method='sc_2order',tol=1e-3,max_iter=50,x_res=100):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -983,7 +902,7 @@ class saarelma_connor:
                 def ode_solv(xi, Y):
                     N, dNdxi = Y
                     x = L * xi
-                    D = D_ped_int(x)
+                    # D = D_ped_int(x)
                     Vcx = V_CX_int(x)
                     f = f_x(x)
                     dfdx = df_dx(x)
