@@ -43,7 +43,15 @@ class saarelma_connor:
     dne_dx0 : float
         m^-3, gradient of electron density at the separatrix (boundary condition)
     psi_N_inner_boundary : float
-        normalized poloidal flux at the inner boundary (boundary condition)
+        normalized poloidal flux at the inner boundary (boundary condition).
+        Used as a fallback when nFC_threshold and nCX_threshold are both None,
+        or when the adaptive search fails to find a crossing.
+    nFC_threshold : float or None
+        Fraction of the separatrix FC neutral density (nFC_x0) below which the
+        inner boundary is placed.  Default 0.01 (1 %).  Set to None to disable.
+    nCX_threshold : float or None
+        Fraction of the peak estimated CX neutral density below which the inner
+        boundary is placed.  Default 0.01 (1 %).  Set to None to disable.
     mhd_loc : string
         Location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
     kprof_loc : string
@@ -77,7 +85,9 @@ class saarelma_connor:
         De_chie_etg = None, # FREE PARAMETER
         nFC_x0 = None, # m^-3, FREE PARAMETER, Franck-Condon neutral density at the separatrix
         ne_x0 = None, # m^-3, electron density at the separatrix (boundary condition, default is to use from pfile)
-        psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition)
+        psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition); overridden by find_inner_boundary if nFC_threshold or nCX_threshold is set
+        nFC_threshold = 0.01, # fraction of nFC at the separatrix below which the inner boundary is placed (None to disable)
+        nCX_threshold = 0.01, # fraction of nCX at the separatrix below which the inner boundary is placed (None to disable)
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
         kprof_loc = 'p', # location of kinetic parameters, currently supporting: p-file
         mhd_fp = None, # filepath to MHD paramter file
@@ -98,6 +108,8 @@ class saarelma_connor:
             self.bvp_verbose = 0
         self.pol_norm = pol_norm
         self.psi_N_inner_boundary = psi_N_inner_boundary
+        self.nFC_threshold = nFC_threshold
+        self.nCX_threshold = nCX_threshold
 
         self.M_i = M_i
         if species == 'D':
@@ -159,6 +171,15 @@ class saarelma_connor:
         D_NEO = 0.05 * (c_s * rho_s**2) / self.a
         self.D_ped = D_KBM + D_ETG + D_NEO
 
+        # Cache parameter-independent intermediates so update_free_params can
+        # recompute D_ped without re-running the expensive flux-surface work.
+        self._c_s_pres = c_s
+        self._rho_s_pres = rho_s
+        self._alpha = alpha
+        self._grad_Te = grad_Te
+        self._P_tot_e = P_tot_e
+        self._psi_N_inner_boundary_default = psi_N_inner_boundary
+
         # boundary conditions - will be updated with a more comprehensive model in the future
         self.ne_x0 = self.n_e_pres[-1]
         if nFC_x0 is None:
@@ -168,6 +189,138 @@ class saarelma_connor:
         else:
             self.nFC_x0 = nFC_x0
 
+
+    _UNSET = object()
+
+    def update_free_params(self, alpha_crit, C_KBM, De_chie_etg, nFC_x0,
+                           P_tot_e=None,
+                           nFC_threshold=_UNSET, nCX_threshold=_UNSET,
+                           psi_N_inner_boundary=None):
+        """Recompute only the free-parameter-dependent quantities (D_ped, nFC_x0).
+
+        Call this instead of constructing a new saarelma_connor instance when
+        only the four free parameters change and the MHD/kinetic equilibrium is
+        fixed.  All expensive flux-surface-averaging is skipped.
+
+        Parameters
+        ----------
+        alpha_crit : float
+        C_KBM : float
+        De_chie_etg : float
+        nFC_x0 : float
+        P_tot_e : float, optional
+            Defaults to the value used at construction time.
+        nFC_threshold : float or None, optional
+            Override the FC-neutral threshold used by find_inner_boundary.
+            If omitted, keeps the value from construction.
+        nCX_threshold : float or None, optional
+            Override the CX-neutral threshold used by find_inner_boundary.
+            If omitted, keeps the value from construction.
+        psi_N_inner_boundary : float, optional
+            If given, the inner boundary is placed at this psi_N value directly
+            and the adaptive threshold-based logic is disabled (both thresholds
+            forced to None for this run).
+        """
+        if P_tot_e is None:
+            P_tot_e = self._P_tot_e
+
+        D_KBM = np.where(
+            self._alpha > alpha_crit,
+            C_KBM * (self._alpha - alpha_crit) * (self._c_s_pres * self._rho_s_pres ** 2) / self.a,
+            0)
+        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * np.abs(self._grad_Te) * self.n_e_pres)
+        D_NEO = 0.05 * (self._c_s_pres * self._rho_s_pres ** 2) / self.a
+        self.D_ped = D_KBM + D_ETG + D_NEO
+        self.nFC_x0 = nFC_x0
+
+        if psi_N_inner_boundary is not None:
+            # Explicit boundary override: disable adaptive logic so
+            # find_inner_boundary returns immediately and our value is kept.
+            self.psi_N_inner_boundary = float(psi_N_inner_boundary)
+            self.nFC_threshold = None
+            self.nCX_threshold = None
+        else:
+            if nFC_threshold is not self._UNSET:
+                self.nFC_threshold = nFC_threshold
+            if nCX_threshold is not self._UNSET:
+                self.nCX_threshold = nCX_threshold
+
+            # Reset the inner-boundary psi_N so find_inner_boundary starts fresh
+            # each run rather than inheriting the previous run's converged value.
+            self.psi_N_inner_boundary = self._psi_N_inner_boundary_default
+
+        # Drop stale solution data from any previous solve() call.
+        for _attr in ('sol', 'sol_first', 'x_sol', 'ne_sol', 'dne_dx_sol',
+                      'exp_term_arr', 'nFC_sol', 'integral_from_0'):
+            if hasattr(self, _attr):
+                delattr(self, _attr)
+
+    def inner_boundary_limits(self, outer_threshold=None,x_res=100):
+        """Return (psi_N_inner_limit, psi_N_outer_limit) — the valid range for
+        psi_N_inner_boundary given current parameters (D_ped, nFC_x0).
+
+        The OUTER limit (closest to separatrix, largest psi_N) is determined by
+        the nFC/nCX threshold logic in ``find_inner_boundary``.
+        The INNER limit (deepest in core, smallest psi_N) is the smallest psi_N
+        at which the experimental dn_e/dx is still sufficiently negative for
+        the BVP boundary condition to be valid.
+
+        Parameters
+        ----------
+        outer_threshold : float, optional
+            Threshold applied to BOTH nFC_threshold and nCX_threshold when
+            computing the outer limit.  Default: keep current thresholds.
+        x_res : int
+            Resolution passed to ``setup_solver_grids`` if it has not yet been
+            called on this instance.
+        """
+        # Ensure form-factor / solver-grid setup has been done.
+        if not hasattr(self, 'fFC'):
+            self.form_factor(type='FC')
+        if not hasattr(self, 'fCX'):
+            self.form_factor(type='cx')
+        if not hasattr(self, 'x_init') or not hasattr(self, 'S_i_pres'):
+            self.setup_solver_grids(res=x_res)
+
+        # ---- OUTER limit ----------------------------------------------------
+        saved_thr_fc = self.nFC_threshold
+        saved_thr_cx = self.nCX_threshold
+        saved_psi    = self.psi_N_inner_boundary
+        saved_x_in   = self.x_inner
+
+        if outer_threshold is not None:
+            self.nFC_threshold = float(outer_threshold)
+            self.nCX_threshold = float(outer_threshold)
+
+        # Start from the default so find_inner_boundary doesn't compound onto
+        # a previously narrowed value.
+        self.psi_N_inner_boundary = self._psi_N_inner_boundary_default
+        self.find_inner_boundary()
+        psi_N_outer = float(self.psi_N_inner_boundary)
+
+        # Restore
+        self.nFC_threshold = saved_thr_fc
+        self.nCX_threshold = saved_thr_cx
+        self.psi_N_inner_boundary = saved_psi
+        self.x_inner = saved_x_in
+
+        # ---- INNER limit ----------------------------------------------------
+        dne_dx = np.gradient(self.n_e_pres, self.x_init)
+        x_inner = None
+        for i in range(len(dne_dx)):
+            j = len(dne_dx) - i - 1
+            if dne_dx[j] < 0:
+                psi_N_inner = self.psi_N_pres[j]
+                break
+        if x_inner is None:
+            print("No valid inner boundary found, defaulting to psi_N=0.85 for inner boundary")
+            psi_N_inner = 0.85
+
+        # Guarantee monotonic ordering (inner <= outer) even with edge cases.
+        if psi_N_inner > psi_N_outer:
+            psi_N_inner, psi_N_outer = psi_N_outer, psi_N_inner
+
+        return psi_N_inner, psi_N_outer
 
     def find_boundary_points(self,eq):
         """Find the top/bottom/inboard/outboard extrema of the separatrix.
@@ -570,6 +723,137 @@ class saarelma_connor:
 
         self.x_inner = interp1d(self.psi_N_pres, self.x_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_inner_boundary)
 
+    def find_inner_boundary(self):
+        """Adaptively locate the inner boundary by finding where the neutral
+        densities (FC and/or CX) fall below user-supplied thresholds.
+
+        Uses the p-file n_e profile as a proxy for the pre-solve electron
+        density to estimate nFC(x) via its exponential attenuation integral
+        (Eq. 11) and nCX(x) via the algebraic closure (Eq. 12).  The inner
+        boundary is placed at the outermost x (closest to the separatrix)
+        where *both* active thresholds are satisfied simultaneously.
+
+        If neither threshold is set (both are None), the method returns
+        immediately without changing ``self.psi_N_inner_boundary`` or
+        ``self.x_inner``.
+
+        Parameters used from self
+        -------------------------
+        self.nFC_threshold : float or None
+            nFC/nFC(x=0) must drop below this fraction.  None disables.
+        self.nCX_threshold : float or None
+            nCX/nCX_peak must drop below this fraction.  None disables.
+        self.n_e_pres, self.x_init : array
+            p-file density and radial grid.
+        self.S_i_pres, self.S_cx_pres : array
+            Ionization and CX rate coefficients on psi_N_pres grid.
+        self.D_ped, self.gradr2_fsa, self.V_cx_pres : array
+            Diffusion and geometry arrays on psi_N_pres grid.
+        self.V_FC, self.fFC, self.fCX : float
+            FC neutral speed and form factors.
+        self.nFC_x0 : float
+            FC neutral density at the separatrix (boundary condition).
+
+        Updates
+        -------
+        self.psi_N_inner_boundary : float
+            Updated to the adaptively found inner boundary psi_N.
+        self.x_inner : float
+            Updated to the corresponding physical x coordinate (m).
+        """
+        if self.nFC_threshold is None and self.nCX_threshold is None:
+            return  # nothing to do; use fixed psi_N_inner_boundary
+
+        ne   = self.n_e_pres
+        Si   = self.S_i_pres
+        Scx  = self.S_cx_pres
+        Dped = self.D_ped
+        gr2  = self.gradr2_fsa
+        Vcx  = self.V_cx_pres      # array, local thermal CX speed
+        Vfc  = abs(self.V_FC)      # scalar FC speed
+        fFC  = self.fFC            # form factor (= 1 currently)
+        fCX  = self.fCX            # form factor (= 1 currently)
+        x    = self.x_init         # physical x, separatrix = 0, inward < 0
+
+        # ------------------------------------------------------------------ #
+        # nFC estimate: integrate from separatrix inward (descending x)       #
+        # nFC(x) / nFC_x0 = exp( ∫_0^x  ne*(Si+Scx)/(fFC*Vfc)  dx' )        #
+        # ------------------------------------------------------------------ #
+        order_desc = np.argsort(x)[::-1]   # index order: separatrix → core
+        x_desc     = x[order_desc]
+        integrand  = (ne * (Si + Scx)) / (fFC * Vfc)
+        cumint     = cumulative_trapezoid(integrand[order_desc], x_desc, initial=0.0)
+        nFC_ratio_desc = np.exp(cumint)    # decays < 1 going inward
+
+        # map back to original (psi_N ascending) order
+        nFC_ratio = np.empty_like(nFC_ratio_desc)
+        nFC_ratio[order_desc] = nFC_ratio_desc
+
+        # ------------------------------------------------------------------ #
+        # nCX estimate: algebraic closure (Eq. 12)                            #
+        # nCX = -(gr2*Dped/(Vcx*fCX))*(dne/dx - dne_dx_inner)               #
+        #        - (Vfc*fFC/(Vcx*fCX))*((Si+Scx/2)/(Si+Scx))*nFC            #
+        # ------------------------------------------------------------------ #
+        dne_dx = np.gradient(ne, x)
+        # Use the innermost p-file gradient as the dne_dx_neginf proxy
+        dne_dx_inner_est = dne_dx[np.argmin(x)]
+
+        f_arr     = gr2 * Dped
+        flux_term = -(f_arr / (Vcx * fCX)) * (dne_dx - dne_dx_inner_est)
+        fc_term   = -(Vfc * fFC / (Vcx * fCX)) * ((Si + Scx / 2) / (Si + Scx)) * (self.nFC_x0 * nFC_ratio)
+        nCX_est   = flux_term + fc_term
+        nCX_est   = np.maximum(nCX_est, 0.0)   # physical lower bound
+
+        nCX_peak  = np.max(nCX_est)
+        nCX_ratio = nCX_est / nCX_peak if nCX_peak > 0 else np.zeros_like(nCX_est)
+
+        # ------------------------------------------------------------------ #
+        # Find the outermost x (closest to separatrix) where both active      #
+        # thresholds are satisfied.                                            #
+        # Work in ascending-x order (core first, separatrix last).            #
+        # ------------------------------------------------------------------ #
+        asc      = np.argsort(x)
+        x_asc    = x[asc]
+        psi_asc  = self.psi_N_pres[asc]
+
+        # build combined mask: only consider thresholds the user activated
+        mask = np.ones(len(x), dtype=bool)
+        if self.nFC_threshold is not None:
+            mask &= nFC_ratio[asc] < self.nFC_threshold
+        if self.nCX_threshold is not None:
+            mask &= nCX_ratio[asc] < self.nCX_threshold
+
+        crossing = np.where(mask)[0]
+
+        if len(crossing) == 0:
+            import warnings
+            warnings.warn(
+                f"Neutral densities never fall below the requested thresholds "
+                f"(nFC_threshold={self.nFC_threshold}, nCX_threshold={self.nCX_threshold}) "
+                f"across the available p-file domain.  Keeping the fixed inner boundary "
+                f"at psi_N = {self.psi_N_inner_boundary:.3f}.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            return
+
+        # The outermost (highest x, most separatrix-side) crossing point that
+        # still satisfies both thresholds. We scan inward from the separatrix
+        # (highest x in ascending order = last element) and take the first hit.
+        idx       = crossing[-1]
+        x_new     = float(x_asc[idx])
+        psi_new   = float(psi_asc[idx])
+
+        if self.verbose:
+            print(f"find_inner_boundary: psi_N_inner_boundary updated "
+                  f"{self.psi_N_inner_boundary:.4f} → {psi_new:.4f}  "
+                  f"(x_inner: {self.x_inner:.4f} → {x_new:.4f} m)")
+
+        self.psi_N_inner_boundary = psi_new
+        print(f"psi_N_inner_boundary: {self.psi_N_inner_boundary:.4f}")
+        self.x_inner = x_new
+        print(f"x_inner: {self.x_inner:.4f} m")
+
     def calc_gradr(self):
         """Compute <|grad(r)|> at each flux surface.
 
@@ -704,6 +988,11 @@ class saarelma_connor:
 
         self.dNdxi_neginf = self.dne_dx_neginf * (L / n0)
 
+    # def neumann_bc(self):
+    #     """Calculate the Neumann boundary condition for the BVP.
+    #     x_inner is chosen where the slope begins to decrease
+    #     """
+
     def first_step(self,resolution=200):
         """Solve Equation (16) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
         This is the simplified BVP (no charge-exchange neutrals) used as the
@@ -717,7 +1006,9 @@ class saarelma_connor:
             number of points to use in the radial grid solve_bvp() call
 
         Boundary conditions:
-            dn_e/dx = dne_dx_neginf  at x_inner (psi_N = 0.85)
+            dn_e/dx = dne_dx_neginf  at x_inner (psi_N adaptively set by
+                                      find_inner_boundary, defaulting to
+                                      psi_N_inner_boundary = 0.85)
             n_e     = ne_x0          at x = 0   (separatrix)
 
         Uses coefficient interpolators set up by solve() and stored as
@@ -728,13 +1019,32 @@ class saarelma_connor:
         ----
         self.ne_first_sol : BVP solution object from solve_bvp.
         """
+        # Adaptively locate the inner boundary where both neutral species
+        # have attenuated below the requested thresholds (no-op when both
+        # thresholds are None, in which case psi_N_inner_boundary is unchanged).
+        self.find_inner_boundary()
         x_inner = self.x_inner
 
         # Calculate boundary condition from profiles at psi_N = 0.85
         # self.n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         self.dne_dx = np.gradient(self.n_e_pres, self.x_init) # (particles/m^3) / m, electron density gradient
         dne_dx_interp = interp1d(self.psi_N_pres, self.dne_dx, kind='linear', bounds_error=False, fill_value='extrapolate')
-        self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary) # hard-coded to psi_N = 0.85, would love to change to a better boundary condition
+        self.dne_dx_neginf = dne_dx_interp(self.psi_N_inner_boundary)
+
+        # Physical sanity check: the inner-boundary gradient must be negative.
+        # A zero or positive value means the chosen boundary is inside the flat
+        # core or on a density inversion, which violates the model's assumption
+        # that the pedestal gradient is steeper everywhere inside the domain.
+        if self.dne_dx_neginf >= 0:
+            raise ValueError(
+                f"Inner boundary condition dne/dx = {self.dne_dx_neginf:.3e} m^-4 "
+                f"at psi_N = {self.psi_N_inner_boundary:.4f} is zero or positive. "
+                f"The Neumann BC must be strictly negative (density decreasing "
+                f"outward). The inner boundary may be sitting inside the flat "
+                f"core or on a density inversion. Consider lowering "
+                f"nFC_threshold / nCX_threshold, or increasing "
+                f"psi_N_inner_boundary to move the boundary further outward."
+            )
         # D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
 
         # f(x) = <|grad(r)|^2> * D_ped
@@ -787,7 +1097,8 @@ class saarelma_connor:
 
         # if self.verbose:
         #     self.check_normalization()
-        sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=100000, verbose=self.bvp_verbose)
+        with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
+            sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=5000, verbose=self.bvp_verbose)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
@@ -948,7 +1259,8 @@ class saarelma_connor:
                 #                         V_CX_fn=V_CX_int, f_fn=f_x,
                 #                         df_fn=df_dx, exp_term_fn=exp_term_prev)
 
-                sol = solve_bvp(ode_solv, bc_solv, self.xi, self.N_guess, max_nodes=100000, verbose=self.bvp_verbose)
+                with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
+                    sol = solve_bvp(ode_solv, bc_solv, self.xi, self.N_guess, max_nodes=5000, verbose=self.bvp_verbose)
                 if not sol.success:
                     raise RuntimeError(f"step {i} BVP failed: {sol.message}")
 
