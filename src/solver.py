@@ -309,7 +309,7 @@ class saarelma_connor:
         x_inner = None
         for i in range(len(dne_dx)):
             j = len(dne_dx) - i - 1
-            if dne_dx[j] < 0:
+            if dne_dx[j] >= 0: # look for the first positive slope
                 psi_N_inner = self.psi_N_pres[j]
                 break
         if x_inner is None:
