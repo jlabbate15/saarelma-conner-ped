@@ -762,7 +762,8 @@ class saarelma_connor:
             Updated to the corresponding physical x coordinate (m).
         """
         if self.nFC_threshold is None and self.nCX_threshold is None:
-            return  # nothing to do; use fixed psi_N_inner_boundary
+            self.x_inner = interp1d(self.psi_N_pres, self.x_init, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_inner_boundary)
+            return  # use fixed psi_N_inner_boundary and corresponding x_inner
 
         ne   = self.n_e_pres
         Si   = self.S_i_pres
@@ -843,11 +844,6 @@ class saarelma_connor:
         idx       = crossing[-1]
         x_new     = float(x_asc[idx])
         psi_new   = float(psi_asc[idx])
-
-        if self.verbose:
-            print(f"find_inner_boundary: psi_N_inner_boundary updated "
-                  f"{self.psi_N_inner_boundary:.4f} → {psi_new:.4f}  "
-                  f"(x_inner: {self.x_inner:.4f} → {x_new:.4f} m)")
 
         self.psi_N_inner_boundary = psi_new
         print(f"psi_N_inner_boundary: {self.psi_N_inner_boundary:.4f}")
