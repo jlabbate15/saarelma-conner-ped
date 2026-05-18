@@ -1288,6 +1288,8 @@ class saarelma_connor:
             self.exp_term_arr = exp_term_arr
             self.nFC_sol = self.nFC_x0 * exp_term_arr
 
+            return self.x_sol, self.ne_sol, self.dne_dx_sol
+
 
     def fsa(self,A,flux_surfaces='T_e'):
         """Flux surface average a quantity as defined by ⟨A⟩= int(R^2Adθ)/ int(R^2dθ) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
