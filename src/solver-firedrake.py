@@ -47,7 +47,9 @@ from src.solver import saarelma_connor
 try:
     from firedrake import (
         IntervalMesh, FunctionSpace, MixedFunctionSpace, Function,
-        TestFunctions, Constant, DirichletBC, dx, ds, split, solve,
+        TestFunctions, TrialFunction, Constant, DirichletBC,
+        dx, ds, split, solve, lhs, rhs,
+        LinearVariationalProblem, LinearVariationalSolver,
         SpatialCoordinate,
     )
     _FIREDRAKE_AVAILABLE = True
@@ -76,7 +78,20 @@ class saarelma_connor_firedrake(saarelma_connor):
     def __init__(self, *args, nCX_x0=None, **kwargs):
         super().__init__(*args, **kwargs) # call the parent class (saarelma-connor class) init method
         self.nCX_x0 = nCX_x0 if nCX_x0 is not None else 0.1 * self.nFC_x0 # set nCX boundary condition, defaults to 0.1 * nFC_x0
+        self._fd_cache = {}
 
+    def invalidate_firedrake_cache(self):
+        """Drop cached Firedrake meshes, coefficients, and linear solvers.
+
+        Called automatically by :meth:`update_free_params`.  Call manually
+        after changing equilibrium inputs or other quantities that affect
+        ``setup_solver_grids`` / ``calc_gradr``.
+        """
+        self._fd_cache = {}
+
+    def update_free_params(self, *args, **kwargs):
+        super().update_free_params(*args, **kwargs)
+        self.invalidate_firedrake_cache()
 
     def _plot_profiles(self, x_dofs, ne, nFC, nCX, title=""):
         """Plot n_e, <n_FC>, <n_CX> vs x with a secondary psi_N axis on top.
@@ -130,33 +145,15 @@ class saarelma_connor_firedrake(saarelma_connor):
 
 
     @staticmethod
-    def _build_petsc_solver_parameters(linear_solver="lu",
-                                       ksp_rtol=1e-8,
-                                       ksp_max_it=200):
-        """Build PETSc options for ``solve(F == 0, u, solver_parameters=...)``.
+    def _build_picard_linear_solver_parameters(linear_solver="lu",
+                                               ksp_rtol=1e-8,
+                                               ksp_max_it=200):
+        """PETSc options for :class:`LinearVariationalSolver` (Picard sub-steps).
 
-        SNES (``newtonls``) handles the nonlinear residual at each
-        ``solve`` call.  Each Newton step assembles the Jacobian ``J`` and
-        solves ``J δu = -R`` with KSP.
-
-        Parameters
-        ----------
-        linear_solver : {"lu", "gamg"}
-            * ``"lu"`` (default) -- direct sparse LU via ``ksp_type=preonly``,
-              ``pc_type=lu``.  Best for small 1D problems (~few thousand DOFs).
-            * ``"gamg"`` -- GMRES preconditioned by PETSc's algebraic
-              multigrid (GAMG).  Useful when the Jacobian is large or LU
-              memory/fill-in becomes costly; each Newton step is iterative.
-        ksp_rtol : float
-            Relative tolerance for GMRES when ``linear_solver="gamg"``.
-            Ignored for ``"lu"`` (direct solve).
-        ksp_max_it : int
-            Maximum GMRES iterations per Newton linear solve (``gamg`` only).
-
-        Returns
-        -------
-        dict
-            Firedrake-compatible ``solver_parameters`` mapping.
+        Each Picard step solves ``a(u, v) = L(v)`` with fixed ``a`` and
+        updated ``L`` from lagged ``u_prev``.  Reusing the same
+        :class:`LinearVariationalSolver` lets PETSc reuse the LU
+        factorization of ``a`` across iterations.
         """
         linear_solver = str(linear_solver).lower()
         if linear_solver not in ("lu", "gamg"):
@@ -164,24 +161,51 @@ class saarelma_connor_firedrake(saarelma_connor):
                 f"linear_solver must be 'lu' or 'gamg', got {linear_solver!r}."
             )
 
-        # Nonlinear outer driver (same for both linear backends).
-        params = {
-            "snes_type": "newtonls",
-            "snes_max_it": 50,
-            "snes_atol": 1.0e-12,
-            "snes_rtol": 1.0e-10,
-            "snes_linesearch_type": "bt",
-            "mat_type": "aij",
-        }
-
+        params = {"mat_type": "aij"}
         if linear_solver == "lu":
-            # Direct factorisation of J each Newton step: no Krylov iterations.
             params.update({
                 "ksp_type": "preonly",
                 "pc_type": "lu",
             })
         else:
-            # Iterative solve: GMRES + algebraic multigrid preconditioner on J.
+            params.update({
+                "ksp_type": "gmres",
+                "ksp_rtol": float(ksp_rtol),
+                "ksp_max_it": int(ksp_max_it),
+                "ksp_gmres_restart": 30,
+                "pc_type": "gamg",
+                "mg_levels_ksp_type": "richardson",
+                "mg_levels_pc_type": "sor",
+                "mg_levels_ksp_max_it": 5,
+            })
+        return params
+
+    @staticmethod
+    def _build_petsc_solver_parameters(linear_solver="lu",
+                                       ksp_rtol=1e-8,
+                                       ksp_max_it=200):
+        """PETSc options for SNES ``solve(F == 0, ...)`` (full Newton path)."""
+        linear_solver = str(linear_solver).lower()
+        if linear_solver not in ("lu", "gamg"):
+            raise ValueError(
+                f"linear_solver must be 'lu' or 'gamg', got {linear_solver!r}."
+            )
+
+        params = {
+            "snes_type": "newtonls",
+            "snes_max_it": 50,
+            "snes_atol": 1.0e-8,
+            "snes_rtol": 1.0e-8,
+            "snes_linesearch_type": "bt",
+            "mat_type": "aij",
+        }
+
+        if linear_solver == "lu":
+            params.update({
+                "ksp_type": "preonly",
+                "pc_type": "lu",
+            })
+        else:
             params.update({
                 "ksp_type": "gmres",
                 "ksp_rtol": float(ksp_rtol),
@@ -194,6 +218,135 @@ class saarelma_connor_firedrake(saarelma_connor):
             })
 
         return params
+
+    def _ensure_firedrake_coefficient_grids(self, x_res, force=False):
+        """Run ``form_factor`` + ``setup_solver_grids`` once per ``x_res``."""
+        key = int(x_res)
+        if force or self._fd_cache.get("x_res") != key:
+            self.form_factor(type='FC')
+            self.form_factor(type='cx')
+            self.setup_solver_grids(res=x_res)
+            self._fd_cache["x_res"] = key
+
+    def _firedrake_mesh_key(self, x_left, mesh_n, fe_degree):
+        return (round(float(x_left), 12), int(mesh_n), int(fe_degree))
+
+    def _ensure_firedrake_discretization(self, x_left, mesh_n, fe_degree, force=False):
+        """Build or reuse mesh, spaces, and coefficient Functions on the mesh."""
+        mesh_key = self._firedrake_mesh_key(x_left, mesh_n, fe_degree)
+        if (not force
+                and self._fd_cache.get("mesh_key") == mesh_key
+                and "mesh" in self._fd_cache):
+            return (
+                self._fd_cache["mesh"],
+                self._fd_cache["V"],
+                self._fd_cache["W"],
+                self._fd_cache["x_dofs"],
+                self._fd_cache["D_fd"],
+                self._fd_cache["g_fd"],
+                self._fd_cache["Si_fd"],
+                self._fd_cache["Scx_fd"],
+                self._fd_cache["Vcx_fd"],
+            )
+
+        mesh = IntervalMesh(mesh_n, x_left, 0.0)
+        V = FunctionSpace(mesh, "CG", fe_degree)
+        W = MixedFunctionSpace([V, V, V])
+
+        x_coord_func = Function(V).interpolate(SpatialCoordinate(mesh)[0])
+        x_dofs = x_coord_func.dat.data.copy()
+
+        def _make_func(arr, name=""):
+            f = Function(V, name=name)
+            f.dat.data[:] = np.interp(x_dofs, self.x_init, arr)
+            return f
+
+        D_fd = _make_func(self.D_ped, "D_ped")
+        g_fd = _make_func(self.gradr2_fsa, "gradr2_fsa")
+        Si_fd = _make_func(self.S_i_pres, "S_i")
+        Scx_fd = _make_func(self.S_cx_pres, "S_cx")
+        Vcx_fd = _make_func(abs(self.V_cx_pres), "V_cx")
+
+        self._fd_cache.pop("u", None)
+        self._fd_cache.pop("u_prev", None)
+        self._fd_cache.update({
+            "mesh_key": mesh_key,
+            "mesh": mesh,
+            "V": V,
+            "W": W,
+            "x_dofs": x_dofs,
+            "D_fd": D_fd,
+            "g_fd": g_fd,
+            "Si_fd": Si_fd,
+            "Scx_fd": Scx_fd,
+            "Vcx_fd": Vcx_fd,
+        })
+        return mesh, V, W, x_dofs, D_fd, g_fd, Si_fd, Scx_fd, Vcx_fd
+
+    def _get_or_create_mixed_solution(self, W, force=False):
+        """Return cached ``(u, u_prev)`` on ``W``, or allocate new Functions."""
+        if (not force
+                and self._fd_cache.get("W") is W
+                and "u" in self._fd_cache
+                and "u_prev" in self._fd_cache):
+            return self._fd_cache["u"], self._fd_cache["u_prev"]
+
+        u = Function(W, name="u")
+        u_prev = Function(W, name="u_prev")
+        self._fd_cache["W"] = W
+        self._fd_cache["u"] = u
+        self._fd_cache["u_prev"] = u_prev
+        return u, u_prev
+
+    @staticmethod
+    def _build_picard_bilinear_and_linear_forms(
+            W, D_fd, g_fd, Si_fd, Scx_fd, Vcx_fd,
+            VFC_const, fFC_const, fCX_const, half,
+            u_prev, ne_inner_bc, dne_dx_inner_c):
+        """Split lagged Picard residual into ``a(u,v)=L(v)`` for linear solves."""
+        v_e, v_F, v_C = TestFunctions(W)
+        u_trial = TrialFunction(W)
+        ne_t, nFC_t, nCX_t = split(u_trial)
+        ne_p, nFC_p, nCX_p = split(u_prev)
+
+        F1 = (g_fd * D_fd * ne_t.dx(0) * v_e.dx(0)
+              - ne_t * Si_fd * (nFC_p + nCX_p) * v_e) * dx
+        F2 = ((VFC_const * fFC_const * g_fd * nFC_t).dx(0) * v_F
+              - ne_p * (Si_fd + Scx_fd) * nFC_t * v_F) * dx
+        F3 = ((Vcx_fd * fCX_const * g_fd * nCX_t).dx(0) * v_C
+              - ne_p * (Si_fd * nCX_t - half * Scx_fd * nFC_p) * v_C) * dx
+
+        if ne_inner_bc == "neumann":
+            F1 = F1 + g_fd * D_fd * dne_dx_inner_c * v_e * ds(1)
+
+        F = F1 + F2 + F3
+        return lhs(F), rhs(F)
+
+    @staticmethod
+    def _create_picard_linear_solver(a_form, L_form, u, bcs, solver_params):
+        """Build a :class:`LinearVariationalSolver` for one Picard solve loop."""
+        problem = LinearVariationalProblem(
+            a_form, L_form, u, bcs=bcs,
+            constant_jacobian=False,
+        )
+        return LinearVariationalSolver(
+            problem, solver_parameters=solver_params,
+        )
+
+    def _interpolate_coefficients_to_mesh(self):
+        """Re-project parent-grid coefficients onto cached Firedrake ``V``."""
+        if "V" not in self._fd_cache:
+            return
+        x_dofs = self._fd_cache["x_dofs"]
+
+        def _fill(func, arr):
+            func.dat.data[:] = np.interp(x_dofs, self.x_init, arr)
+
+        _fill(self._fd_cache["D_fd"], self.D_ped)
+        _fill(self._fd_cache["g_fd"], self.gradr2_fsa)
+        _fill(self._fd_cache["Si_fd"], self.S_i_pres)
+        _fill(self._fd_cache["Scx_fd"], self.S_cx_pres)
+        _fill(self._fd_cache["Vcx_fd"], abs(self.V_cx_pres))
 
 
     def solve_firedrake(self,
@@ -213,6 +366,7 @@ class saarelma_connor_firedrake(saarelma_connor):
                         linear_solver="lu",
                         ksp_rtol=1e-8,
                         ksp_max_it=200,
+                        reuse_setup=True,
                         verbose=None):
         """Solve the coupled (n_e, <n_FC>, <n_CX>) system with Firedrake.
 
@@ -302,10 +456,11 @@ class saarelma_connor_firedrake(saarelma_connor):
             ``-tanh_width`` so the pedestal sits just inside the
             separatrix.
         use_picard : bool
-            If True (default) use a Picard fixed-point iteration that
-            lags the bilinear nonlinearity at each step.  If False, do a
-            single full-Newton solve (less robust, but faster when it
-            does converge).
+            If True (default), run a Picard loop where each step is one
+            :class:`LinearVariationalSolver` solve on the lagged residual
+            (no SNES).  If False, use a single SNES Newton solve on the
+            fully coupled nonlinear residual (less robust; useful for
+            cross-checks).
         picard_tol : float
             Relative L2 convergence tolerance on n_e for the Picard loop.
         max_picard : int
@@ -315,8 +470,10 @@ class saarelma_connor_firedrake(saarelma_connor):
             no relaxation; smaller values trade speed for robustness.
             The default is 0.5, well-suited to the linear initial guess.
         linear_solver : {"lu", "gamg"}, default ``"lu"``
-            How each inner Newton linear system ``J δu = -R`` is solved
-            (see :meth:`_build_petsc_solver_parameters`).
+            Picard: direct/iterative solve of each linear sub-step
+            (:meth:`_build_picard_linear_solver_parameters`).  Newton:
+            linear solve of each SNES Jacobian step
+            (:meth:`_build_petsc_solver_parameters`).
 
             * ``"lu"`` -- sparse direct LU (default; fast for 1D meshes).
             * ``"gamg"`` -- GMRES + PETSc algebraic multigrid (GAMG)
@@ -326,6 +483,13 @@ class saarelma_connor_firedrake(saarelma_connor):
             GMRES relative tolerance when ``linear_solver="gamg"``.
         ksp_max_it : int, default ``200``
             Maximum GMRES iterations per Newton step when using ``"gamg"``.
+        reuse_setup : bool, default ``True``
+            If True, reuse cached ``setup_solver_grids`` / mesh / coefficient
+            projections when ``x_res``, ``mesh_n``, ``fe_degree``, and
+            ``x_inner`` are unchanged since the last solve.  Call
+            :meth:`invalidate_firedrake_cache` after changing free parameters
+            or equilibrium inputs (also done automatically by
+            :meth:`update_free_params`).
         verbose : bool or None
             Override ``self.verbose`` for the duration of this solve.
 
@@ -347,12 +511,9 @@ class saarelma_connor_firedrake(saarelma_connor):
             )
 
         v = self.verbose if verbose is None else bool(verbose)
+        force_setup = not reuse_setup
 
-
-        # Set up form factors and solver grids using methods from the parent class
-        self.form_factor(type='FC')
-        self.form_factor(type='cx')
-        self.setup_solver_grids(res=x_res)
+        self._ensure_firedrake_coefficient_grids(x_res, force=force_setup)
 
         # set the inner boundary location and read off the values used for
         # either the Dirichlet or Neumann BC at x = x_inner.
@@ -407,36 +568,33 @@ class saarelma_connor_firedrake(saarelma_connor):
             # print(f"[firedrake] initial_guess  = {initial_guess!r}")
 
         
-        # Firedrake mesh and function space
         x_left  = float(self.x_inner)
         x_right = 0.0
         if x_left >= x_right:
             raise ValueError(
                 f"x_inner = {x_left} must be strictly less than 0 (separatrix)."
             )
-        mesh = IntervalMesh(mesh_n, x_left, x_right) # finer-spaced mesh for firedrake
-        V    = FunctionSpace(mesh, "CG", fe_degree) # using continuous Galerkin finite elements, default degree is 2 (quadratic)
-        W    = MixedFunctionSpace([V, V, V]) # mixed function space for the three unknowns n_e, <n_FC>, and <n_CX>
 
-        # interpolate numpy arrays onto the Firedrake function space V (interpolate from x_init mesh to the Firedrake mesh)
-        x_coord_func = Function(V).interpolate(SpatialCoordinate(mesh)[0])
-        x_dofs = x_coord_func.dat.data.copy()
+        mesh, V, W, x_dofs, D_fd, g_fd, Si_fd, Scx_fd, Vcx_fd = (
+            self._ensure_firedrake_discretization(
+                x_left, mesh_n, fe_degree, force=force_setup,
+            )
+        )
+        self._interpolate_coefficients_to_mesh()
+
         def _make_func(arr, name=""):
             """Project a numpy array on self.x_init onto V via np.interp."""
             f = Function(V, name=name)
             f.dat.data[:] = np.interp(x_dofs, self.x_init, arr)
             return f
-        D_fd   = _make_func(self.D_ped, "D_ped")
-        g_fd   = _make_func(self.gradr2_fsa, "gradr2_fsa")
-        Si_fd  = _make_func(self.S_i_pres, "S_i")
-        Scx_fd = _make_func(self.S_cx_pres, "S_cx")
-        Vcx_fd = _make_func(abs(self.V_cx_pres), "V_cx")
 
         # define constants for the Firedrake system
         VFC_const = Constant(abs(self.V_FC))
         fFC_const = Constant(self.fFC)
         fCX_const = Constant(self.fCX)
         half      = Constant(0.5)
+
+        u, u_prev = self._get_or_create_mixed_solution(W, force=force_setup)
 
         # set up initial guess
         if initial_guess == "linear":
@@ -450,8 +608,6 @@ class saarelma_connor_firedrake(saarelma_connor):
             nFC_init_data = self.nFC_x0 * xi
             nCX_init_data = self.nCX_x0 * xi
 
-            u      = Function(W, name="u")
-            u_prev = Function(W, name="u_prev")
             u.subfunctions[0].dat.data[:] = ne_init_data
             u.subfunctions[1].dat.data[:] = nFC_init_data
             u.subfunctions[2].dat.data[:] = nCX_init_data
@@ -471,8 +627,6 @@ class saarelma_connor_firedrake(saarelma_connor):
             ratio_CX  = self.nCX_x0 / self.nFC_x0 if self.nFC_x0 > 0 else 0.0
             nCX_init  = ratio_CX * nFC_init
 
-            u      = Function(W, name="u")
-            u_prev = Function(W, name="u_prev")
             u.sub(0).assign(_make_func(self.n_e_pres, "ne_init"))
             u.sub(1).assign(_make_func(nFC_init,      "nFC_init"))
             u.sub(2).assign(_make_func(nCX_init,      "nCX_init"))
@@ -498,8 +652,6 @@ class saarelma_connor_firedrake(saarelma_connor):
             nFC_init_data = self.nFC_x0 * s_neut
             nCX_init_data = self.nCX_x0 * s_neut
 
-            u      = Function(W, name="u")
-            u_prev = Function(W, name="u_prev")
             u.subfunctions[0].dat.data[:] = ne_init_data
             u.subfunctions[1].dat.data[:] = nFC_init_data
             u.subfunctions[2].dat.data[:] = nCX_init_data
@@ -615,75 +767,26 @@ class saarelma_connor_firedrake(saarelma_connor):
         #     int [ |V_CX| d/dx(f_CX g n_CX)
         #           - n_e ( S_i n_CX - (S_CX/2) n_FC ) ] v_C dx = 0,
         # ------------------------------------------------------------------
-        v_e, v_F, v_C = TestFunctions(W)
-
-        # --- Picard iteration -------------------------------------------
-        # The system is bilinear in (n_e, n_FC, n_CX) -- every nonlinear
-        # term is a *product* of two unknowns.  The cleanest linearisation
-        # is to evaluate the "lagged" factor at u_prev while differentiating
-        # against the "current" unknown in u.  This gives a properly
-        # linear sub-problem each step and keeps Newton-like convergence
-        # behaviour at the fixed point.
-        ne_prev,  nFC_prev,  nCX_prev  = split(u_prev)
-        ne_curr,  nFC_curr,  nCX_curr  = split(u)
-
-        # Boundary contribution to F1 from a Neumann BC at x_inner.  
-        # No boundary condition (bc is zero) when Dirichlet is used at x_inner (no boundary term, because v_e vanishes at that end).
-        # note this is NOT the same as the boundary condition as the density Dirichlet bcs
-        F1_neumann_bc = (
-            g_fd * D_fd * dne_dx_inner_c * v_e * ds(1)
-            if ne_inner_bc == "neumann" else None
-        )
-
         if use_picard:
-            # define residuals for each of the three equations
-            # use previous step's (<n_FC> + <n_CX>) on the RHS
+            # Linear Picard: one LinearVariationalProblem per (mesh, BC) layout;
+            # lagged factors live in u_prev (updated each iteration).
+            a_form, L_form = self._build_picard_bilinear_and_linear_forms(
+                W, D_fd, g_fd, Si_fd, Scx_fd, Vcx_fd,
+                VFC_const, fFC_const, fCX_const, half,
+                u_prev, ne_inner_bc, dne_dx_inner_c,
+            )
+            picard_params = self._build_picard_linear_solver_parameters(
+                linear_solver=linear_solver,
+                ksp_rtol=ksp_rtol,
+                ksp_max_it=ksp_max_it,
+            )
+            picard_solver = self._create_picard_linear_solver(
+                a_form, L_form, u, bcs, picard_params,
+            )
 
-            # F1 is weak form because it is a second-order equation
-            F1 = (g_fd * D_fd * ne_curr.dx(0) * v_e.dx(0)
-                  - ne_curr * Si_fd * (nFC_prev + nCX_prev) * v_e) * dx # define without boundary condition terms
-            
-            # F2 is strong form because it is a first-order equation. No integration by parts needed.
-            # use previous step's n_e on the RHS
-            F2 = ((VFC_const * fFC_const * g_fd * nFC_curr).dx(0) * v_F
-                  - ne_prev * (Si_fd + Scx_fd) * nFC_curr * v_F) * dx
-
-            # F3 is strong form because it is a first-order equation. No integration by parts needed.
-            # use previous step's n_e on the RHS, use previous step's n_FC in the CX-source term
-            F3 = ((Vcx_fd * fCX_const * g_fd * nCX_curr).dx(0) * v_C
-                  - ne_prev * (
-                        Si_fd * nCX_curr - half * Scx_fd * nFC_prev
-                    ) * v_C) * dx
-        else: # don't use Picard iteration, use full Newton solve
-            # Full Newton on the truly nonlinear residual.  More fragile
-            # but useful for debugging / checking the linearisation.
-            F1 = (g_fd * D_fd * ne_curr.dx(0) * v_e.dx(0)
-                  - ne_curr * Si_fd * (nFC_curr + nCX_curr) * v_e) * dx
-            F2 = ((VFC_const * fFC_const * g_fd * nFC_curr).dx(0) * v_F
-                  - ne_curr * (Si_fd + Scx_fd) * nFC_curr * v_F) * dx
-            F3 = ((Vcx_fd * fCX_const * g_fd * nCX_curr).dx(0) * v_C
-                  - ne_curr * (
-                        Si_fd * nCX_curr - half * Scx_fd * nFC_curr
-                    ) * v_C) * dx
-
-        if F1_neumann_bc is not None:
-            F1 = F1 + F1_neumann_bc
-
-        F = F1 + F2 + F3 # total residual
-
-
-        solver_params = self._build_petsc_solver_parameters(
-            linear_solver=linear_solver,
-            ksp_rtol=ksp_rtol,
-            ksp_max_it=ksp_max_it,
-        )
-
-
-        # solve the system using Picard iteration or full Newton solve
-        if use_picard: # u is current step, u_prev is previous step
-            rel = np.inf # initialize relative error to infinity
+            rel = np.inf
             for k in range(max_picard):
-                solve(F == 0, u, bcs=bcs, solver_parameters=solver_params)
+                picard_solver.solve()
 
                 ne_data_new  = u.subfunctions[0].dat.data
                 ne_data_old  = u_prev.subfunctions[0].dat.data
@@ -692,9 +795,6 @@ class saarelma_connor_firedrake(saarelma_connor):
                 nCX_data_new = u.subfunctions[2].dat.data
                 nCX_data_old = u_prev.subfunctions[2].dat.data
 
-                # Convergence diagnostic on n_e BEFORE relaxation, so the
-                # tolerance refers to the actual change introduced by the
-                # linear solve, not the dampened one.
                 diff = ne_data_new - ne_data_old
                 err = float(np.sqrt(np.sum(diff * diff)))
                 ncr = float(np.sqrt(np.sum(ne_data_new * ne_data_new)))
@@ -715,14 +815,36 @@ class saarelma_connor_firedrake(saarelma_connor):
                     break
                 u_prev.assign(u)
             else:
-                import warnings
-                warnings.warn(
-                    f"Picard iteration did not reach tol={picard_tol:g} "
-                    f"after {max_picard} iterations (last rel = {rel:.3e}).",
-                    RuntimeWarning,
-                )
-        else: # Newton solve
-            solve(F == 0, u, bcs=bcs, solver_parameters=solver_params)
+                if v:
+                    import warnings
+                    warnings.warn(
+                        f"Picard iteration did not reach tol={picard_tol:g} "
+                        f"after {max_picard} iterations (last rel = {rel:.3e}).",
+                        RuntimeWarning,
+                    )
+        else:
+            # Full Newton via SNES on the nonlinear residual F(u)=0.
+            v_e, v_F, v_C = TestFunctions(W)
+            ne_curr, nFC_curr, nCX_curr = split(u)
+
+            F1 = (g_fd * D_fd * ne_curr.dx(0) * v_e.dx(0)
+                  - ne_curr * Si_fd * (nFC_curr + nCX_curr) * v_e) * dx
+            F2 = ((VFC_const * fFC_const * g_fd * nFC_curr).dx(0) * v_F
+                  - ne_curr * (Si_fd + Scx_fd) * nFC_curr * v_F) * dx
+            F3 = ((Vcx_fd * fCX_const * g_fd * nCX_curr).dx(0) * v_C
+                  - ne_curr * (
+                        Si_fd * nCX_curr - half * Scx_fd * nFC_curr
+                    ) * v_C) * dx
+            if ne_inner_bc == "neumann":
+                F1 = F1 + g_fd * D_fd * dne_dx_inner_c * v_e * ds(1)
+
+            F = F1 + F2 + F3
+            newton_params = self._build_petsc_solver_parameters(
+                linear_solver=linear_solver,
+                ksp_rtol=ksp_rtol,
+                ksp_max_it=ksp_max_it,
+            )
+            solve(F == 0, u, bcs=bcs, solver_parameters=newton_params)
 
 
         # extract the converged profiles from the Firedrake solution and save/return them

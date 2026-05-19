@@ -255,24 +255,30 @@ class saarelma_connor:
             if hasattr(self, _attr):
                 delattr(self, _attr)
 
-    def inner_boundary_limits(self, outer_threshold=None,x_res=100):
+    def inner_boundary_limits(self, outer_threshold=None, safety_margin=0.01,
+                              x_res=100, psi_N_default=0.85):
         """Return (psi_N_inner_limit, psi_N_outer_limit) — the valid range for
         psi_N_inner_boundary given current parameters (D_ped, nFC_x0).
 
         The OUTER limit (closest to separatrix, largest psi_N) is determined by
         the nFC/nCX threshold logic in ``find_inner_boundary``.
-        The INNER limit (deepest in core, smallest psi_N) is the smallest psi_N
-        at which the experimental dn_e/dx is still sufficiently negative for
-        the BVP boundary condition to be valid.
+        The INNER limit (deepest in core, smallest psi_N) is found by scanning
+        from the separatrix inward until the p-file ``dn_e/dx`` is no longer
+        steeper than ``safety_margin * min(dn_e/dx)``.
 
         Parameters
         ----------
         outer_threshold : float, optional
             Threshold applied to BOTH nFC_threshold and nCX_threshold when
             computing the outer limit.  Default: keep current thresholds.
+        safety_margin : float, default ``0.01``
+            Fraction of the most negative p-file ``dn_e/dx`` used as the inner
+            slope cutoff (see ``psi_inner_safety_margin`` in scan notebooks).
         x_res : int
             Resolution passed to ``setup_solver_grids`` if it has not yet been
             called on this instance.
+        psi_N_default : float, default ``0.85``
+            Default psi_N value used when no valid inner boundary is found.
         """
         # Ensure form-factor / solver-grid setup has been done.
         if not hasattr(self, 'fFC'):
@@ -306,15 +312,20 @@ class saarelma_connor:
 
         # ---- INNER limit ----------------------------------------------------
         dne_dx = np.gradient(self.n_e_pres, self.x_init)
-        x_inner = None
+        slope_cut = float(safety_margin) * float(np.min(dne_dx))
+        psi_N_inner = None
         for i in range(len(dne_dx)):
-            j = len(dne_dx) - i - 1
-            if dne_dx[j] >= 0: # look for the first positive slope
-                psi_N_inner = self.psi_N_pres[j]
+            j = len(dne_dx) - i - 1  # separatrix -> core
+            if dne_dx[j] >= slope_cut:
+                psi_N_inner = float(self.psi_N_pres[j])
                 break
-        if x_inner is None:
-            print("No valid inner boundary found, defaulting to psi_N=0.85 for inner boundary")
-            psi_N_inner = 0.85
+        if psi_N_inner is None:
+            if self.verbose:
+                print(
+                    "No valid inner boundary found, defaulting to psi_N=0.85 "
+                    "for inner boundary"
+                )
+            psi_N_inner = psi_N_default
 
         # Guarantee monotonic ordering (inner <= outer) even with edge cases.
         if psi_N_inner > psi_N_outer:
@@ -1109,7 +1120,7 @@ class saarelma_connor:
         """Franck--Condon and charge-exchange densities after ``solve()``.
 
         Uses the same closures as ``find_inner_boundary`` (Eqs.~(11)--(12) in
-        Saarelma \emph{et al.}~2023): exponential attenuation of FC neutrals
+        Saarelma et al., 2023): exponential attenuation of FC neutrals
         from the separatrix and the algebraic CX relation.
 
         Parameters
