@@ -1105,6 +1105,68 @@ class saarelma_connor:
         self.sol = sol
 
 
+    def compute_post_solve_neutrals(self, x=None, ne=None, dne_dx=None):
+        """Franck--Condon and charge-exchange densities after ``solve()``.
+
+        Uses the same closures as ``find_inner_boundary`` (Eqs.~(11)--(12) in
+        Saarelma \emph{et al.}~2023): exponential attenuation of FC neutrals
+        from the separatrix and the algebraic CX relation.
+
+        Parameters
+        ----------
+        x, ne, dne_dx : ndarray, optional
+            Radial grid and electron profiles.  Defaults to ``self.x_sol``,
+            ``self.ne_sol``, and ``self.dne_dx_sol``.
+
+        Returns
+        -------
+        nFC, nCX : ndarray
+            Neutral densities (m^-3) on ``x``.
+        """
+        if x is None:
+            x = self.x_sol
+        if ne is None:
+            ne = self.ne_sol
+        if dne_dx is None:
+            dne_dx = self.dne_dx_sol
+
+        Si = interp1d(self.x_init, self.S_i_pres, kind='linear',
+                      bounds_error=False, fill_value='extrapolate')(x)
+        Scx = interp1d(self.x_init, self.S_cx_pres, kind='linear',
+                       bounds_error=False, fill_value='extrapolate')(x)
+        gr2 = interp1d(self.x_init, self.gradr2_fsa, kind='linear',
+                       bounds_error=False, fill_value='extrapolate')(x)
+        Dped = interp1d(self.x_init, self.D_ped, kind='linear',
+                        bounds_error=False, fill_value='extrapolate')(x)
+        Vcx = interp1d(self.x_init, self.V_cx_pres, kind='linear',
+                       bounds_error=False, fill_value='extrapolate')(x)
+
+        Vfc = abs(self.V_FC)
+        fFC = self.fFC
+        fCX = self.fCX
+
+        integrand = ne * (Si + Scx) / (fFC * Vfc)
+        order_desc = np.argsort(x)[::-1]
+        x_desc = x[order_desc]
+        cumint = cumulative_trapezoid(integrand[order_desc], x_desc, initial=0.0)
+        integral_from_0 = np.empty_like(cumint)
+        integral_from_0[order_desc] = cumint
+        nFC = self.nFC_x0 * np.exp(integral_from_0)
+
+        if not hasattr(self, 'dne_dx_neginf'):
+            dne_dx_pres = np.gradient(self.n_e_pres, self.x_init)
+            dne_dx_interp = interp1d(
+                self.psi_N_pres, dne_dx_pres, kind='linear',
+                bounds_error=False, fill_value='extrapolate',
+            )
+            self.dne_dx_neginf = float(dne_dx_interp(self.psi_N_inner_boundary))
+
+        flux_term = -(gr2 * Dped / (Vcx * fCX)) * (dne_dx - self.dne_dx_neginf)
+        fc_term = -(Vfc * fFC / (Vcx * fCX)) * ((Si + Scx / 2) / (Si + Scx)) * nFC
+        nCX = np.maximum(flux_term + fc_term, 0.0)
+        return nFC, nCX
+
+
     def solve(self,soln_method='sc_2order',tol=1e-3,max_iter=50,x_res=100):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
 
@@ -1132,6 +1194,8 @@ class saarelma_connor:
             Converged electron density profile on self.x_sol.
         self.x_sol : ndarray
             Radial grid (x = 0 at separatrix, x < 0 inside).
+        self.nFC_sol, self.nCX_sol : ndarray
+            FC and CX neutral densities on ``self.x_sol`` (Eqs.~(11)--(12)).
         """
 
         # form factors are currently set to 1, assuming poloidal symmetry as done in S. Saarelma et al 2024 Nucl. Fusion 64 076025 Section 3
@@ -1284,9 +1348,15 @@ class saarelma_connor:
             self.ne_sol = self.sol.y[0]
             self.dne_dx_sol = self.sol.y[1]
 
-            # Calculate nFC
-            self.exp_term_arr = exp_term_arr
-            self.nFC_sol = self.nFC_x0 * exp_term_arr
+            # FC/CX on the converged BVP grid (Eqs. 11--12)
+            self.exp_term_arr = exp_term_arr  # last Picard iterate, on x_prev
+            self.nFC_sol, self.nCX_sol = self.compute_post_solve_neutrals()
+            if not (len(self.x_sol) == len(self.ne_sol) == len(self.nFC_sol)):
+                raise RuntimeError(
+                    "Parent solve profile length mismatch on x_sol: "
+                    f"x={len(self.x_sol)}, ne={len(self.ne_sol)}, "
+                    f"nFC={len(self.nFC_sol)}"
+                )
 
             return self.x_sol, self.ne_sol, self.dne_dx_sol
 
