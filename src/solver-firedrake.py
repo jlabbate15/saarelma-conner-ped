@@ -356,6 +356,7 @@ class saarelma_connor_firedrake(saarelma_connor):
                         ne_inner=None,
                         ne_inner_bc="neumann",
                         dne_dx_inner=None,
+                        bc_origin="p-file",
                         initial_guess="linear",
                         tanh_width=None,
                         tanh_center=None,
@@ -419,6 +420,11 @@ class saarelma_connor_firedrake(saarelma_connor):
                 x_inner is sufficiently deep that the p-file value and
                 p-file slope at x_inner are mutually consistent with
                 each other and with the pedestal model.
+        bc_origin : {"p-file", "user"}, default "p-file"
+            Origin of the inner-boundary BCs:
+              - ``"p-file"`` (default): read the inner-boundary values
+                from the p-file.
+              - ``"user"``: use the values provided by the user.
         dne_dx_inner : float or None
             Value of dn_e/dx (m^-4) at x = x_inner, used as the Neumann
             BC value when ``ne_inner_bc == "neumann"``.  If ``None``
@@ -521,22 +527,19 @@ class saarelma_connor_firedrake(saarelma_connor):
 
         # ne(x_inner) -- used for the Dirichlet BC if requested, and for the
         # initial guess at the inner boundary in all cases.
-        if ne_inner is None:
+        if bc_origin == "p-file":
             ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres))
-            ne_inner_src = "p-file"
-        else:
-            ne_inner_val = float(ne_inner)
-            ne_inner_src = "user"
 
-        # dne/dx(x_inner) -- used for the Neumann BC if requested.  Computed
-        # the same way as solver.first_step (np.gradient on the p-file n_e).
-        if dne_dx_inner is None:
+            # dne/dx(x_inner) -- used for the Neumann BC if requested. Computed the same way as solver.first_step (np.gradient on the p-file n_e).
             dne_dx_pres        = np.gradient(self.n_e_pres, self.x_init)
             dne_dx_inner_val   = float(np.interp(self.x_inner, self.x_init, dne_dx_pres))
-            dne_dx_inner_src   = "p-file"
+        elif bc_origin == "user":
+            ne_inner_val = float(ne_inner)
+            dne_dx_inner_val = float(dne_dx_inner)
         else:
-            dne_dx_inner_val   = float(dne_dx_inner)
-            dne_dx_inner_src   = "user"
+            raise ValueError(
+                f"bc_origin must be 'p-file' or 'user', got {bc_origin!r}."
+            )
 
         ne_inner_bc = str(ne_inner_bc).lower()
         if ne_inner_bc not in ("dirichlet", "neumann"):
@@ -560,8 +563,8 @@ class saarelma_connor_firedrake(saarelma_connor):
         if v:
             print(f"[firedrake] x_inner        = {self.x_inner:.4e} m")
             print(f"[firedrake] ne_inner_bc    = {ne_inner_bc!r}")
-            print(f"[firedrake] ne(x_inner)    = {ne_inner_val:.3e} m^-3 ({ne_inner_src})")
-            print(f"[firedrake] dne/dx(x_in)   = {dne_dx_inner_val:.3e} m^-4 ({dne_dx_inner_src})")
+            print(f"[firedrake] ne(x_inner)    = {ne_inner_val:.3e} m^-3 ({bc_origin})")
+            print(f"[firedrake] dne/dx(x_in)   = {dne_dx_inner_val:.3e} m^-4 ({bc_origin})")
             print(f"[firedrake] ne_x0          = {self.ne_x0:.3e} m^-3")
             print(f"[firedrake] nFC_x0         = {self.nFC_x0:.3e} m^-3")
             print(f"[firedrake] nCX_x0         = {self.nCX_x0:.3e} m^-3")

@@ -179,6 +179,8 @@ class saarelma_connor:
         self._grad_Te = grad_Te
         self._P_tot_e = P_tot_e
         self._psi_N_inner_boundary_default = psi_N_inner_boundary
+        self._dne_dx_inner = 0
+        self._ne_inner = 0
 
         # boundary conditions - will be updated with a more comprehensive model in the future
         self.ne_x0 = self.n_e_pres[-1]
