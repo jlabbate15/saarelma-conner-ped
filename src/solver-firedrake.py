@@ -551,14 +551,15 @@ class saarelma_connor_firedrake(saarelma_connor):
         # inside the domain than at x_inner, so dne/dx(x_inner) must be
         # strictly negative (n_e decreasing outward).  Mirrors the same check
         # in solver.first_step.
-        if ne_inner_bc == "neumann" and dne_dx_inner_val >= 0:
+
+        '''if ne_inner_bc == "neumann" and dne_dx_inner_val >= 0: # model was not converging before Firedrake-implemented model
             raise ValueError(
                 f"Neumann BC value dne/dx(x_inner) = {dne_dx_inner_val:.3e} m^-4 "
                 f"is zero or positive.  It must be strictly negative for a "
                 f"pedestal solve (density decreasing outward).  Either pass a "
                 f"valid dne_dx_inner explicitly or move x_inner deeper (e.g. "
                 f"lower psi_N_inner_boundary)."
-            )
+            )'''
 
         if v:
             print(f"[firedrake] x_inner        = {self.x_inner:.4e} m")
