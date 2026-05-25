@@ -1,1 +1,0 @@
-alpha_crit, C_KBM, De_chie_etg, nFC_x0, psi_N_inner, message
