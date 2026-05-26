@@ -87,7 +87,7 @@ class saarelma_connor:
         De_chie_etg = None, # FREE PARAMETER
         nFC_x0 = None, # m^-3, FREE PARAMETER, Franck-Condon neutral density at the separatrix
         ne_x0 = None, # m^-3, electron density at the separatrix (boundary condition, default is to use from pfile)
-        psi_N_inner_boundary = None, # normalized poloidal flux at the inner boundary (boundary condition); overridden by find_inner_boundary if nFC_threshold or nCX_threshold is set
+        psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition); overridden by find_inner_boundary if nFC_threshold or nCX_threshold is set
         nFC_threshold = 0.01, # fraction of nFC at the separatrix below which the inner boundary is placed (None to disable)
         nCX_threshold = 0.01, # fraction of nCX at the separatrix below which the inner boundary is placed (None to disable)
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
@@ -163,7 +163,7 @@ class saarelma_connor:
         self.c_s = (self.e_i * self.T_e * 1e3 / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2, T_e in keV -> eV via 1e3, as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
         V_th_i_rz = self.psi_rz_expand(self.V_th_i, psi_N_A='T_e')
         self.rho_s = V_th_i_rz*M_i*self.M_eff / (self.e_i * self.B) # m, known on each RZ grid point
-        self.rho_s = self.fsa(rho_s,flux_surfaces='T_e') # m, known on each flux surface, outputs nan for psi_N < 0.01 or psi_N > 0.99
+        self.rho_s = self.fsa(self.rho_s,flux_surfaces='T_e') # m, known on each flux surface, outputs nan for psi_N < 0.01 or psi_N > 0.99
         valid = ~np.isnan(self.rho_s)
         self.rho_s = interp1d(self.psi_Te_eval[valid], self.rho_s[valid], kind='linear',bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval) # removes nan values from rho_s
         self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
@@ -172,7 +172,7 @@ class saarelma_connor:
         T_e_pres = interp1d(self.psi_Te_eval, self.T_e, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         self.T_e_pres = T_e_pres * (1e3) # eV, on psi_N_pres grid
-        self.n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
+        self.n_e_pres = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         self.c_s = interp1d(self.psi_Te_eval, self.c_s, kind='linear',
                        bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
@@ -183,14 +183,10 @@ class saarelma_connor:
         self.D_ETG_x = P_tot_e / (self.S_plasma * abs(grad_Te)) # evaluated at each psi_N_pres, not including free parameter De_chie_etg and n_e
         self.D_NEO = 0.05 * (self.c_s * self.rho_s**2) / self.a
 
-        # Boundary conditions
-        self._dne_dx_inner = 0
-        self._ne_inner = 0
-
         # Outer boundary condition for electrons and FC neutrals
-        self.ne_x0 = self._n_e_pfile[-1]
+        self.ne_x0 = self.n_e_pfile[-1]
         if nFC_x0 is None:
-            nFC_x0 = self._n_e_pfile[-1] * 1e-4
+            nFC_x0 = self.n_e_pfile[-1] * 1e-4
             if self.verbose:
                 print('nFC_x0 = ', nFC_x0)
 
@@ -202,8 +198,9 @@ class saarelma_connor:
             psi_N_inner_boundary=psi_N_inner_boundary,
         )
 
-    def calc_pressure_quantities(self,n_e):
+    def calc_pressure_quantities(self,n_e,x):
         """Calculate the pressure, alpha, and D_KBM on the psi_N_pres grid."""
+        n_e = interp1d(x, n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         _pres = n_e * self.T_e_pres
         _alpha = (
             -(2 * np.gradient(self.V_plasma, self.psi_pres) / ((2 * np.pi) ** 2))
@@ -312,7 +309,6 @@ class saarelma_connor:
 
         # Start from the default so find_inner_boundary doesn't compound onto
         # a previously narrowed value.
-        self.psi_N_inner_boundary = self._psi_N_inner_boundary_default
         self.find_inner_boundary()
         psi_N_outer = float(self.psi_N_inner_boundary)
 
@@ -418,7 +414,7 @@ class saarelma_connor:
             Enclosed toroidal volume (m^3) at each flux surface.
         """
 
-        n_psi = len(self.pres)
+        n_psi = len(self.psi_pres)
 
         self.S_plasma = np.zeros(n_psi)
         self.V_plasma = np.zeros(n_psi)
@@ -630,8 +626,8 @@ class saarelma_connor:
 
             # ionization rate coefficient profile: scd_adas(n_e, T_e[eV]) at each psi_Te_eval point.
             # n_e is given on psi_ne_eval, so interpolate it onto psi_Te_eval first.
-            n_e_at_Te = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
-                                 bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval)
+            n_e_at_Te = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear',
+                                 bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval) # NEEDS TO BE CHANGED!
             T_e_eV = self.T_e * 1e3 # keV -> eV
             self.sigma_i = np.array([
                 scd_adas(n_e_at_Te[i], T_e_eV[i]) for i in range(len(self.psi_Te_eval))
@@ -792,7 +788,7 @@ class saarelma_connor:
         ne   = self.n_e_pres
         Si   = self.S_i_pres
         Scx  = self.S_cx_pres
-        Dped = self.D_ped
+        Dped = self.D_NEO + self._D_KBM + (self.D_ETG_x / ne)
         gr2  = self.gradr2_fsa
         Vcx  = self.V_cx_pres      # array, local thermal CX speed
         Vfc  = abs(self.V_FC)      # scalar FC speed
@@ -1193,14 +1189,6 @@ class saarelma_connor:
         integral_from_0[order_desc] = cumint
         nFC = self.nFC_x0 * np.exp(integral_from_0)
 
-        if not hasattr(self, 'dne_dx_neginf'):
-            dne_dx_pres = np.gradient(self.n_e_pres, self.x_init)
-            dne_dx_interp = interp1d(
-                self.psi_N_pres, dne_dx_pres, kind='linear',
-                bounds_error=False, fill_value='extrapolate',
-            )
-            self.dne_dx_neginf = float(dne_dx_interp(self.psi_N_inner_boundary))
-
         flux_term = -(gr2 * Dped / (Vcx * fCX)) * (dne_dx - self.dne_dx_neginf)
         fc_term = -(Vfc * fFC / (Vcx * fCX)) * ((Si + Scx / 2) / (Si + Scx)) * nFC
         nCX = np.maximum(flux_term + fc_term, 0.0)
@@ -1258,8 +1246,8 @@ class saarelma_connor:
 
                 # Current iteration of n_e
                 if i == 0:
-                    if self.initial_guess is 'pfile':
-                        ne_sol_prev = self.n_e_pfile
+                    if self.initial_guess == 'pfile':
+                        ne_sol_prev = self.n_e_pres
                     else:
                         raise ValueError(f"Invalid initial guess: {self.initial_guess}")
                 else:
@@ -1268,7 +1256,7 @@ class saarelma_connor:
                     ne_sol_prev = self.sol.y[0]
 
                 # Calculate pressure, alpha, and D_KBM
-                self.calc_pressure_quantities(n_e=ne_sol_prev)
+                self.calc_pressure_quantities(n_e=ne_sol_prev,x=self.x_prev)
 
                 # First step (Eq 16 in Saarelma et al., 2023, no CX neutrals)
                 if i == 0:
