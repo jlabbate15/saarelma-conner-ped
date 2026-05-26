@@ -1151,30 +1151,24 @@ class saarelma_connor:
         self.sol = sol
 
 
-    def compute_post_solve_neutrals(self, x=None, ne=None, dne_dx=None):
+    def compute_post_solve_neutrals(self):
         """Franck--Condon and charge-exchange densities after ``solve()``.
 
         Uses the same closures as ``find_inner_boundary`` (Eqs.~(11)--(12) in
         Saarelma et al., 2023): exponential attenuation of FC neutrals
         from the separatrix and the algebraic CX relation.
 
-        Parameters
-        ----------
-        x, ne, dne_dx : ndarray, optional
-            Radial grid and electron profiles.  Defaults to ``self.x_sol``,
-            ``self.ne_sol``, and ``self.dne_dx_sol``.
-
         Returns
         -------
         nFC, nCX : ndarray
             Neutral densities (m^-3) on ``x``.
         """
-        if x is None:
-            x = self.x_sol
-        if ne is None:
-            ne = self.ne_sol
-        if dne_dx is None:
-            dne_dx = self.dne_dx_sol
+        x = self.x_sol
+        dne_dx = self.dne_dx_sol
+
+        ne_x = interp1d(self.x_sol, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')
+
+        D_ped = self.D_NEO + self._D_KBM + (self.D_ETG_x / ne_x(self.x_prev))
 
         Si = interp1d(self.x_init, self.S_i_pres, kind='linear',
                       bounds_error=False, fill_value='extrapolate')(x)
@@ -1182,7 +1176,7 @@ class saarelma_connor:
                        bounds_error=False, fill_value='extrapolate')(x)
         gr2 = interp1d(self.x_init, self.gradr2_fsa, kind='linear',
                        bounds_error=False, fill_value='extrapolate')(x)
-        Dped = interp1d(self.x_init, self.D_ped, kind='linear',
+        Dped = interp1d(self.x_prev, D_ped, kind='linear',
                         bounds_error=False, fill_value='extrapolate')(x)
         Vcx = interp1d(self.x_init, self.V_cx_pres, kind='linear',
                        bounds_error=False, fill_value='extrapolate')(x)
@@ -1191,7 +1185,7 @@ class saarelma_connor:
         fFC = self.fFC
         fCX = self.fCX
 
-        integrand = ne * (Si + Scx) / (fFC * Vfc)
+        integrand = self.ne_sol * (Si + Scx) / (fFC * Vfc)
         order_desc = np.argsort(x)[::-1]
         x_desc = x[order_desc]
         cumint = cumulative_trapezoid(integrand[order_desc], x_desc, initial=0.0)
@@ -1251,14 +1245,21 @@ class saarelma_connor:
         self.form_factor(type='cx')
         self.setup_solver_grids(res=x_res)
 
-        if soln_method == 'sc_2order':
+        # Set free parameters
+        self.update_free_params(
+            free_params['alpha_crit'], free_params['C_KBM'], free_params['De_chie_etg'], free_params['nFC_x0'],
+            nFC_threshold=free_params['nFC_threshold'],
+            nCX_threshold=free_params['nCX_threshold'],
+            psi_N_inner_boundary=free_params['psi_N_inner_boundary'],
+        )
 
+        if soln_method == 'sc_2order':
             for i in range(max_iter):
 
                 # Current iteration of n_e
                 if i == 0:
                     if self.initial_guess is 'pfile':
-                        ne_current = self.n_e_pfile
+                        ne_sol_prev = self.n_e_pfile
                     else:
                         raise ValueError(f"Invalid initial guess: {self.initial_guess}")
                 else:
@@ -1266,39 +1267,19 @@ class saarelma_connor:
                     self.x_prev = self.sol.x
                     ne_sol_prev = self.sol.y[0]
 
-                # Set free parameters
-                self.update_free_params(
-                    free_params['alpha_crit'], free_params['C_KBM'], free_params['De_chie_etg'], free_params['nFC_x0'],
-                    nFC_threshold=free_params['nFC_threshold'],
-                    nCX_threshold=free_params['nCX_threshold'],
-                    psi_N_inner_boundary=free_params['psi_N_inner_boundary'],
-                )
-
                 # Calculate pressure, alpha, and D_KBM
-                self.calc_pressure_quantities(n_e=ne_current)
+                self.calc_pressure_quantities(n_e=ne_sol_prev)
 
                 # First step (Eq 16 in Saarelma et al., 2023, no CX neutrals)
                 if i == 0:
                     self.first_step(resolution=x_res)
                     continue
 
-                # Map the Picard iterate onto the equilibrium psi_N_pres grid and
-                # refresh D_ped, S_i, and related coefficients.
-                ne_at_pres = interp1d(
-                    self.x_prev, ne_sol_prev, kind='linear',
-                    bounds_error=False, fill_value='extrapolate',
-                )(self.x_init)
-                self.update_free_params(
-                    self.alpha_crit, self.C_KBM, self.De_chie_etg, self.nFC_x0,
-                    clear_solution=False,
-                    refresh_pres_profiles=True,
-                    n_e_pres=ne_at_pres,
-                )
+                # Individual transport component interpolators
+                D_NC_int = interp1d(self.x_init, self.D_NEO, kind='linear', bounds_error=False, fill_value='extrapolate')
+                D_KBM_int = interp1d(self.x_init, self._D_KBM, kind='linear', bounds_error=False, fill_value='extrapolate')
+                D_ETG_x_int = interp1d(self.x_init, self.D_ETG_x, kind='linear', bounds_error=False, fill_value='extrapolate')
 
-                D_ped_int = interp1d(
-                    self.x_init, self.D_ped, kind='linear',
-                    bounds_error=False, fill_value='extrapolate',
-                )
                 gradr2_fsa_int = interp1d(
                     self.x_init, self.gradr2_fsa, kind='linear',
                     bounds_error=False, fill_value='extrapolate',
@@ -1317,15 +1298,10 @@ class saarelma_connor:
                 )
 
                 # Iterated exponential term (computed in physical coordinates).
-                # Evaluate the rate coefficients on the previous-solution grid so
-                # the integrand uses S_i(x_prev), S_cx(x_prev) rather than scalars.
                 S_i_on_xprev = S_i_int(self.x_prev)
                 S_cx_on_xprev = S_cx_int(self.x_prev)
                 integrand = (ne_sol_prev * (S_i_on_xprev + S_cx_on_xprev)) / (self.fFC * abs(self.V_FC))
-                # int_from_left = cumulative_trapezoid(integrand, self.x_prev, initial=0)
-                # integral_from_0 = int_from_left - int_from_left[-1]
-                # Eq. (11) / Eq. (15) kernel: integral from separatrix (x=0) to local x:
-                # I(x) = ∫_0^x ne(x')*(Si+Scx)/(fFC*|VFC|) dx'
+                
                 # To make the sign unambiguous with x<0 inward, integrate on a
                 # descending-x ordering (separatrix -> core), then map back.
                 order_desc = np.argsort(self.x_prev)[::-1]
@@ -1338,13 +1314,18 @@ class saarelma_connor:
                     self.integral_from_0 = integral_from_0 # debugging
                 exp_term_arr = np.exp(integral_from_0)
 
-                # f(x) = <|grad(r)|^2> * D_ped on previous solution grid
-                f_arr = gradr2_fsa_int(self.x_prev) * D_ped_int(self.x_prev)
-                df_arr = np.gradient(f_arr, self.x_prev)
+                # Split non-linear components based on the LaTeX derivation
+                f0_arr = gradr2_fsa_int(self.x_prev) * (D_NC_int(self.x_prev) + D_KBM_int(self.x_prev))
+                f1_arr = gradr2_fsa_int(self.x_prev) * D_ETG_x_int(self.x_prev)
+                
+                df0_arr = np.gradient(f0_arr, self.x_prev)
+                df1_arr = np.gradient(f1_arr, self.x_prev)
 
                 # Callable interpolators (all in physical x)
-                f_x = interp1d(self.x_prev, f_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
-                df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+                f0_x = interp1d(self.x_prev, f0_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+                df0_dx = interp1d(self.x_prev, df0_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+                f1_x = interp1d(self.x_prev, f1_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+                df1_dx = interp1d(self.x_prev, df1_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
                 exp_term_prev = interp1d(self.x_prev, exp_term_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
 
                 # Build physical guess on uniform grid, then non-dimensionalize
@@ -1354,66 +1335,70 @@ class saarelma_connor:
                 dne_guess = np.gradient(ne_guess, x_grid)
                 Y_guess = np.vstack([ne_guess, dne_guess])
 
-                n0_inner = interp1d(self.x_prev, ne_sol_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) # use density at pedestal's inner boundary to be the density scale
-                self.non_dimensionalize(x=x_grid, y=Y_guess,n0=n0_inner)
+                n0_inner = interp1d(self.x_prev, ne_sol_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) 
+                self.non_dimensionalize(x=x_grid, y=Y_guess, n0=n0_inner)
                 L = self._L
                 n0 = self._n0
 
                 def ode_solv(xi, Y):
                     N, dNdxi = Y
                     x = L * xi
-                    D = D_ped_int(x)
                     Vcx = V_CX_int(x)
-                    f = f_x(x)
-                    dfdx = df_dx(x)
+                    
+                    f0 = f0_x(x)
+                    df0dx = df0_dx(x)
+                    f1 = f1_x(x)
+                    df1dx = df1_dx(x)
+                    
                     exp_term = exp_term_prev(x)
                     S_i = S_i_int(x)
                     S_cx = S_cx_int(x)
 
+                    # Protection against non-physical solver guesses (N near 0)
+                    N_safe = np.maximum(N, 1e-6)
+                    if 1e-6 in N_safe:
+                        import warnings
+                        warnings.warn(
+                            "N_safe is very close to zero and got clipped to 1e-6",
+                            RuntimeWarning,
+                            stacklevel=2,
+                        )
+                    F = f0 + (f1 / (n0 * N_safe))
+
                     C_cx = 1 - (abs(self.V_FC) * self.fFC / (abs(Vcx) * self.fCX)) * ((S_i + S_cx / 2) / (S_i + S_cx))
 
-                    c_a = S_i / (abs(Vcx) * self.fCX)
-                    c_b = S_i * self.dne_dx_neginf / (abs(Vcx) * self.fCX)
-                    c_E = exp_term * S_i * C_cx * self.nFC_x0 / f # nFC_x0 does not need to be non-dimensionalized
-                    c_k = dfdx / f
+                    # Mathematically consistent dimensionless coefficients
+                    C_A = (n0 * L * S_i) / (abs(Vcx) * self.fCX)
+                    C_B = C_A * self.dNdxi_neginf
+                    C_E = (L**2 * S_i * C_cx * self.nFC_x0 * exp_term) / F
+                    C_K = (L / F) * (df0dx + (df1dx / (n0 * N_safe)))
+                    C_N = f1 / (n0 * (N_safe**2) * F)
 
                     if self.error_check:
-                        c_a = c_a * abs(Vcx) * self.fCX / D
-                        c_b = c_b * abs(Vcx) * self.fCX / D
-
-                    A = c_a * n0 * L
-                    B = c_b * L**2
-                    C = c_E * L**2
-                    K = c_k * L
+                        # Fallback utilizing an effective D_ped equivalent if the error check overrides coefficients
+                        D_ped_eff = D_NC_int(x) + D_KBM_int(x) + (D_ETG_x_int(x) / (n0 * N_safe))
+                        C_A = C_A * abs(Vcx) * self.fCX / D_ped_eff
+                        C_B = C_B * abs(Vcx) * self.fCX / D_ped_eff
 
                     if i==0 and self.verbose:
                         print('iteration: ', i+1)
-                        # print(f"A : {np.max(A)}, min: {np.min(A)}")
-                        # print(f"B : {np.max(B)}, min: {np.min(B)}")
-                        print(f"C : {np.max(C)}, min: {np.min(C)}")
-                        # print(f"D : {np.max(K)}, min: {np.min(K)}")
-
+                        print(f"C_E : {np.max(C_E):.3e}, min: {np.min(C_E):.3e}")
                         print("exp_term max/min", np.max(exp_term), np.min(exp_term))
                         print("nFC_x0", self.nFC_x0)
-                        print("f max/min", np.max(f), np.min(f))
+                        print("F max/min", np.max(F), np.min(F))
                         print("C_cx max/min", np.max(C_cx), np.min(C_cx))
                         print("Si max/min", np.max(S_i), np.min(S_i))
 
-                    d2Ndxi2 = A*dNdxi*N - B*N - C*N - K*dNdxi
+                    d2Ndxi2 = C_A * N * dNdxi - C_B * N - C_E * N - C_K * dNdxi + C_N * (dNdxi**2)
                     return np.vstack([dNdxi, d2Ndxi2])
 
                 def bc_solv(Ya, Yb):
                     return np.array([
                         Ya[1] - self.dNdxi_neginf, # Neumann boundary condition at x_inner
-                        Yb[0] - self.ne_x0/n0,      # Dirichlet BC: N = ne/n0 at xi = x = 0 (separatrix)
+                        Yb[0] - self.ne_x0/n0,     # Dirichlet BC: N = ne/n0 at xi = x = 0 (separatrix)
                     ])
 
-                # self.check_normalization(step='iterate', D_ped_fn=D_ped_int,
-                #                         V_CX_fn=V_CX_int, f_fn=f_x,
-                #                         df_fn=df_dx, exp_term_fn=exp_term_prev)
-
-                with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
-                    sol = solve_bvp(ode_solv, bc_solv, self.xi, self.N_guess, max_nodes=5000, verbose=self.bvp_verbose)
+                sol = solve_bvp(ode_solv, bc_solv, self.xi, self.N_guess, max_nodes=5000, verbose=self.bvp_verbose)
                 if not sol.success:
                     raise RuntimeError(f"step {i} BVP failed: {sol.message}")
 
