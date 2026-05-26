@@ -180,7 +180,7 @@ class saarelma_connor:
                          bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
 
         grad_Te = np.gradient(self.T_e_pres * (1.60218e-19), self.r_psi) # gradient in J/m, T_e_pres is in eV
-        self.D_ETG = P_tot_e / (self.S_plasma * abs(grad_Te)) # evaluated at each psi_N_pres, not including free parameter De_chie_etg and n_e
+        self.D_ETG_x = P_tot_e / (self.S_plasma * abs(grad_Te)) # evaluated at each psi_N_pres, not including free parameter De_chie_etg and n_e
         self.D_NEO = 0.05 * (self.c_s * self.rho_s**2) / self.a
 
         # Boundary conditions
@@ -204,16 +204,16 @@ class saarelma_connor:
 
     def calc_pressure_quantities(self,n_e):
         """Calculate the pressure, alpha, and D_KBM on the psi_N_pres grid."""
-        self._pres = n_e * self.T_e_pres
-        self._alpha = (
+        _pres = n_e * self.T_e_pres
+        _alpha = (
             -(2 * np.gradient(self.V_plasma, self.psi_pres) / ((2 * np.pi) ** 2))
             * self.mu0
-            * np.gradient(self.pres, self.psi_pres)
+            * np.gradient(_pres, self.psi_pres)
             * np.sqrt(self.V_plasma / (2 * self.Rmajor * np.pi ** 2))
         )
         self._D_KBM = np.where(
-            self._alpha > self.alpha_crit,
-            self.C_KBM*(self._alpha-self.alpha_crit)*(self.c_s*self.rho_s**2)/self.a,
+            _alpha > self.alpha_crit,
+            self.C_KBM*(_alpha-self.alpha_crit)*(self.c_s*self.rho_s**2)/self.a,
             0)
 
     def update_free_params(self, alpha_crit, C_KBM, De_chie_etg, nFC_x0,
@@ -1008,10 +1008,6 @@ class saarelma_connor:
 
         self.dNdxi_neginf = self.dne_dx_neginf * (L / n0)
 
-    # def neumann_bc(self):
-    #     """Calculate the Neumann boundary condition for the BVP.
-    #     x_inner is chosen where the slope begins to decrease
-    #     """
 
     def first_step(self,resolution=200):
         """Solve Equation (16) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
@@ -1039,6 +1035,8 @@ class saarelma_connor:
         ----
         self.ne_first_sol : BVP solution object from solve_bvp.
         """
+
+        # FIRST set boundary conditions
         # Adaptively locate the inner boundary where both neutral species
         # have attenuated below the requested thresholds (no-op when both
         # thresholds are None, in which case psi_N_inner_boundary is unchanged).
@@ -1065,16 +1063,20 @@ class saarelma_connor:
                 f"nFC_threshold / nCX_threshold, or increasing "
                 f"psi_N_inner_boundary to move the boundary further outward."
             )
-        # D_ped_x = interp1d(self.x_prev, self.D_ped, kind='linear', bounds_error=False, fill_value='extrapolate')
 
-        # f(x) = <|grad(r)|^2> * D_ped
-        f_arr = self.gradr2_fsa * self.D_ped
-        df_arr = np.gradient(f_arr, self.x_prev)
-        f_x = interp1d(self.x_prev, f_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
-        df_dx = interp1d(self.x_prev, df_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+        # Set up ODE
+        f0_arr = self.gradr2_fsa * (self.D_NEO + self._D_KBM)
+        f1_arr = self.gradr2_fsa * self.D_ETG_x
 
-        # x-based interpolators for the ionization and CX rate coefficient profiles,
-        # so the ODE evaluates them at the local x = L*xi rather than treating them as scalars
+        df0_arr = np.gradient(f0_arr, self.x_prev)
+        df1_arr = np.gradient(f1_arr, self.x_prev)
+
+        f0_x = interp1d(self.x_prev, f0_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+        df0_dx = interp1d(self.x_prev, df0_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+        f1_x = interp1d(self.x_prev, f1_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+        df1_dx = interp1d(self.x_prev, df1_arr, kind='linear', bounds_error=False, fill_value='extrapolate')
+
+        # x-based interpolators for the ionization and CX rate coefficient profiles
         S_i_x = interp1d(self.x_prev, self.S_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
         S_cx_x = interp1d(self.x_prev, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
 
@@ -1086,27 +1088,50 @@ class saarelma_connor:
         dne_guess[0] = self.dne_dx_neginf
         Y_guess = np.vstack([ne_guess, dne_guess])
 
-        n0_inner = interp1d(self.x_prev, self.n_e_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_inner) # use density at pedestal's inner boundary to be the density scale
-        self.non_dimensionalize(x=x_grid, y=Y_guess,n0=n0_inner)
+        n0_inner = interp1d(self.x_prev, self.n_e_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_inner) 
+        self.non_dimensionalize(x=x_grid, y=Y_guess, n0=n0_inner)
         L = self._L
         n0 = self._n0
 
         def ode(xi, Y):
             N, dNdxi = Y
             x = L * xi # map back to physical coordinate for interpolators
-            f = f_x(x)
-            dfdx = df_dx(x)
+            
+            f0 = f0_x(x)
+            df0dx = df0_dx(x)
+            f1 = f1_x(x)
+            df1dx = df1_dx(x)
+            
             S_i = S_i_x(x)
             S_cx = S_cx_x(x)
-            A = n0 * L * (S_i + S_cx) / (abs(self.V_FC) * self.fFC)
-            B = n0 * L * self.dNdxi_neginf * (S_i + S_cx) / (abs(self.V_FC) * self.fFC)
-            K = L * dfdx / f
+
+            # Prevent division by zero mathematically if N drops near 0 during BVP iterations
+            N_safe = np.maximum(N, 1e-6)
+            if 1e-6 in N_safe:
+                import warnings
+                warnings.warn(
+                    "N_safe is very close to zero and got clipped to 1e-6",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+
+            # Total flux multiplier
+            F = f0 + (f1 / (n0 * N_safe))
+
+            # Non-dimensional coefficients
+            C_A = (n0 * L * (S_i + S_cx)) / (abs(self.V_FC) * self.fFC * F)
+            C_B = C_A * self.dNdxi_neginf
+            C_K = (L / F) * (df0dx + (df1dx / (n0 * N_safe)))
+            C_N = f1 / (n0 * (N_safe**2) * F)
+
             if self.verbose:
-                print('iteration: ', 0)
-                print(f"A : {np.max(A)}, min: {np.min(A)}")
-                print(f"B : {np.max(B)}, min: {np.min(B)}")
-                print(f"K : {np.max(K)}, min: {np.min(K)}")
-            d2Ndxi2 = A * N * dNdxi - B * N - K * dNdxi
+                print('iteration ODE eval')
+                print(f"C_A : {np.max(C_A):.3e}, min: {np.min(C_A):.3e}")
+                print(f"C_B : {np.max(C_B):.3e}, min: {np.min(C_B):.3e}")
+                print(f"C_K : {np.max(C_K):.3e}, min: {np.min(C_K):.3e}")
+                print(f"C_N : {np.max(C_N):.3e}, min: {np.min(C_N):.3e}")
+                
+            d2Ndxi2 = C_A * N * dNdxi - C_B * N - C_K * dNdxi + C_N * (dNdxi**2)
             return np.vstack([dNdxi, d2Ndxi2])
 
         def bc(Ya, Yb):
@@ -1115,10 +1140,7 @@ class saarelma_connor:
                 Yb[0] - self.ne_x0/n0,      # Dirichlet BC: N = ne/n0 at xi = x = 0 (separatrix)
             ])
 
-        # if self.verbose:
-        #     self.check_normalization()
-        with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
-            sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=5000, verbose=self.bvp_verbose)
+        sol = solve_bvp(ode, bc, self.xi, self.N_guess, max_nodes=5000, verbose=self.bvp_verbose)
         if not sol.success:
             raise RuntimeError(f"first_step BVP failed: {sol.message}")
 
