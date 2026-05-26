@@ -70,6 +70,8 @@ class saarelma_connor:
         True if the poloidal flux is normalized by 2pi, False if the poloidal flux is not normalized by 2pi
     species : string
         Species of ions, currently supporting: D, D-T
+    initial_guess : string
+        Initial guess for the electron density profile, currently supporting: pfile
     verbose : bool
         True if verbose output is desired, False if verbose output is not desired
     """
@@ -85,7 +87,7 @@ class saarelma_connor:
         De_chie_etg = None, # FREE PARAMETER
         nFC_x0 = None, # m^-3, FREE PARAMETER, Franck-Condon neutral density at the separatrix
         ne_x0 = None, # m^-3, electron density at the separatrix (boundary condition, default is to use from pfile)
-        psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition); overridden by find_inner_boundary if nFC_threshold or nCX_threshold is set
+        psi_N_inner_boundary = None, # normalized poloidal flux at the inner boundary (boundary condition); overridden by find_inner_boundary if nFC_threshold or nCX_threshold is set
         nFC_threshold = 0.01, # fraction of nFC at the separatrix below which the inner boundary is placed (None to disable)
         nCX_threshold = 0.01, # fraction of nCX at the separatrix below which the inner boundary is placed (None to disable)
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
@@ -98,9 +100,11 @@ class saarelma_connor:
         species = 'D', # species of ions, currently supporting: D, D-T
         verbose = False,
         error_check = False, # check if Samuli's 2023 paper Eq. 15 is correct or not
+        initial_guess = 'pfile', # initial guess for the electron density profile, currently supporting: pfile, linear
     ):
-        self.error_check = error_check
 
+        # User-specified flags
+        self.error_check = error_check
         self.T_rat_flag = T_rat_flag
         self.T_rat = T_rat
         self.verbose = verbose
@@ -110,8 +114,14 @@ class saarelma_connor:
             self.bvp_verbose = 0
         self.pol_norm = pol_norm
         self.psi_N_inner_boundary = psi_N_inner_boundary
+        self.initial_guess = initial_guess
+
+        # User-specified thresholds for the inner boundary
         self.nFC_threshold = nFC_threshold
         self.nCX_threshold = nCX_threshold
+
+
+        self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
 
         self.M_i = M_i
         if species == 'D':
@@ -121,197 +131,99 @@ class saarelma_connor:
         else:
             assert False, 'species must be D or D-T'
 
+        # Load in quantities
         self.mhd_load(mhd_loc,mhd_fp) # load in MHD quantities
         self.kprof_load(kprof_loc,kprof_fp) # load in kinetic quantities
-        self.calc_B(self.rgrid,self.zgrid) # calculate the magnetic field at each RZ grid point, sets self.B
 
+        # TEMPERATURE IS GIVEN AS AN INPUT TO THIS MODEL
+        
+        # Calculate the magnetic field at each RZ grid point, sets self.B
+        self.calc_B(self.rgrid,self.zgrid)
+
+
+        # calculate the flux surface-averaged |grad(r)| and |grad(r)|^2 and some other quantities like r_psi (outboard midplane minor radius for each flux surface)
+        self.calc_gradr() # only a function of geometry
+
+        # Calculate velocities
         self.Z_i = Z_i
         self.e_i = Z_i * 1.602e-19 # C
         k_B = 1.38064852e-23 # J/K, Boltzmann constant
         self.V_th_i = np.sqrt(2*k_B*self.T_i_K/(M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
         self.V_th_e = np.sqrt(2*k_B*self.T_e_K/M_e) # m/s, per psi_N_eval for Te
-
         self.V_FC = np.sqrt(8*E_FC/((np.pi**2) * M_i*self.M_eff)) # m/s
         self.V_cx = np.sqrt(2*k_B*self.T_i_K/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
 
-        # self.cross_sections(species) # load in cross-sections
+        # Load in cross-sections, which are only a function of temperature
+        self.cross_sections(species) # load in cross-sections
+        self.S_i = self.sigma_i # m^3/s, ionization <sigma v> profile on psi_Te_eval (scd_adas already returns the rate coefficient)
+        self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, CX rate coefficient profile on psi_Te_eval
 
-        # self.S_i = self.sigma_i # m^3/s, ionization <sigma v> profile on psi_Te_eval (scd_adas already returns the rate coefficient)
-        # self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, CX rate coefficient profile on psi_Te_eval
 
-        self._species = species
+        # Setup for diffusion coefficient that does not include free parameters and n_e
+        self.c_s = (self.e_i * self.T_e * 1e3 / (M_i * self.M_eff)) ** 0.5 # m/s, cs = (e*T_e/mD)^1/2, T_e in keV -> eV via 1e3, as defined in W. Guttenfelder et al 2021 Nucl. Fusion 61 056005
+        V_th_i_rz = self.psi_rz_expand(self.V_th_i, psi_N_A='T_e')
+        self.rho_s = V_th_i_rz*M_i*self.M_eff / (self.e_i * self.B) # m, known on each RZ grid point
+        self.rho_s = self.fsa(rho_s,flux_surfaces='T_e') # m, known on each flux surface, outputs nan for psi_N < 0.01 or psi_N > 0.99
+        valid = ~np.isnan(self.rho_s)
+        self.rho_s = interp1d(self.psi_Te_eval[valid], self.rho_s[valid], kind='linear',bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval) # removes nan values from rho_s
         self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
 
-        # calculate the flux surface-averaged |grad(r)| and |grad(r)|^2 and some other quantities like r_psi (outboard midplane minor radius for each flux surface)
-        self.calc_gradr()
+        # Interpolate T_e, c_s, rho_s from psi_Te_eval onto the pressure psi_N grid
+        T_e_pres = interp1d(self.psi_Te_eval, self.T_e, kind='linear',
+                            bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        self.T_e_pres = T_e_pres * (1e3) # eV, on psi_N_pres grid
+        self.n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
+                            bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        self.c_s = interp1d(self.psi_Te_eval, self.c_s, kind='linear',
+                       bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
+        self.rho_s = interp1d(self.psi_Te_eval, self.rho_s, kind='linear',
+                         bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
 
-        self._n_e_pfile = interp1d(
-            self.psi_ne_eval, self.n_e, kind='linear',
-            bounds_error=False, fill_value='extrapolate',
-        )(self.psi_N_pres)
+        grad_Te = np.gradient(self.T_e_pres * (1.60218e-19), self.r_psi) # gradient in J/m, T_e_pres is in eV
+        self.D_ETG = P_tot_e / (self.S_plasma * abs(grad_Te)) # evaluated at each psi_N_pres, not including free parameter De_chie_etg and n_e
+        self.D_NEO = 0.05 * (self.c_s * self.rho_s**2) / self.a
 
-        self._psi_N_inner_boundary_default = psi_N_inner_boundary
-        self._P_tot_e = P_tot_e
+        # Boundary conditions
         self._dne_dx_inner = 0
         self._ne_inner = 0
 
-        # boundary conditions - will be updated with a more comprehensive model in the future
+        # Outer boundary condition for electrons and FC neutrals
         self.ne_x0 = self._n_e_pfile[-1]
-
-        self._cache_equilibrium_transport_baseline()
-
         if nFC_x0 is None:
             nFC_x0 = self._n_e_pfile[-1] * 1e-4
             if self.verbose:
                 print('nFC_x0 = ', nFC_x0)
 
+        # Set free parameters
         self.update_free_params(
             alpha_crit, C_KBM, De_chie_etg, nFC_x0,
-            P_tot_e=P_tot_e,
             nFC_threshold=nFC_threshold,
             nCX_threshold=nCX_threshold,
             psi_N_inner_boundary=psi_N_inner_boundary,
         )
 
-
-    _UNSET = object()
-
-    def _cache_equilibrium_transport_baseline(self):
-        """Cache MHD/T_e quantities used in D_ped (FSA for rho_s done once)."""
-        c_s_te = (self.e_i * self.T_e * 1e3 / (self.M_i * self.M_eff)) ** 0.5
-        V_th_i_rz = self.psi_rz_expand(self.V_th_i, psi_N_A='T_e')
-        rho_s_rz = V_th_i_rz * self.M_i * self.M_eff / (self.e_i * self.B)
-        rho_s_te = self.fsa(rho_s_rz, flux_surfaces='T_e')
-        valid = np.isfinite(rho_s_te)
-        rho_s_te = interp1d(
-            self.psi_Te_eval[valid], rho_s_te[valid], kind='linear',
-            bounds_error=False, fill_value='extrapolate',
-        )(self.psi_Te_eval)
-        self._c_s_te = c_s_te
-        self._rho_s_te = rho_s_te
-        self._alpha_pres = (
+    def calc_pressure_quantities(self,n_e):
+        """Calculate the pressure, alpha, and D_KBM on the psi_N_pres grid."""
+        self._pres = n_e * self.T_e_pres
+        self._alpha = (
             -(2 * np.gradient(self.V_plasma, self.psi_pres) / ((2 * np.pi) ** 2))
             * self.mu0
             * np.gradient(self.pres, self.psi_pres)
             * np.sqrt(self.V_plasma / (2 * self.Rmajor * np.pi ** 2))
         )
-        self._T_e_pres = interp1d(
-            self.psi_Te_eval, self.T_e, kind='linear',
-            bounds_error=False, fill_value='extrapolate',
-        )(self.psi_N_pres)
-
-    def _update_reaction_coefficients(self):
-        """Ionization and CX rate coefficients from current self.n_e and T_e."""
-        if self._species == 'D':
-            sigma_cx_interp = interp1d(
-                np.array([3.23e-16, 9.68e-16, 3.23e-15, 6.45e-15, 9.68e-15, 3.23e-14, 9.68e-14, 2.26e-13]),
-                np.array([3.81e-18, 3.85e-18, 3.44e-18, 2.71e-18, 1.74e-18, 8.10e-20, 9.56e-22, 1.46e-23]),
-                kind='linear', fill_value='extrapolate', bounds_error=False,
-            )
-            self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i * self.M_eff) * self.V_cx ** 2)
-            n_e_at_Te = interp1d(
-                self.psi_ne_eval, self.n_e, kind='linear',
-                bounds_error=False, fill_value='extrapolate',
-            )(self.psi_Te_eval)
-            T_e_eV = self.T_e * 1e3
-            self.sigma_i = np.array([
-                scd_adas(n_e_at_Te[i], T_e_eV[i]) for i in range(len(self.psi_Te_eval))
-            ])
-        else:
-            assert False, 'species not supported'
-        self.S_i = self.sigma_i
-        self.S_cx = self.sigma_cx * self.V_th_i
-
-    def recompute_transport_coefficients(self, n_e_pres=None):
-        """Recompute inputs to D_ped and reaction rates on the psi_N_pres grid.
-
-        Uses the cached equilibrium baseline (c_s, rho_s, alpha, T_e from MHD/p-file)
-        and updates n_e-dependent quantities (S_i, D_ETG).  When ``n_e_pres`` is
-        given (e.g. from the current Picard iterate), it replaces the p-file density
-        on ``psi_N_pres`` and ``psi_ne_eval``.
-
-        Parameters
-        ----------
-        n_e_pres : ndarray, optional
-            Electron density (m^-3) on ``self.psi_N_pres``.  Defaults to the
-            p-file profile stored at construction.
-        """
-        if n_e_pres is None:
-            n_e_pres = self._n_e_pfile
-        else:
-            n_e_pres = np.asarray(n_e_pres, dtype=float)
-            if n_e_pres.shape != self.psi_N_pres.shape:
-                raise ValueError(
-                    f"n_e_pres must have shape {self.psi_N_pres.shape}, "
-                    f"got {n_e_pres.shape}"
-                )
-
-        self.n_e_pres = n_e_pres
-        self.n_e = interp1d(
-            self.psi_N_pres, n_e_pres, kind='linear',
-            bounds_error=False, fill_value='extrapolate',
-        )(self.psi_ne_eval)
-
-        self.c_s_pres = interp1d(
-            self.psi_Te_eval, self._c_s_te, kind='linear',
-            bounds_error=False, fill_value='extrapolate',
-        )(self.psi_N_pres)
-        self.rho_s_pres = interp1d(
-            self.psi_Te_eval, self._rho_s_te, kind='linear',
-            bounds_error=False, fill_value='extrapolate',
-        )(self.psi_N_pres)
-        self.alpha = self._alpha_pres
-        self._grad_Te = np.gradient(
-            self._T_e_pres * 1e3 * 1.60218e-19, self.r_psi,
-        )
-
-        self._update_reaction_coefficients()
-        self._compute_D_ped()
-
-    def _compute_D_ped(self):
-        """Assemble D_ped from stored free parameters and transport intermediates."""
-        D_KBM = np.where(
-            self.alpha > self.alpha_crit,
-            self.C_KBM * (self.alpha - self.alpha_crit)
-            * (self.c_s_pres * self.rho_s_pres ** 2) / self.a,
-            0,
-        )
-        D_ETG = (
-            self.De_chie_etg * self._P_tot_e
-            / (self.S_plasma * np.abs(self._grad_Te) * self.n_e_pres)
-        )
-        D_NEO = 0.05 * (self.c_s_pres * self.rho_s_pres ** 2) / self.a
-        self.D_ped = D_KBM + D_ETG + D_NEO
-
-    def _sync_pres_grid_profiles(self):
-        """Refresh x_init-grid interpolants after n_e / S_i change (if grids exist)."""
-        if not hasattr(self, 'x_init'):
-            return
-        self.S_i_pres = interp1d(
-            self.psi_Te_eval, self.S_i, kind='linear',
-            bounds_error=False, fill_value='extrapolate',
-        )(self.psi_N_pres)
-        self.S_cx_pres = interp1d(
-            self.psi_Te_eval, self.S_cx, kind='linear',
-            bounds_error=False, fill_value='extrapolate',
-        )(self.psi_N_pres)
-        self.V_cx_pres = interp1d(
-            self.psi_Te_eval, np.abs(self.V_cx), kind='linear',
-            bounds_error=False, fill_value='extrapolate',
-        )(self.psi_N_pres)
+        self._D_KBM = np.where(
+            self._alpha > self.alpha_crit,
+            self.C_KBM*(self._alpha-self.alpha_crit)*(self.c_s*self.rho_s**2)/self.a,
+            0)
 
     def update_free_params(self, alpha_crit, C_KBM, De_chie_etg, nFC_x0,
-                           P_tot_e=None,
-                           nFC_threshold=_UNSET, nCX_threshold=_UNSET,
+                           nFC_threshold=None, nCX_threshold=None,
                            psi_N_inner_boundary=None,
-                           n_e_pres=None,
-                           clear_solution=True,
-                           refresh_pres_profiles=True):
-        """Update free parameters and recompute transport / D_ped.
+                           clear_solution=False):
+        """Update free parameters.
 
         Call this instead of constructing a new instance when the MHD equilibrium
-        is fixed.  Recomputes c_s, rho_s, alpha, grad_T_e, reaction rates, and
-        D_ped via :meth:`recompute_transport_coefficients`.
+        is fixed.
 
         Parameters
         ----------
@@ -319,8 +231,6 @@ class saarelma_connor:
         C_KBM : float
         De_chie_etg : float
         nFC_x0 : float
-        P_tot_e : float, optional
-            Defaults to the value used at construction time.
         nFC_threshold : float or None, optional
             Override the FC-neutral threshold used by find_inner_boundary.
             If omitted, keeps the value from construction.
@@ -331,42 +241,25 @@ class saarelma_connor:
             If given, the inner boundary is placed at this psi_N value directly
             and the adaptive threshold-based logic is disabled (both thresholds
             forced to None for this run).
-        n_e_pres : ndarray, optional
-            Electron density on ``psi_N_pres`` for D_ped and S_i.  ``None`` uses
-            the p-file profile from construction.
         clear_solution : bool, default True
             If True, drop cached BVP solution attributes from a previous
             :meth:`solve` call.  Set False inside the Picard loop.
-        refresh_pres_profiles : bool, default True
-            If True and :meth:`setup_solver_grids` has run, refresh ``S_i_pres``,
-            ``S_cx_pres``, and ``V_cx_pres`` on the solver grid.
         """
+        
+        # Set/update free parameters alpha_crit, C_KBM, De_chie_etg, nFC_x0, psi_N_inner_boundary
         self.alpha_crit = alpha_crit
         self.C_KBM = C_KBM
         self.De_chie_etg = De_chie_etg
-        if P_tot_e is None:
-            P_tot_e = self._P_tot_e
-        else:
-            self._P_tot_e = P_tot_e
-
-        self.recompute_transport_coefficients(n_e_pres=n_e_pres)
-
         self.nFC_x0 = nFC_x0
-        self.ne_x0 = self.n_e_pres[-1]
-
-        if refresh_pres_profiles:
-            self._sync_pres_grid_profiles()
-
         if psi_N_inner_boundary is not None:
             self.psi_N_inner_boundary = float(psi_N_inner_boundary)
             self.nFC_threshold = None
             self.nCX_threshold = None
         else:
-            if nFC_threshold is not self._UNSET:
+            if nFC_threshold is not None:
                 self.nFC_threshold = nFC_threshold
-            if nCX_threshold is not self._UNSET:
+            if nCX_threshold is not None:
                 self.nCX_threshold = nCX_threshold
-            self.psi_N_inner_boundary = self._psi_N_inner_boundary_default
 
         if clear_solution:
             for _attr in ('sol', 'sol_first', 'x_sol', 'ne_sol', 'dne_dx_sol',
@@ -646,7 +539,7 @@ class saarelma_connor:
 
             # Plasma parameters (skip the magnetic axis to avoid degenerate zero-area/volume flux surface)
             self.Ip = self.eq['ip'] # MA, Plasma current
-            self.pres = self.eq['pres'][1:]
+            # self.pres = self.eq['pres'][1:] # pressure is NOT an input to this model
             self.psi_pres = np.linspace(self.eq['psimag'], self.eq['psibry'], len(self.eq['pres']))[1:]
             self.psi_N_pres = (self.psi_pres - self.eq['psimag']) / (self.eq['psibry'] - self.eq['psimag'])
 
@@ -698,7 +591,7 @@ class saarelma_connor:
 
             # Extract profiles
             pf = read_pfile(kprof_fp)
-            self.n_e = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
+            self.n_e_pfile = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
             self.T_e = pf['te(KeV)'] # T_e values (keV) evaluated at psi_Te_eval
             self.T_e_K = self.T_e * 1e3 * 11604.52 # T_e values (K) evaluated at psi_Te_eval
             self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated]
@@ -710,59 +603,42 @@ class saarelma_connor:
         if self.T_rat_flag:
             self.T_i = self.T_e * self.T_rat # keV
             self.T_i_K = self.T_i * 1e3 * 11604.52 # K
-    def D_ped(self):
-        # Diffusion coefficient computation
-        D_KBM = np.where(
-            alpha > alpha_crit,
-            C_KBM*(alpha-alpha_crit)*(c_s*rho_s**2)/self.a,
-            0)
-        grad_Te = np.gradient(T_e_pres * (1e3) * (1.60218e-19), self.r_psi) # gradient in J/m, T_e_pres is in keV
-        D_ETG = De_chie_etg * P_tot_e / (self.S_plasma * abs(grad_Te) * self.n_e_pres) # evaluated at each psi_N_pres
-        D_NEO = 0.05 * (c_s * rho_s**2) / self.a
-        self.D_ped = D_KBM + D_ETG + D_NEO
 
 
-    # def cross_sections(self,species='D'):
-    #     """Calculate the cross-sections for the ionization and charge-exchange cross-sections
-    #     Uses ADAS ADF01 qcx#h0_ex3#h1.dat to interpolate the charge-exchange cross-sections as a function of energy
-    #     Uses ADAS ADF23  to interpolate the ionization cross-sections as a function of energy
-    #     This is for deuterium only
+    def cross_sections(self,species='D'):
+        """Calculate the cross-sections for the ionization and charge-exchange cross-sections
+        Uses ADAS ADF01 qcx#h0_ex3#h1.dat to interpolate the charge-exchange cross-sections as a function of energy
+        Uses ADAS ADF23  to interpolate the ionization cross-sections as a function of energy
+        This is for deuterium only
 
-    #     Parameters
-    #     ----------
-    #     self : object
-    #         instance of saarelma_connor class
-    #     species : string
-    #         species of ions, currently supporting: D
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+        species : string
+            species of ions, currently supporting: D
              
-    #     """     
+        """     
 
-    #     if species == 'D':
+        if species == 'D':
             
-    #         # charge-exchange cross-section
-    #         sigma_cx_perE = np.array([3.81*10**(-18), 3.85*10**(-18), 3.44*10**(-18), 2.71*10**(-18), 1.74*10**(-18), 8.10*10**(-20), 9.56*10**(-22), 1.46*10**(-23)]) # m^2
-    #         E = np.array([3.23*10**(-16), 9.68*10**(-16), 3.23*10**(-15), 6.45*10**(-15), 9.68*10**(-15), 3.23*10**(-14), 9.68*10**(-14), 2.26*10**(-13)]) # J
-    #         sigma_cx_interp = interp1d(E, sigma_cx_perE, kind='linear',fill_value='extrapolate',bounds_error=False)
-    #         self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i*self.M_eff) * self.V_cx**2) # m^2, charge-exchange cross-section
+            # charge-exchange cross-section
+            sigma_cx_perE = np.array([3.81*10**(-18), 3.85*10**(-18), 3.44*10**(-18), 2.71*10**(-18), 1.74*10**(-18), 8.10*10**(-20), 9.56*10**(-22), 1.46*10**(-23)]) # m^2
+            E = np.array([3.23*10**(-16), 9.68*10**(-16), 3.23*10**(-15), 6.45*10**(-15), 9.68*10**(-15), 3.23*10**(-14), 9.68*10**(-14), 2.26*10**(-13)]) # J
+            sigma_cx_interp = interp1d(E, sigma_cx_perE, kind='linear',fill_value='extrapolate',bounds_error=False)
+            self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i*self.M_eff) * self.V_cx**2) # m^2, charge-exchange cross-section
 
-    #         # ionization rate coefficient profile: scd_adas(n_e, T_e[eV]) at each psi_Te_eval point.
-    #         # n_e is given on psi_ne_eval, so interpolate it onto psi_Te_eval first.
-    #         n_e_at_Te = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
-    #                              bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval)
-    #         T_e_eV = self.T_e * 1e3 # keV -> eV
-    #         self.sigma_i = np.array([
-    #             scd_adas(n_e_at_Te[i], T_e_eV[i]) for i in range(len(self.psi_Te_eval))
-    #         ]) # m^3/s, on psi_Te_eval
+            # ionization rate coefficient profile: scd_adas(n_e, T_e[eV]) at each psi_Te_eval point.
+            # n_e is given on psi_ne_eval, so interpolate it onto psi_Te_eval first.
+            n_e_at_Te = interp1d(self.psi_ne_eval, self.n_e, kind='linear',
+                                 bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval)
+            T_e_eV = self.T_e * 1e3 # keV -> eV
+            self.sigma_i = np.array([
+                scd_adas(n_e_at_Te[i], T_e_eV[i]) for i in range(len(self.psi_Te_eval))
+            ]) # m^3/s, on psi_Te_eval
 
-    #     else:
-    #         assert False, 'species not supported'
-    def cross_sections(self, species='D'):
-        """Calculate ionization and charge-exchange rate coefficients (legacy entry point).
-
-        Prefer :meth:`recompute_transport_coefficients` or :meth:`_update_reaction_coefficients`.
-        """
-        self._species = species
-        self._update_reaction_coefficients()
+        else:
+            assert False, 'species not supported'
 
     def calc_volavgP(self):
         """Calculate the volume-averaged pressure
@@ -1315,7 +1191,7 @@ class saarelma_connor:
         return nFC, nCX
 
 
-    def solve(self,soln_method='sc_2order',tol=1e-3,max_iter=50,x_res=100):
+    def solve(self,soln_method='sc_2order',tol=1e-3,max_iter=50,x_res=100,free_params=None):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
 
         1. Sets up coefficient interpolators mapping psi_N quantities to x.
@@ -1335,6 +1211,8 @@ class saarelma_connor:
             Maximum number of Picard iterations for solve_bvp() call.
         x_res : int
             Number of points to use in the radial grid for solve_bvp() call.
+        free_params : dict, optional
+            Dictionary of free parameters to update. If None, uses the free parameters from construction.
 
         Sets
         ----
@@ -1353,15 +1231,34 @@ class saarelma_connor:
 
         if soln_method == 'sc_2order':
 
-            # --- Step 1: first step (Eq 16, no CX neutrals) ---
-            self.first_step(resolution=x_res)
-
-            # --- Step 2: iterate full Eq 15 ---
             for i in range(max_iter):
 
-                # Previous solution in physical units (after de-normalization)
-                self.x_prev = self.sol.x
-                ne_sol_prev = self.sol.y[0]
+                # Current iteration of n_e
+                if i == 0:
+                    if self.initial_guess is 'pfile':
+                        ne_current = self.n_e_pfile
+                    else:
+                        raise ValueError(f"Invalid initial guess: {self.initial_guess}")
+                else:
+                    # Previous solution in physical units (after de-normalization)
+                    self.x_prev = self.sol.x
+                    ne_sol_prev = self.sol.y[0]
+
+                # Set free parameters
+                self.update_free_params(
+                    free_params['alpha_crit'], free_params['C_KBM'], free_params['De_chie_etg'], free_params['nFC_x0'],
+                    nFC_threshold=free_params['nFC_threshold'],
+                    nCX_threshold=free_params['nCX_threshold'],
+                    psi_N_inner_boundary=free_params['psi_N_inner_boundary'],
+                )
+
+                # Calculate pressure, alpha, and D_KBM
+                self.calc_pressure_quantities(n_e=ne_current)
+
+                # First step (Eq 16 in Saarelma et al., 2023, no CX neutrals)
+                if i == 0:
+                    self.first_step(resolution=x_res)
+                    continue
 
                 # Map the Picard iterate onto the equilibrium psi_N_pres grid and
                 # refresh D_ped, S_i, and related coefficients.
