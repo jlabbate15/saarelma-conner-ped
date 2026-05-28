@@ -172,6 +172,10 @@ class saarelma_connor:
         T_e_pres = interp1d(self.psi_Te_eval, self.T_e, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         self.T_e_pres = T_e_pres * (1e3) # eV, on psi_N_pres grid
+        if self.T_rat_flag:
+            self.T_i_pres = T_e_pres * self.T_rat * (1e3) # eV, on psi_N_pres grid
+        else:
+            raise NotImplementedError("T_rat_flag must be True for now")
         self.n_e_pres = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
         self.c_s = interp1d(self.psi_Te_eval, self.c_s, kind='linear',
@@ -1036,8 +1040,10 @@ class saarelma_connor:
         # Adaptively locate the inner boundary where both neutral species
         # have attenuated below the requested thresholds (no-op when both
         # thresholds are None, in which case psi_N_inner_boundary is unchanged).
-        self.find_inner_boundary()
-        x_inner = self.x_inner
+        if self.psi_N_inner_boundary is None:
+            self.find_inner_boundary()
+        else:
+            self.x_inner = self.psi_N_inner_boundary
 
         # Calculate boundary condition from profiles at psi_N = 0.85
         # self.n_e_pres = interp1d(self.psi_ne_eval, self.n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
@@ -1077,7 +1083,7 @@ class saarelma_connor:
         S_cx_x = interp1d(self.x_prev, self.S_cx_pres, kind='linear', bounds_error=False, fill_value='extrapolate')
 
         # Build physical guess, then non-dimensionalize to help solver converge
-        x_grid = np.linspace(x_inner, 0, resolution)
+        x_grid = np.linspace(self.x_inner, 0, resolution)
         ne_guess = interp1d(self.x_init, self.n_e_pres, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(x_grid)
         dne_guess = np.gradient(ne_guess, x_grid)
