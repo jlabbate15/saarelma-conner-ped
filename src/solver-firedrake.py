@@ -16,8 +16,9 @@ With form factors
     f_CX(x) = <|grad r|^2 n_CX> / ( <n_CX> <|grad r|^2> )
 the coupled system to solve is:
 
-    d/dx [ <|grad r|^2> D dn_e/dx ]  with  D = D_ped + D_NEO,
-        D_ped = C_ETG/n_e + C_KBM dp/dx,  p = n_e(T_e + T_i)  (T_e, T_i given)
+    d/dx [ <|grad r|^2> D dn_e/dx ]  with
+        D = D_NEO + D_KBM + C_ETG/n_e,
+        D_KBM from Eqs. (24)--(25) (pedestal-averaged alpha),
         = - n_e S_i ( <n_FC> + <n_CX> )
 
     |V_FC| d/dx [ f_FC <n_FC> <|grad r|^2> ]
@@ -229,18 +230,41 @@ class saarelma_connor_firedrake(saarelma_connor):
             self.setup_solver_grids(res=x_res)
             self._fd_cache["x_res"] = key
 
-    def _update_C_KBM_coefficient(self, ne_on_x_init): # NEED TO CHANGE
-        """``C_KBM`` on ``x_init`` so that ``D_KBM = C_KBM * dp/dx`` (Eq. A24)."""
-        self.calc_pressure_quantities(ne_on_x_init, self.x_init)
-        dne_dx = np.gradient(ne_on_x_init, self.x_init)
-        dp_dx = (self.T_e_pres + self.T_i_pres) * dne_dx + ne_on_x_init * np.gradient(self.T_e_pres + self.T_i_pres, self.x_init)
-        eps = 1.0e-30
-        if any(np.abs(dp_dx) > eps):
-            raise ValueError(f"dp_dx is positive")
-            # self.C_KBM_pres = np.where( # this should not need to be done
-            #     np.abs(dp_dx) > eps, self._D_KBM / dp_dx, 0.0,
-            # )
+    def calc_pressure_quantities(self, n_e, x, average_alpha_pedestal=True):
+        """Pressure, ``alpha``, and ``D_KBM`` on the ``psi_N_pres`` grid.
 
+        When ``average_alpha_pedestal`` is True (default), use the mean of
+        local ``alpha`` over the pedestal ``x in [x_inner, 0]`` in Eq.~(25)
+        instead of a flux-surface-local ``alpha``.
+        """
+        n_e = interp1d(
+            x, n_e, kind='linear', bounds_error=False, fill_value='extrapolate',
+        )(self.psi_N_pres)
+        _pres = n_e * self.T_e_pres
+        _alpha = (
+            -(2 * np.gradient(self.V_plasma, self.psi_pres) / ((2 * np.pi) ** 2))
+            * self.mu0
+            * np.gradient(_pres, self.psi_pres)
+            * np.sqrt(self.V_plasma / (2 * self.Rmajor * np.pi ** 2))
+        )
+        kbm_factor = self.C_KBM * (self.c_s * self.rho_s**2) / self.a
+        if average_alpha_pedestal:
+            ped_mask = (self.x_init >= float(self.x_inner)) & (self.x_init <= 0.0)
+            if not np.any(ped_mask):
+                ped_mask = np.ones_like(self.x_init, dtype=bool)
+            alpha_bar = float(np.mean(_alpha[ped_mask]))
+            self.alpha_bar_ped = alpha_bar
+            self._D_KBM = np.where(
+                alpha_bar > self.alpha_crit,
+                (alpha_bar - self.alpha_crit) * kbm_factor,
+                0.0,
+            )
+        else:
+            self._D_KBM = np.where(
+                _alpha > self.alpha_crit,
+                (_alpha - self.alpha_crit) * kbm_factor,
+                0.0,
+            )
 
     def _firedrake_mesh_key(self, x_left, mesh_n, fe_degree):
         return (round(float(x_left), 12), int(mesh_n), int(fe_degree))
@@ -249,13 +273,26 @@ class saarelma_connor_firedrake(saarelma_connor):
         DeltaT_e = np.gradient(self.T_e_pres, self.x_init)
         self.C_ETG = self.De_chie_etg * self.P_tot_e / (self.S_plasma * abs(DeltaT_e)) # evaluated at x_init
 
-    def construct_C_KBM(self): # on x_init grid
-        alpha_mod = (
-            -(2 * np.gradient(self.V_plasma, self.psi_pres) / ((2 * np.pi) ** 2))
-            * self.mu0
-            * np.sqrt(self.V_plasma / (2 * self.Rmajor * np.pi ** 2))
+
+    def _ne_on_parent_grid(self, ne_mesh_data):
+        """Interpolate FE ``n_e`` DOF values onto ``self.x_init``."""
+        x_dofs = self._fd_cache["x_dofs"]
+        order = np.argsort(x_dofs)
+        return np.interp(
+            self.x_init, x_dofs[order], ne_mesh_data[order],
+            left=np.nan, right=np.nan,
         )
-        self.C_KBM_x = alpha_mod * self.C_KBM * self.c_s * self.rho_s**2 / self.a # evaluated at x_init, doesn't include p'
+
+    def _set_D_KBM_from_ne_profile(self, ne_on_x_init):
+        """Compute ``self._D_KBM`` (Eqs. 24--25) and project onto ``D_KBM_fd``."""
+        self.calc_pressure_quantities(
+            ne_on_x_init, self.x_init, average_alpha_pedestal=True,
+        )
+        if "D_KBM_fd" in self._fd_cache:
+            x_dofs = self._fd_cache["x_dofs"]
+            self._fd_cache["D_KBM_fd"].dat.data[:] = np.interp(
+                x_dofs, self.x_init, self._D_KBM,
+            )
 
     def _ensure_firedrake_discretization(self, x_left, mesh_n, fe_degree, force=False):
         """Build or reuse mesh, spaces, and coefficient Functions on the mesh."""
@@ -292,7 +329,7 @@ class saarelma_connor_firedrake(saarelma_connor):
         Vcx_fd = _make_func(abs(self.V_cx_pres), "V_cx")
         C_ETG_fd = _make_func(self.C_ETG, "C_ETG")
         D_NEO_fd = _make_func(self.D_NEO, "D_NEO")
-        C_KBM_fd = _make_func(self.C_KBM_x, "C_KBM")
+        D_KBM_fd = _make_func(np.zeros_like(self.x_init), "D_KBM")
 
         self._fd_cache.pop("u", None)
         self._fd_cache.pop("u_prev", None)
@@ -308,7 +345,7 @@ class saarelma_connor_firedrake(saarelma_connor):
             "Vcx_fd": Vcx_fd,
             "C_ETG_fd": C_ETG_fd,
             "D_NEO_fd": D_NEO_fd,
-            "C_KBM_fd": C_KBM_fd,
+            "D_KBM_fd": D_KBM_fd,
         })
         return mesh, V, W, x_dofs, g_fd, Si_fd, Scx_fd, Vcx_fd
 
@@ -329,33 +366,26 @@ class saarelma_connor_firedrake(saarelma_connor):
         return u, u_prev
 
 
+    # @staticmethod
     def _build_f1_weak_form(
-            self, ne, ne_for_etg, ne_for_kbm, ne_dx_for_kbm,
-            g_fd, C_ETG_fd, D_NEO_fd, C_KBM_fd,
+            self,
+            ne, ne_for_etg,
+            g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
             Si_fd, nFC, nCX, v_e, ne_inner_bc, dne_dx_inner_c):
-        """Electron-density weak form (Eq. A29); ``v_e`` is the test function. Picard has additional test functions to linearize."""
-        ne_dx = ne.dx(0)        
-        x_dofs = self._fd_cache["x_dofs"]
-        T_e_pres = np.interp(x_dofs, self.x_init, self.T_e_pres)
-        T_i_pres = np.interp(x_dofs, self.x_init, self.T_i_pres)
-        dTsum_dx = np.gradient(self.T_e_pres + self.T_i_pres, self.x_init)
-        dTsum_dx = np.interp(x_dofs, self.x_init, dTsum_dx)
-        
-        flux = (
-            (C_ETG_fd / ne_for_etg) * ne_dx
-            + C_KBM_fd * (T_e_pres + T_i_pres) * ne_dx * ne_dx_for_kbm
-            + C_KBM_fd * ne_for_kbm * dTsum_dx * ne_dx
-            + D_NEO_fd * ne_dx
-        )
+        """Electron-density weak form; ``v_e`` is the test function (Plan A flux)."""
+        ne_dx = ne.dx(0)
+        D_total = D_NEO_fd + D_KBM_fd + C_ETG_fd / ne_for_etg
+        flux = D_total * ne_dx
         F1 = (g_fd * flux * v_e.dx(0) - ne * Si_fd * (nFC + nCX) * v_e) * dx
         if ne_inner_bc == "neumann":
-            D_bc = D_NEO_fd + C_KBM_fd * (T_e_pres + T_i_pres) * dne_dx_inner_c + C_KBM_fd * self.ne_inner * dTsum_dx + C_ETG_fd / self.ne_inner # full diffusion coefficient
+            D_bc = D_NEO_fd + D_KBM_fd + C_ETG_fd / self.ne_inner # full diffusion coefficient, NEED TO UPDATE NE_INNER IF YOU USE NEUMANN NOT FROM PFILE
             F1 = F1 + g_fd[0] * D_bc[0] * dne_dx_inner_c * v_e * ds(1)
         return F1
 
-    @staticmethod
+    # @staticmethod
     def _build_picard_bilinear_and_linear_forms(
-            W, g_fd, C_ETG_fd, D_NEO_fd, C_KBM_fd,
+            self,
+            W, g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
             Si_fd, Scx_fd, Vcx_fd,
             VFC_const, fFC_const, fCX_const, half,
             u_prev, ne_inner_bc, dne_dx_inner_c):
@@ -365,9 +395,9 @@ class saarelma_connor_firedrake(saarelma_connor):
         ne_t, nFC_t, nCX_t = split(u_trial)
         ne_p, nFC_p, nCX_p = split(u_prev)
 
-        F1 = saarelma_connor_firedrake._build_f1_weak_form(
-            ne_t, ne_p, ne_p, ne_p.dx(0),
-            g_fd, C_ETG_fd, D_NEO_fd, C_KBM_fd,
+        F1 = self._build_f1_weak_form(
+            ne_t, ne_p,
+            g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
             Si_fd, nFC_p, nCX_p, v_e, ne_inner_bc, dne_dx_inner_c,
         )
         F2 = ((VFC_const * fFC_const * g_fd * nFC_t).dx(0) * v_F
@@ -404,40 +434,29 @@ class saarelma_connor_firedrake(saarelma_connor):
         _fill(self._fd_cache["Vcx_fd"], abs(self.V_cx_pres))
         _fill(self._fd_cache["C_ETG_fd"], self.C_ETG)
         _fill(self._fd_cache["D_NEO_fd"], self.D_NEO)
-        _fill(self._fd_cache["C_KBM_fd"], self.C_KBM_pres)
-
-
+        if hasattr(self, "_D_KBM"):
+            _fill(self._fd_cache["D_KBM_fd"], self._D_KBM)
 
     def _diffusion_coeff_at_inner(self, ne_inner_val):
         """``D = D_NEO + D_KBM + C_ETG/n_e`` at ``x_inner`` for the Neumann BC."""
         x_in = float(self.x_inner)
         D_NEO = float(np.interp(x_in, self.x_init, self.D_NEO))
         D_KBM = float(np.interp(x_in, self.x_init, self._D_KBM))
-        C_ETG = float(np.interp(x_in, self.x_init, self.D_ETG_x))
+        C_ETG = float(np.interp(x_in, self.x_init, self.C_ETG))
         ne_safe = max(float(ne_inner_val), 1.0e-30)
         return D_NEO + D_KBM + C_ETG / ne_safe
 
     def _update_firedrake_ne_transport_from_ne(self, ne_mesh_data):
-        """Refresh ``C_KBM`` on the mesh from a lagged ``n_e`` profile.
+        """Refresh ``D_KBM_fd`` from a lagged ``n_e`` profile (Picard).
 
         Returns
         -------
         float
-            ``D`` at ``x_inner`` for the Neumann boundary term (Eq. A29).
+            ``D`` at ``x_inner`` for the Neumann boundary term.
         """
-
-        # Interpolate FE ``n_e`` DOF values onto ``self.x_init``
-        x_dofs = self._fd_cache["x_dofs"]
-        order = np.argsort(x_dofs)
-        ne_on_x = np.interp(
-            self.x_init, x_dofs[order], ne_mesh_data[order],
-            left=np.nan, right=np.nan,
-        )
-        self._update_C_KBM_coefficient(ne_on_x)
-        self._interpolate_coefficients_to_mesh()
-        ne_inner_lag = float(self._ne_on_parent_grid(ne_mesh_data)[
-            np.argmin(np.abs(self.x_init - self.x_inner))
-        ])
+        ne_on_x = self._ne_on_parent_grid(ne_mesh_data)
+        self._set_D_KBM_from_ne_profile(ne_on_x)
+        ne_inner_lag = float(ne_on_x[np.argmin(np.abs(self.x_init - self.x_inner))]) # value of n_e at the inner boundary
         return self._diffusion_coeff_at_inner(ne_inner_lag)
 
 
@@ -556,9 +575,10 @@ class saarelma_connor_firedrake(saarelma_connor):
         use_picard : bool
             If True (default), run a Picard loop where each step is one
             :class:`LinearVariationalSolver` solve on the lagged residual
-            (no SNES).  If False, use a single SNES Newton solve on the
-            fully coupled nonlinear residual (less robust; useful for
-            cross-checks).
+            (no SNES), updating ``D_KBM`` from the lagged ``n_e`` each
+            iteration.  If False, use a single SNES Newton solve; this
+            requires ``initial_guess`` ``"pfile"`` or ``"tanh"`` and
+            freezes ``D_KBM`` from that initial ``n_e`` profile.
         picard_tol : float
             Relative L2 convergence tolerance on n_e for the Picard loop.
         max_picard : int
@@ -611,16 +631,16 @@ class saarelma_connor_firedrake(saarelma_connor):
         v = self.verbose if verbose is None else bool(verbose)
         force_setup = not reuse_setup # True is reuse_setup is False
 
-        self.construct_C_ETG()
-        self.construct_C_KBM()
         self._ensure_firedrake_coefficient_grids(x_res, force=force_setup)
+        # self._ensure_temperature_profiles()
+        self.construct_C_ETG()
 
         # set the inner boundary location and read off the values used for
         # either the Dirichlet or Neumann BC at x = x_inner.
         if self.psi_N_inner_boundary is None:
             self.find_inner_boundary() # set self.psi_N_inner_boundary and self.x_inner, where nFC and nCX fall below their thresholds
         else:
-            self.x_inner = self.psi_N_inner_boundary
+            self.x_inner = np.interp(self.psi_N_inner_boundary, self.psi_N_pres, self.x_init)
 
         # ne(x_inner) -- used for the Dirichlet BC if requested, and for the
         # initial guess at the inner boundary in all cases.
@@ -682,7 +702,8 @@ class saarelma_connor_firedrake(saarelma_connor):
         # self._interpolate_coefficients_to_mesh() # redoes the interpolation from self.x_init to x_dofs, likely not necessary
         C_ETG_fd = self._fd_cache["C_ETG_fd"]
         D_NEO_fd = self._fd_cache["D_NEO_fd"]
-        C_KBM_fd = self._fd_cache["C_KBM_fd"]
+        D_KBM_fd = self._fd_cache["D_KBM_fd"]
+        C_ETG_fd.dat.data[:] = np.interp(x_dofs, self.x_init, self.C_ETG)
 
         def _make_func(arr, name=""):
             """Project a numpy array on self.x_init onto V via np.interp."""
@@ -766,6 +787,24 @@ class saarelma_connor_firedrake(saarelma_connor):
                 f"'linear', 'pfile', or 'tanh'."
             )
 
+        if not use_picard and initial_guess not in ("pfile", "tanh"):
+            raise ValueError(
+                "Newton (use_picard=False) requires initial_guess 'pfile' or "
+                f"'tanh' so D_KBM can be computed from a physical n_e profile; "
+                f"got {initial_guess!r}."
+            )
+
+        # D_KBM (Eqs. 24--25, pedestal-averaged alpha) from the initial n_e.
+        # Picard: refreshed each outer iteration.  Newton: frozen after this step.
+        self._set_D_KBM_from_ne_profile(
+            self._ne_on_parent_grid(u.subfunctions[0].dat.data),
+        )
+        ne_inner_for_D = float(
+            self._ne_on_parent_grid(u.subfunctions[0].dat.data)[
+                np.argmin(np.abs(self.x_init - self.x_inner))
+            ],
+        )
+
         if v:
             self._plot_profiles(
                 x_dofs=x_dofs,
@@ -840,11 +879,9 @@ class saarelma_connor_firedrake(saarelma_connor):
 
         # Variational forms for each of the three equations
         #
-        # Second-order diffusion equation for n_e (Eq. A29 in Labbate_APMA9301_Final).
-        # D = D_NEO + C_ETG/n_e + C_KBM dp/dx with p = n_e(T_e+T_i); T_e, T_i
-        # are given.  IBP on d/dx[g * flux] with flux expanded in ne' and ne'^2
-        # gives the volume terms in ``_build_f1_weak_form``.  Neumann at
-        # x_inner adds + g D n'_e,inner v_e on ds(1) with D evaluated there.
+        # Second-order diffusion for n_e: D = D_NEO + D_KBM + C_ETG/n_e (Plan A).
+        # D_KBM from Eqs. (24)--(25) with pedestal-averaged alpha; updated each
+        # Picard step, frozen for Newton from the initial guess.
         #
         # First-order ODE for <n_FC>.  We use the strong
         # residual form (no IBP) so the Galerkin solution converges to
@@ -857,25 +894,23 @@ class saarelma_connor_firedrake(saarelma_connor):
         #           - n_e ( S_i n_CX - (S_CX/2) n_FC ) ] v_C dx = 0,
         # ------------------------------------------------------------------
         if use_picard:
-            # Linear Picard: one LinearVariationalProblem per (mesh, BC) layout;
-            # lagged factors live in u_prev (updated each iteration).
-            a_form, L_form = self._build_picard_bilinear_and_linear_forms(
-                W, g_fd, C_ETG_fd, D_NEO_fd, C_KBM_fd,
-                Si_fd, Scx_fd, Vcx_fd,
-                VFC_const, fFC_const, fCX_const, half,
-                u_prev, ne_inner_bc, dne_dx_inner_c,
-            )
             picard_params = self._build_picard_linear_solver_parameters(
                 linear_solver=linear_solver,
                 ksp_rtol=ksp_rtol,
                 ksp_max_it=ksp_max_it,
             )
-            picard_solver = self._create_picard_linear_solver(
-                a_form, L_form, u, bcs, picard_params,
-            )
 
             rel = np.inf
             for k in range(max_picard):
+                a_form, L_form = self._build_picard_bilinear_and_linear_forms(
+                    W, g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
+                    Si_fd, Scx_fd, Vcx_fd,
+                    VFC_const, fFC_const, fCX_const, half,
+                    u_prev, ne_inner_bc, dne_dx_inner_c,
+                )
+                picard_solver = self._create_picard_linear_solver(
+                    a_form, L_form, u, bcs, picard_params,
+                )
                 picard_solver.solve()
 
                 ne_data_new  = u.subfunctions[0].dat.data
@@ -918,8 +953,8 @@ class saarelma_connor_firedrake(saarelma_connor):
             ne_curr, nFC_curr, nCX_curr = split(u)
 
             F1 = self._build_f1_weak_form(
-                ne_curr, ne_curr, ne_curr, ne_curr.dx(0),
-                g_fd, C_ETG_fd, D_NEO_fd, C_KBM_fd,
+                ne_curr, ne_curr,
+                g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
                 Si_fd, nFC_curr, nCX_curr, v_e,
                 ne_inner_bc, dne_dx_inner_c,
             )

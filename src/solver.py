@@ -122,6 +122,7 @@ class saarelma_connor:
 
 
         self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
+        self.P_tot_e = P_tot_e
 
         self.M_i = M_i
         if species == 'D':
