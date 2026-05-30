@@ -378,9 +378,9 @@ class saarelma_connor_firedrake(saarelma_connor):
         flux = D_total * ne_dx
         F1 = (g_fd * flux * v_e.dx(0) - ne * Si_fd * (nFC + nCX) * v_e) * dx
         if ne_inner_bc == "neumann":
-            D_bc = D_NEO_fd + D_KBM_fd + C_ETG_fd / self.ne_inner # full diffusion coefficient, NEED TO UPDATE NE_INNER IF YOU USE NEUMANN NOT FROM PFILE
-            F1 = F1 + g_fd[0] * D_bc[0] * dne_dx_inner_c * v_e * ds(1)
-        return F1
+            D_bc = D_NEO_fd.dat.data[0] + D_KBM_fd.dat.data[0] + C_ETG_fd.dat.data[0] / self.ne_inner # full diffusion coefficient, NEED TO UPDATE NE_INNER IF YOU USE NEUMANN NOT FROM PFILE
+            F1 = F1 + g_fd.dat.data[0] * D_bc * dne_dx_inner_c * v_e * ds(1)
+        return F1 
 
     # @staticmethod
     def _build_picard_bilinear_and_linear_forms(
