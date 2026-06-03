@@ -243,8 +243,9 @@ class saarelma_connor_firedrake(saarelma_connor):
         V_plasma = np.interp(x, self.x_init, self.V_plasma)
         psi_xdofs = np.interp(x, self.x_init, self.psi_pres)
         T_e = np.interp(x, self.x_init, self.T_e_pres)
-        kbm_factor = self.C_KBM * (self.c_s * self.rho_s**2) / self.a # on psi_Te_eval grid
-        kbm_factor = np.interp(x, self.x_init, kbm_factor) # on x_dofs grid
+        G_KBM = self.C_KBM * (self.c_s * self.rho_s**2) / self.a # on psi_Te_eval grid
+        G_KBM = np.interp(x, self.x_init, G_KBM) # on x_dofs grid
+        self.G_KBM = G_KBM
 
         _pres = n_e * T_e # eV*m^(-3), on x_dofs grid
         _pres = _pres * (1.60218e-19) # Pa=J*m^(-3), on x_dofs grid
@@ -257,9 +258,10 @@ class saarelma_connor_firedrake(saarelma_connor):
         _alpha = (
             -(2 * dVdpsi / ((2 * np.pi) ** 2))
             * self.mu0
-            * dpdpsi
             * np.sqrt(V_plasma / (2 * self.Rmajor * np.pi ** 2))
         ) # on x_dofs grid
+        self.alpha_nodp = _alpha
+        _alpha = _alpha * dpdpsi
 
         if average_alpha_pedestal:
             # ped_mask = (self.x_init >= float(self.x_inner)) & (self.x_init <= 0.0)
@@ -269,17 +271,23 @@ class saarelma_connor_firedrake(saarelma_connor):
             self.alpha_bar_ped = alpha_bar
             self._D_KBM = np.where(
                 alpha_bar > self.alpha_crit,
-                (alpha_bar - self.alpha_crit) * kbm_factor,
+                (alpha_bar - self.alpha_crit) * G_KBM,
                 0.0,
             )
+
+            # Coefficients for Eq. A33 expanded flux (UFL via A_KBM_fd / B_KBM_fd).
+            self._A_KBM = np.where(alpha_bar > self.alpha_crit, -G_KBM * self.alpha_crit, 0.0)
+            self._B_KBM = np.where(alpha_bar > self.alpha_crit, G_KBM * self.alpha_nodp, 0.0)
             # print(f'alpha (post-average) = {alpha_bar}')
         else:
             self._D_KBM = np.where(
                 _alpha > self.alpha_crit,
-                (_alpha - self.alpha_crit) * kbm_factor,
+                (_alpha - self.alpha_crit) * G_KBM,
                 0.0,
             )
-        self._fd_cache["D_KBM"] = self._D_KBM
+            self._A_KBM = np.where(_alpha > self.alpha_crit, -G_KBM * self.alpha_crit, 0.0)
+            self._B_KBM = np.where(_alpha > self.alpha_crit, G_KBM * self.alpha_nodp, 0.0)
+        # self._fd_cache["D_KBM_fd"] = self._D_KBM
 
     def _firedrake_mesh_key(self, x_left, mesh_n, fe_degree):
         return (round(float(x_left), 12), int(mesh_n), int(fe_degree))
@@ -367,16 +375,64 @@ class saarelma_connor_firedrake(saarelma_connor):
             self,
             ne, ne_for_etg,
             g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
-            Si_fd, nFC, nCX, v_e, ne_inner_bc, dne_dx_inner_c):
-        """Electron-density weak form; ``v_e`` is the test function (Plan A flux)."""
+            Si_fd, nFC, nCX, v_e, ne_inner_bc, dne_dx_inner_c, linearize):
+        """Electron-density weak form for ``v_e``.
+
+        ``linearize=True``: Plan A, ``D_total = D_NEO + D_KBM + C_ETG/n_e`` (Saarelma
+        ``D_KBM`` from Eqs. 24--25).
+
+        ``linearize=False``: appendix Eq. A33 expanded flux with ``A_KBM_fd``,
+        ``B_KBM_fd`` (from Eqs. 24--25), ``T_tot_fd``, ``dT_tot_dx_fd``.
+        """
         ne_dx = ne.dx(0)
-        D_total = D_NEO_fd + D_KBM_fd + C_ETG_fd / ne_for_etg
-        flux = D_total * ne_dx
-        F1 = (g_fd * flux * v_e.dx(0) - ne * Si_fd * (nFC + nCX) * v_e) * dx
+
+        if linearize:
+            D_total = D_NEO_fd + D_KBM_fd + C_ETG_fd / ne_for_etg
+            flux = D_total * ne_dx
+            F1 = (g_fd * flux * v_e.dx(0) - ne * Si_fd * (nFC + nCX) * v_e) * dx
+        else:
+            T_tot_fd = self._fd_cache.get("T_tot_fd")
+            dT_tot_dx_fd = self._fd_cache.get("dT_tot_dx_fd")
+            A_KBM_fd = self._fd_cache.get("A_KBM_fd")
+            B_KBM_fd = self._fd_cache.get("B_KBM_fd")
+            if (T_tot_fd is None or dT_tot_dx_fd is None
+                    or A_KBM_fd is None or B_KBM_fd is None):
+                raise RuntimeError(
+                    "Eq. A33 weak form requires T_tot_fd, dT_tot_dx_fd, "
+                    "A_KBM_fd, and B_KBM_fd in _fd_cache (built in solve_firedrake)."
+                )
+            # Expanded flux inside <|grad r|^2> ... v_e' (Labbate appendix A33).
+            flux_a33 = (
+                (C_ETG_fd / ne_for_etg) * ne_dx
+                + A_KBM_fd * ne_dx
+                + B_KBM_fd * T_tot_fd * ne_dx * ne_dx
+                + B_KBM_fd * ne * dT_tot_dx_fd * ne_dx
+                + D_NEO_fd * ne_dx
+            )
+            F1 = (g_fd * flux_a33 * v_e.dx(0) - ne * Si_fd * (nFC + nCX) * v_e) * dx
+
         if ne_inner_bc == "neumann":
-            D_bc = D_NEO_fd.dat.data[0] + D_KBM_fd.dat.data[0] + C_ETG_fd.dat.data[0] / self.ne_inner # full diffusion coefficient, NEED TO UPDATE NE_INNER IF YOU USE NEUMANN NOT FROM PFILE
-            F1 = F1 + g_fd.dat.data[0] * D_bc * dne_dx_inner_c * v_e * ds(1)
-        return F1 
+            if linearize:
+                D_bc = (
+                    D_NEO_fd.dat.data[0]
+                    + D_KBM_fd.dat.data[0]
+                    + C_ETG_fd.dat.data[0] / self.ne_inner
+                )
+                F1 = F1 + g_fd.dat.data[0] * D_bc * dne_dx_inner_c * v_e * ds(1)
+            else:
+                T_tot_fd = self._fd_cache["T_tot_fd"]
+                dT_tot_dx_fd = self._fd_cache["dT_tot_dx_fd"]
+                A_KBM_fd = self._fd_cache["A_KBM_fd"]
+                B_KBM_fd = self._fd_cache["B_KBM_fd"]
+                D_bc_a33 = (
+                    C_ETG_fd / ne_for_etg
+                    + A_KBM_fd
+                    + B_KBM_fd * T_tot_fd * dne_dx_inner_c
+                    + B_KBM_fd * ne * dT_tot_dx_fd
+                    + D_NEO_fd
+                )
+                F1 = F1 + g_fd * D_bc_a33 * dne_dx_inner_c * v_e * ds(1)
+        return F1
 
     # @staticmethod
     def _build_picard_bilinear_and_linear_forms(
@@ -384,7 +440,7 @@ class saarelma_connor_firedrake(saarelma_connor):
             W, g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
             Si_fd, Scx_fd, Vcx_fd,
             VFC_const, fFC_const, fCX_const, half,
-            u_prev, ne_inner_bc, dne_dx_inner_c):
+            u_prev, ne_inner_bc, dne_dx_inner_c, linearize):
         """Split lagged Picard residual into ``a(u,v)=L(v)`` for linear solves."""
         v_e, v_F, v_C = TestFunctions(W)
         u_trial = TrialFunction(W)
@@ -394,7 +450,7 @@ class saarelma_connor_firedrake(saarelma_connor):
         F1 = self._build_f1_weak_form(
             ne_t, ne_p,
             g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
-            Si_fd, nFC_p, nCX_p, v_e, ne_inner_bc, dne_dx_inner_c,
+            Si_fd, nFC_p, nCX_p, v_e, ne_inner_bc, dne_dx_inner_c, linearize
         )
         F2 = ((VFC_const * fFC_const * g_fd * nFC_t).dx(0) * v_F
               - ne_p * (Si_fd + Scx_fd) * nFC_t * v_F) * dx
@@ -415,7 +471,7 @@ class saarelma_connor_firedrake(saarelma_connor):
             problem, solver_parameters=solver_params,
         )
 
-    def picard_solve(self, picard_tol=1e-4, max_picard=40, relax=0.5, linear_solver="lu", ksp_rtol=1e-6, ksp_max_it=1000, params_dict=None, v=False):
+    def picard_solve(self, linearize, picard_tol=1e-4, max_picard=40, relax=0.5, linear_solver="lu", ksp_rtol=1e-6, ksp_max_it=1000, params_dict=None, v=False):
         if params_dict is None:
             raise ValueError("params_dict is required")
 
@@ -445,11 +501,17 @@ class saarelma_connor_firedrake(saarelma_connor):
 
         rel = np.inf
         for k in range(max_picard):
+            if k != 0:
+                self.calc_pressure_quantities(
+                    u.subfunctions[0].dat.data, average_alpha_pedestal=True, # this is n_e on x_dofs, which goes from separatrix to x_inner
+                )
+                D_KBM_fd.dat.data[:] = self._D_KBM
+            
             a_form, L_form = self._build_picard_bilinear_and_linear_forms(
                 W, g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
                 Si_fd, Scx_fd, Vcx_fd,
                 VFC_const, fFC_const, fCX_const, half,
-                u_prev, ne_inner_bc, dne_dx_inner_c,
+                u_prev, ne_inner_bc, dne_dx_inner_c, linearize
             )
             picard_solver = self._create_picard_linear_solver(
                 a_form, L_form, u, bcs, picard_params,
@@ -491,7 +553,7 @@ class saarelma_connor_firedrake(saarelma_connor):
                     RuntimeWarning,
                 )
 
-    def newton_solve(self, linear_solver="lu", ksp_rtol=1e-6, ksp_max_it=1000, params_dict=None, v=False):
+    def newton_solve(self, linearize, linear_solver="lu", ksp_rtol=1e-6, ksp_max_it=1000, params_dict=None, v=False):
         # Full Newton via SNES on the nonlinear residual F(u)=0.
         W = params_dict['W']
         g_fd = params_dict['g_fd']
@@ -517,7 +579,7 @@ class saarelma_connor_firedrake(saarelma_connor):
             ne_curr, ne_curr,
             g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
             Si_fd, nFC_curr, nCX_curr, v_e,
-            ne_inner_bc, dne_dx_inner_c,
+            ne_inner_bc, dne_dx_inner_c, linearize
         )
         F2 = ((VFC_const * fFC_const * g_fd * nFC_curr).dx(0) * v_F
                 - ne_curr * (Si_fd + Scx_fd) * nFC_curr * v_F) * dx
@@ -552,6 +614,7 @@ class saarelma_connor_firedrake(saarelma_connor):
                         ksp_rtol=1e-8,
                         ksp_max_it=200,
                         reuse_setup=True,
+                        linearize=True,
                         verbose=None):
         """Solve the coupled (n_e, <n_FC>, <n_CX>) system with Firedrake.
 
@@ -560,6 +623,10 @@ class saarelma_connor_firedrake(saarelma_connor):
         x_res : int
             Resolution used to set up the coefficient grid via
             :meth:`saarelma_connor.setup_solver_grids`.
+        linearize : bool
+            If True, use the Plan-A effective-``D`` weak form (Picard or Newton).
+            If False, use the appendix Eq. A29 expanded flux (nonlinear in ``n_e'``;
+            use ``use_picard=False`` and Newton only).
         mesh_n : int
             Number of cells in the 1D Firedrake mesh.
         fe_degree : int
@@ -886,6 +953,26 @@ class saarelma_connor_firedrake(saarelma_connor):
         f.dat.data[:] = self._D_KBM
         self._fd_cache["D_KBM_fd"] = f
 
+        f = Function(V, name="A_KBM")
+        f.dat.data[:] = self._A_KBM
+        self._fd_cache["A_KBM_fd"] = f
+
+        f = Function(V, name="B_KBM")
+        f.dat.data[:] = self._B_KBM
+        self._fd_cache["B_KBM_fd"] = f
+
+        # Frozen background T_e + T_i and d(T_e+T_i)/dx on x for Eq. A33 (linearize=False).
+        T_tot_on_x = np.interp(x_dofs, self.x_init, self.T_e_pres + self.T_i_pres)
+        dT_tot_on_x = np.interp(
+            x_dofs, self.x_init, np.gradient(self.T_e_pres + self.T_i_pres, self.x_init),
+        )
+        f = Function(V, name="T_tot")
+        f.dat.data[:] = T_tot_on_x
+        self._fd_cache["T_tot_fd"] = f
+        f = Function(V, name="dT_tot_dx")
+        f.dat.data[:] = dT_tot_on_x
+        self._fd_cache["dT_tot_dx_fd"] = f
+
         if v:
             self._plot_profiles(
                 x_dofs=x_dofs,
@@ -997,9 +1084,14 @@ class saarelma_connor_firedrake(saarelma_connor):
             'u': u,
         }
         if use_picard:
-            self.picard_solve(picard_tol=picard_tol, max_picard=max_picard, relax=relax, linear_solver=linear_solver, ksp_rtol=ksp_rtol, ksp_max_it=ksp_max_it, params_dict=params_dict, v=v)
+            if not linearize:
+                raise ValueError(
+                    "Picard requires linearize=True (Plan A). "
+                    "Eq. A29 (linearize=False) is nonlinear in n_e'; use use_picard=False."
+                )
+            self.picard_solve(linearize, picard_tol=picard_tol, max_picard=max_picard, relax=relax, linear_solver=linear_solver, ksp_rtol=ksp_rtol, ksp_max_it=ksp_max_it, params_dict=params_dict, v=v)
         else:
-            self.newton_solve(linear_solver=linear_solver, ksp_rtol=ksp_rtol, ksp_max_it=ksp_max_it, params_dict=params_dict, v=v)
+            self.newton_solve(linearize, linear_solver=linear_solver, ksp_rtol=ksp_rtol, ksp_max_it=ksp_max_it, params_dict=params_dict, v=v)
 
         # extract the converged profiles from the Firedrake solution and save/return them
         ne_fd, nFC_fd, nCX_fd = u.subfunctions
