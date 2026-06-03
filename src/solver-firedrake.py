@@ -415,10 +415,127 @@ class saarelma_connor_firedrake(saarelma_connor):
             problem, solver_parameters=solver_params,
         )
 
+    def picard_solve(self, picard_tol=1e-4, max_picard=40, relax=0.5, linear_solver="lu", ksp_rtol=1e-6, ksp_max_it=1000, params_dict=None, v=False):
+        if params_dict is None:
+            raise ValueError("params_dict is required")
+
+        W = params_dict['W']
+        g_fd = params_dict['g_fd']
+        C_ETG_fd = params_dict['C_ETG_fd']
+        D_NEO_fd = params_dict['D_NEO_fd']
+        D_KBM_fd = params_dict['D_KBM_fd']
+        Si_fd = params_dict['Si_fd']
+        Scx_fd = params_dict['Scx_fd']
+        Vcx_fd = params_dict['Vcx_fd']
+        VFC_const = params_dict['VFC_const']
+        fFC_const = params_dict['fFC_const']
+        fCX_const = params_dict['fCX_const']
+        half = params_dict['half']
+        u_prev = params_dict['u_prev']
+        ne_inner_bc = params_dict['ne_inner_bc']
+        dne_dx_inner_c = params_dict['dne_dx_inner_c']
+        bcs = params_dict['bcs']
+        u = params_dict['u']
+
+        picard_params = self._build_picard_linear_solver_parameters(
+            linear_solver=linear_solver,
+            ksp_rtol=ksp_rtol,
+            ksp_max_it=ksp_max_it,
+        )
+
+        rel = np.inf
+        for k in range(max_picard):
+            a_form, L_form = self._build_picard_bilinear_and_linear_forms(
+                W, g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
+                Si_fd, Scx_fd, Vcx_fd,
+                VFC_const, fFC_const, fCX_const, half,
+                u_prev, ne_inner_bc, dne_dx_inner_c,
+            )
+            picard_solver = self._create_picard_linear_solver(
+                a_form, L_form, u, bcs, picard_params,
+            )
+            picard_solver.solve()
+
+            ne_data_new  = u.subfunctions[0].dat.data
+            ne_data_old  = u_prev.subfunctions[0].dat.data
+            nFC_data_new = u.subfunctions[1].dat.data
+            nFC_data_old = u_prev.subfunctions[1].dat.data
+            nCX_data_new = u.subfunctions[2].dat.data
+            nCX_data_old = u_prev.subfunctions[2].dat.data
+
+            diff = ne_data_new - ne_data_old
+            err = float(np.sqrt(np.sum(diff * diff)))
+            ncr = float(np.sqrt(np.sum(ne_data_new * ne_data_new)))
+            rel = err / max(ncr, 1.0e-30)
+            if v:
+                print(f"[firedrake] Picard iter {k:>3d}:  "
+                        f"||dne||/||ne|| = {rel:.3e}")
+
+            # Under-relaxed update: u <- (1-relax)*u_prev + relax*u
+            if relax < 1.0:
+                ne_data_new [:] = (1.0 - relax) * ne_data_old  + relax * ne_data_new
+                nFC_data_new[:] = (1.0 - relax) * nFC_data_old + relax * nFC_data_new
+                nCX_data_new[:] = (1.0 - relax) * nCX_data_old + relax * nCX_data_new
+
+            if rel < picard_tol:
+                if v:
+                    print(f"[firedrake] Picard converged in {k+1} iterations.")
+                break
+            u_prev.assign(u)
+        else:
+            if v:
+                import warnings
+                warnings.warn(
+                    f"Picard iteration did not reach tol={picard_tol:g} "
+                    f"after {max_picard} iterations (last rel = {rel:.3e}).",
+                    RuntimeWarning,
+                )
+
+    def newton_solve(self, linear_solver="lu", ksp_rtol=1e-6, ksp_max_it=1000, params_dict=None, v=False):
+        # Full Newton via SNES on the nonlinear residual F(u)=0.
+        W = params_dict['W']
+        g_fd = params_dict['g_fd']
+        C_ETG_fd = params_dict['C_ETG_fd']
+        D_NEO_fd = params_dict['D_NEO_fd']
+        D_KBM_fd = params_dict['D_KBM_fd']
+        Si_fd = params_dict['Si_fd']
+        Scx_fd = params_dict['Scx_fd']
+        Vcx_fd = params_dict['Vcx_fd']
+        VFC_const = params_dict['VFC_const']
+        fFC_const = params_dict['fFC_const']
+        fCX_const = params_dict['fCX_const']
+        half = params_dict['half']
+        u_prev = params_dict['u_prev']
+        ne_inner_bc = params_dict['ne_inner_bc']
+        dne_dx_inner_c = params_dict['dne_dx_inner_c']
+        bcs = params_dict['bcs']
+        u = params_dict['u']
+        v_e, v_F, v_C = TestFunctions(W)
+        ne_curr, nFC_curr, nCX_curr = split(u)
+
+        F1 = self._build_f1_weak_form(
+            ne_curr, ne_curr,
+            g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
+            Si_fd, nFC_curr, nCX_curr, v_e,
+            ne_inner_bc, dne_dx_inner_c,
+        )
+        F2 = ((VFC_const * fFC_const * g_fd * nFC_curr).dx(0) * v_F
+                - ne_curr * (Si_fd + Scx_fd) * nFC_curr * v_F) * dx
+        F3 = ((Vcx_fd * fCX_const * g_fd * nCX_curr).dx(0) * v_C
+                - ne_curr * (
+                    Si_fd * nCX_curr - half * Scx_fd * nFC_curr
+                ) * v_C) * dx
+
+        F = F1 + F2 + F3
+        newton_params = self._build_petsc_solver_parameters(
+            linear_solver=linear_solver,
+            ksp_rtol=ksp_rtol,
+            ksp_max_it=ksp_max_it,
+        )
+        solve(F == 0, u, bcs=bcs, solver_parameters=newton_params)
 
     def solve_firedrake(self,
                         x_res=200,
-                        # mesh_n=400,
                         fe_degree=2,
                         ne_inner=None,
                         ne_inner_bc="neumann",
@@ -860,86 +977,29 @@ class saarelma_connor_firedrake(saarelma_connor):
         C_ETG_fd = self._fd_cache["C_ETG_fd"]
         D_NEO_fd = self._fd_cache["D_NEO_fd"]
         D_KBM_fd = self._fd_cache["D_KBM_fd"]
+        params_dict = {
+            'W': W,
+            'g_fd': g_fd,
+            'C_ETG_fd': C_ETG_fd,
+            'D_NEO_fd': D_NEO_fd,
+            'D_KBM_fd': D_KBM_fd,
+            'Si_fd': Si_fd,
+            'Scx_fd': Scx_fd,
+            'Vcx_fd': Vcx_fd,
+            'VFC_const': VFC_const,
+            'fFC_const': fFC_const,
+            'fCX_const': fCX_const,
+            'half': half,
+            'u_prev': u_prev,
+            'ne_inner_bc': ne_inner_bc,
+            'dne_dx_inner_c': dne_dx_inner_c,
+            'bcs': bcs,
+            'u': u,
+        }
         if use_picard:
-            picard_params = self._build_picard_linear_solver_parameters(
-                linear_solver=linear_solver,
-                ksp_rtol=ksp_rtol,
-                ksp_max_it=ksp_max_it,
-            )
-
-            rel = np.inf
-            for k in range(max_picard):
-                a_form, L_form = self._build_picard_bilinear_and_linear_forms(
-                    W, g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
-                    Si_fd, Scx_fd, Vcx_fd,
-                    VFC_const, fFC_const, fCX_const, half,
-                    u_prev, ne_inner_bc, dne_dx_inner_c,
-                )
-                picard_solver = self._create_picard_linear_solver(
-                    a_form, L_form, u, bcs, picard_params,
-                )
-                picard_solver.solve()
-
-                ne_data_new  = u.subfunctions[0].dat.data
-                ne_data_old  = u_prev.subfunctions[0].dat.data
-                nFC_data_new = u.subfunctions[1].dat.data
-                nFC_data_old = u_prev.subfunctions[1].dat.data
-                nCX_data_new = u.subfunctions[2].dat.data
-                nCX_data_old = u_prev.subfunctions[2].dat.data
-
-                diff = ne_data_new - ne_data_old
-                err = float(np.sqrt(np.sum(diff * diff)))
-                ncr = float(np.sqrt(np.sum(ne_data_new * ne_data_new)))
-                rel = err / max(ncr, 1.0e-30)
-                if v:
-                    print(f"[firedrake] Picard iter {k:>3d}:  "
-                          f"||dne||/||ne|| = {rel:.3e}")
-
-                # Under-relaxed update: u <- (1-relax)*u_prev + relax*u
-                if relax < 1.0:
-                    ne_data_new [:] = (1.0 - relax) * ne_data_old  + relax * ne_data_new
-                    nFC_data_new[:] = (1.0 - relax) * nFC_data_old + relax * nFC_data_new
-                    nCX_data_new[:] = (1.0 - relax) * nCX_data_old + relax * nCX_data_new
-
-                if rel < picard_tol:
-                    if v:
-                        print(f"[firedrake] Picard converged in {k+1} iterations.")
-                    break
-                u_prev.assign(u)
-            else:
-                if v:
-                    import warnings
-                    warnings.warn(
-                        f"Picard iteration did not reach tol={picard_tol:g} "
-                        f"after {max_picard} iterations (last rel = {rel:.3e}).",
-                        RuntimeWarning,
-                    )
+            self.picard_solve(picard_tol=picard_tol, max_picard=max_picard, relax=relax, linear_solver=linear_solver, ksp_rtol=ksp_rtol, ksp_max_it=ksp_max_it, params_dict=params_dict, v=v)
         else:
-            # Full Newton via SNES on the nonlinear residual F(u)=0.
-            v_e, v_F, v_C = TestFunctions(W)
-            ne_curr, nFC_curr, nCX_curr = split(u)
-
-            F1 = self._build_f1_weak_form(
-                ne_curr, ne_curr,
-                g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
-                Si_fd, nFC_curr, nCX_curr, v_e,
-                ne_inner_bc, dne_dx_inner_c,
-            )
-            F2 = ((VFC_const * fFC_const * g_fd * nFC_curr).dx(0) * v_F
-                  - ne_curr * (Si_fd + Scx_fd) * nFC_curr * v_F) * dx
-            F3 = ((Vcx_fd * fCX_const * g_fd * nCX_curr).dx(0) * v_C
-                  - ne_curr * (
-                        Si_fd * nCX_curr - half * Scx_fd * nFC_curr
-                    ) * v_C) * dx
-
-            F = F1 + F2 + F3
-            newton_params = self._build_petsc_solver_parameters(
-                linear_solver=linear_solver,
-                ksp_rtol=ksp_rtol,
-                ksp_max_it=ksp_max_it,
-            )
-            solve(F == 0, u, bcs=bcs, solver_parameters=newton_params)
-
+            self.newton_solve(linear_solver=linear_solver, ksp_rtol=ksp_rtol, ksp_max_it=ksp_max_it, params_dict=params_dict, v=v)
 
         # extract the converged profiles from the Firedrake solution and save/return them
         ne_fd, nFC_fd, nCX_fd = u.subfunctions
