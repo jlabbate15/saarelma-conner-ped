@@ -79,7 +79,7 @@ class saarelma_connor_firedrake(saarelma_connor):
 
     def __init__(self, *args, nCX_x0=None, **kwargs):
         super().__init__(*args, **kwargs) # call the parent class (saarelma-connor class) init method
-        self.nCX_x0 = nCX_x0 if nCX_x0 is not None else 0.1 * self.nFC_x0 # set nCX boundary condition, defaults to 0.1 * nFC_x0
+        self.nCX_x0 = nCX_x0 if nCX_x0 is not None else self.ncx_x0_ratio * self.nFC_x0 # set nCX boundary condition, defaults to 0.1 * nFC_x0
         self._fd_cache = {}
 
     def invalidate_firedrake_cache(self):
@@ -230,49 +230,63 @@ class saarelma_connor_firedrake(saarelma_connor):
             self.setup_solver_grids(res=x_res)
             self._fd_cache["x_res"] = key
 
-    def calc_pressure_quantities(self, n_e, x, average_alpha_pedestal=True):
-        """Pressure, ``alpha``, and ``D_KBM`` on the ``psi_N_pres`` grid.
+    def calc_pressure_quantities(self, n_e, average_alpha_pedestal=True):
+        """Pressure, ``alpha``, and ``D_KBM`` on the ``x_dofs`` (from separatrix to x_inner) grid.
 
         When ``average_alpha_pedestal`` is True (default), use the mean of
         local ``alpha`` over the pedestal ``x in [x_inner, 0]`` in Eq.~(25)
         instead of a flux-surface-local ``alpha``.
         """
-        n_e = interp1d(
-            x, n_e, kind='linear', bounds_error=False, fill_value='extrapolate',
-        )(self.psi_N_pres)
-        _pres = n_e * self.T_e_pres
+        x = self._fd_cache["x_dofs"]
+
+        # change to x_dofs grid
+        V_plasma = np.interp(x, self.x_init, self.V_plasma)
+        psi_xdofs = np.interp(x, self.x_init, self.psi_pres)
+        T_e = np.interp(x, self.x_init, self.T_e_pres)
+        kbm_factor = self.C_KBM * (self.c_s * self.rho_s**2) / self.a # on psi_Te_eval grid
+        kbm_factor = np.interp(x, self.x_init, kbm_factor) # on x_dofs grid
+
+        _pres = n_e * T_e # eV*m^(-3), on x_dofs grid
+        _pres = _pres * (1.60218e-19) # Pa=J*m^(-3), on x_dofs grid
+        self.pres = _pres # debugging, eV*m^(-3)
+
+        # gradients on x_dof
+        dpdpsi = np.gradient(_pres, psi_xdofs)
+        dVdpsi = np.gradient(V_plasma, psi_xdofs)
+
         _alpha = (
-            -(2 * np.gradient(self.V_plasma, self.psi_pres) / ((2 * np.pi) ** 2))
+            -(2 * dVdpsi / ((2 * np.pi) ** 2))
             * self.mu0
-            * np.gradient(_pres, self.psi_pres)
-            * np.sqrt(self.V_plasma / (2 * self.Rmajor * np.pi ** 2))
-        )
-        kbm_factor = self.C_KBM * (self.c_s * self.rho_s**2) / self.a
+            * dpdpsi
+            * np.sqrt(V_plasma / (2 * self.Rmajor * np.pi ** 2))
+        ) # on x_dofs grid
+
         if average_alpha_pedestal:
-            ped_mask = (self.x_init >= float(self.x_inner)) & (self.x_init <= 0.0)
-            if not np.any(ped_mask):
-                ped_mask = np.ones_like(self.x_init, dtype=bool)
-            alpha_bar = float(np.mean(_alpha[ped_mask]))
+            # ped_mask = (self.x_init >= float(self.x_inner)) & (self.x_init <= 0.0)
+            # if not np.any(ped_mask):
+            #     ped_mask = np.ones_like(self.x_init, dtype=bool)
+            alpha_bar = float(np.mean(_alpha)) # average in pedestal region
             self.alpha_bar_ped = alpha_bar
             self._D_KBM = np.where(
                 alpha_bar > self.alpha_crit,
                 (alpha_bar - self.alpha_crit) * kbm_factor,
                 0.0,
             )
+            # print(f'alpha (post-average) = {alpha_bar}')
         else:
             self._D_KBM = np.where(
                 _alpha > self.alpha_crit,
                 (_alpha - self.alpha_crit) * kbm_factor,
                 0.0,
             )
+        self._fd_cache["D_KBM"] = self._D_KBM
 
     def _firedrake_mesh_key(self, x_left, mesh_n, fe_degree):
         return (round(float(x_left), 12), int(mesh_n), int(fe_degree))
 
     def construct_C_ETG(self): # on x_init grid
-        DeltaT_e = np.gradient(self.T_e_pres, self.x_init)
+        DeltaT_e = np.gradient(self.T_e_pres * (1.60218e-19), self.x_init) # gradient in J/m, T_e_pres is in eV
         self.C_ETG = self.De_chie_etg * self.P_tot_e / (self.S_plasma * abs(DeltaT_e)) # evaluated at x_init
-
 
     def _ne_on_parent_grid(self, ne_mesh_data):
         """Interpolate FE ``n_e`` DOF values onto ``self.x_init``."""
@@ -282,17 +296,6 @@ class saarelma_connor_firedrake(saarelma_connor):
             self.x_init, x_dofs[order], ne_mesh_data[order],
             left=np.nan, right=np.nan,
         )
-
-    def _set_D_KBM_from_ne_profile(self, ne_on_x_init):
-        """Compute ``self._D_KBM`` (Eqs. 24--25) and project onto ``D_KBM_fd``."""
-        self.calc_pressure_quantities(
-            ne_on_x_init, self.x_init, average_alpha_pedestal=True,
-        )
-        if "D_KBM_fd" in self._fd_cache:
-            x_dofs = self._fd_cache["x_dofs"]
-            self._fd_cache["D_KBM_fd"].dat.data[:] = np.interp(
-                x_dofs, self.x_init, self._D_KBM,
-            )
 
     def _ensure_firedrake_discretization(self, x_left, mesh_n, fe_degree, force=False):
         """Build or reuse mesh, spaces, and coefficient Functions on the mesh."""
@@ -327,9 +330,6 @@ class saarelma_connor_firedrake(saarelma_connor):
         Si_fd = _make_func(self.S_i_pres, "S_i")
         Scx_fd = _make_func(self.S_cx_pres, "S_cx")
         Vcx_fd = _make_func(abs(self.V_cx_pres), "V_cx")
-        C_ETG_fd = _make_func(self.C_ETG, "C_ETG")
-        D_NEO_fd = _make_func(self.D_NEO, "D_NEO")
-        D_KBM_fd = _make_func(np.zeros_like(self.x_init), "D_KBM")
 
         self._fd_cache.pop("u", None)
         self._fd_cache.pop("u_prev", None)
@@ -343,12 +343,8 @@ class saarelma_connor_firedrake(saarelma_connor):
             "Si_fd": Si_fd,
             "Scx_fd": Scx_fd,
             "Vcx_fd": Vcx_fd,
-            "C_ETG_fd": C_ETG_fd,
-            "D_NEO_fd": D_NEO_fd,
-            "D_KBM_fd": D_KBM_fd,
         })
         return mesh, V, W, x_dofs, g_fd, Si_fd, Scx_fd, Vcx_fd
-
 
     def _get_or_create_mixed_solution(self, W, force=False):
         """Return cached ``(u, u_prev)`` on ``W``, or allocate new Functions."""
@@ -418,46 +414,6 @@ class saarelma_connor_firedrake(saarelma_connor):
         return LinearVariationalSolver(
             problem, solver_parameters=solver_params,
         )
-
-    def _interpolate_coefficients_to_mesh(self):
-        """Re-project parent-grid coefficients onto cached Firedrake ``V``."""
-        if "V" not in self._fd_cache:
-            return
-        x_dofs = self._fd_cache["x_dofs"]
-
-        def _fill(func, arr):
-            func.dat.data[:] = np.interp(x_dofs, self.x_init, arr)
-
-        _fill(self._fd_cache["g_fd"], self.gradr2_fsa)
-        _fill(self._fd_cache["Si_fd"], self.S_i_pres)
-        _fill(self._fd_cache["Scx_fd"], self.S_cx_pres)
-        _fill(self._fd_cache["Vcx_fd"], abs(self.V_cx_pres))
-        _fill(self._fd_cache["C_ETG_fd"], self.C_ETG)
-        _fill(self._fd_cache["D_NEO_fd"], self.D_NEO)
-        if hasattr(self, "_D_KBM"):
-            _fill(self._fd_cache["D_KBM_fd"], self._D_KBM)
-
-    def _diffusion_coeff_at_inner(self, ne_inner_val):
-        """``D = D_NEO + D_KBM + C_ETG/n_e`` at ``x_inner`` for the Neumann BC."""
-        x_in = float(self.x_inner)
-        D_NEO = float(np.interp(x_in, self.x_init, self.D_NEO))
-        D_KBM = float(np.interp(x_in, self.x_init, self._D_KBM))
-        C_ETG = float(np.interp(x_in, self.x_init, self.C_ETG))
-        ne_safe = max(float(ne_inner_val), 1.0e-30)
-        return D_NEO + D_KBM + C_ETG / ne_safe
-
-    def _update_firedrake_ne_transport_from_ne(self, ne_mesh_data):
-        """Refresh ``D_KBM_fd`` from a lagged ``n_e`` profile (Picard).
-
-        Returns
-        -------
-        float
-            ``D`` at ``x_inner`` for the Neumann boundary term.
-        """
-        ne_on_x = self._ne_on_parent_grid(ne_mesh_data)
-        self._set_D_KBM_from_ne_profile(ne_on_x)
-        ne_inner_lag = float(ne_on_x[np.argmin(np.abs(self.x_init - self.x_inner))]) # value of n_e at the inner boundary
-        return self._diffusion_coeff_at_inner(ne_inner_lag)
 
 
     def solve_firedrake(self,
@@ -699,17 +655,6 @@ class saarelma_connor_firedrake(saarelma_connor):
                 x_left, x_res, fe_degree, force=force_setup,
             )
         )
-        # self._interpolate_coefficients_to_mesh() # redoes the interpolation from self.x_init to x_dofs, likely not necessary
-        C_ETG_fd = self._fd_cache["C_ETG_fd"]
-        D_NEO_fd = self._fd_cache["D_NEO_fd"]
-        D_KBM_fd = self._fd_cache["D_KBM_fd"]
-        C_ETG_fd.dat.data[:] = np.interp(x_dofs, self.x_init, self.C_ETG)
-
-        def _make_func(arr, name=""):
-            """Project a numpy array on self.x_init onto V via np.interp."""
-            f = Function(V, name=name)
-            f.dat.data[:] = np.interp(x_dofs, self.x_init, arr)
-            return f
 
         # define constants for the Firedrake system
         VFC_const = Constant(abs(self.V_FC))
@@ -737,23 +682,30 @@ class saarelma_connor_firedrake(saarelma_connor):
             u_prev.assign(u)
 
         elif initial_guess == "pfile":
-            # Legacy initial guess: p-file n_e, exponential-decay n_FC
-            # built from  d<n_FC>/dx = ne (Si+Scx)/(fFC |V_FC|) <n_FC>
-            # integrated from the separatrix inward.
-            x_desc          = self.x_init[::-1]
-            integrand_init  = (self.n_e_pres[::-1]
-                               * (self.S_i_pres[::-1] + self.S_cx_pres[::-1])
-                               / (self.fFC * abs(self.V_FC)))
-            cumint_desc     = cumulative_trapezoid(integrand_init, x_desc, initial=0.0)
-            nFC_init        = self.nFC_x0 * np.exp(cumint_desc)[::-1]
+            # p-file n_e; n_FC from d<n_FC>/dx = ne (Si+Scx)/(fFC |V_FC|) <n_FC>
+            # integrated separatrix -> inner, evaluated only at mesh DOFs (x_dofs).
+            ne_init_data = np.interp(x_dofs, self.x_init, self.n_e_pres)
 
-            ratio_CX  = self.nCX_x0 / self.nFC_x0 if self.nFC_x0 > 0 else 0.0
-            nCX_init  = ratio_CX * nFC_init
+            order_desc = np.argsort(x_dofs)[::-1]
+            x_desc = x_dofs[order_desc]
+            ne_desc = np.interp(x_desc, self.x_init, self.n_e_pres)
+            Si_desc = np.interp(x_desc, self.x_init, self.S_i_pres)
+            Scx_desc = np.interp(x_desc, self.x_init, self.S_cx_pres)
+            integrand_init = (
+                ne_desc * (Si_desc + Scx_desc) / (self.fFC * abs(self.V_FC))
+            )
+            cumint_desc = cumulative_trapezoid(integrand_init, x_desc, initial=0.0)
+            nFC_on_desc = self.nFC_x0 * np.exp(cumint_desc)
 
-            # using assign to be safe about the interpolation from self.x_init to x_dofs
-            u.sub(0).assign(_make_func(self.n_e_pres, "ne_init"))
-            u.sub(1).assign(_make_func(nFC_init,      "nFC_init"))
-            u.sub(2).assign(_make_func(nCX_init,      "nCX_init"))
+            nFC_init_data = np.empty_like(x_dofs)
+            nFC_init_data[order_desc] = nFC_on_desc
+
+            ratio_CX = self.nCX_x0 / self.nFC_x0 if self.nFC_x0 > 0 else 0.0
+            nCX_init_data = ratio_CX * nFC_init_data
+
+            u.subfunctions[0].dat.data[:] = ne_init_data
+            u.subfunctions[1].dat.data[:] = nFC_init_data
+            u.subfunctions[2].dat.data[:] = nCX_init_data
             u_prev.assign(u)
 
         elif initial_guess == "tanh":
@@ -796,14 +748,26 @@ class saarelma_connor_firedrake(saarelma_connor):
 
         # D_KBM (Eqs. 24--25, pedestal-averaged alpha) from the initial n_e.
         # Picard: refreshed each outer iteration.  Newton: frozen after this step.
-        self._set_D_KBM_from_ne_profile(
-            self._ne_on_parent_grid(u.subfunctions[0].dat.data),
+        self.calc_pressure_quantities(
+            u.subfunctions[0].dat.data, average_alpha_pedestal=True, # this is n_e on x_dofs, which goes from separatrix to x_inner
         )
-        ne_inner_for_D = float(
-            self._ne_on_parent_grid(u.subfunctions[0].dat.data)[
-                np.argmin(np.abs(self.x_init - self.x_inner))
-            ],
-        )
+        C_ETG = np.interp(x_dofs, self.x_init, self.C_ETG)
+        if v:
+            print(f'D_ETG = {C_ETG/ne_init_data}\n\n')
+            print(f'D_NEO = {self.D_NEO}\n\n')
+            print(f'D_KBM = {self._D_KBM}\n\n')
+        
+        f = Function(V, name="C_ETG")
+        f.dat.data[:] = C_ETG
+        self._fd_cache["C_ETG_fd"] = f
+
+        f = Function(V, name="D_NEO")
+        f.dat.data[:] = np.interp(x_dofs, self.x_init, self.D_NEO) # self.D_NEO is on self.x_init grid
+        self._fd_cache["D_NEO_fd"] = f
+
+        f = Function(V, name="D_KBM")
+        f.dat.data[:] = self._D_KBM
+        self._fd_cache["D_KBM_fd"] = f
 
         if v:
             self._plot_profiles(
@@ -893,6 +857,9 @@ class saarelma_connor_firedrake(saarelma_connor):
         #     int [ |V_CX| d/dx(f_CX g n_CX)
         #           - n_e ( S_i n_CX - (S_CX/2) n_FC ) ] v_C dx = 0,
         # ------------------------------------------------------------------
+        C_ETG_fd = self._fd_cache["C_ETG_fd"]
+        D_NEO_fd = self._fd_cache["D_NEO_fd"]
+        D_KBM_fd = self._fd_cache["D_KBM_fd"]
         if use_picard:
             picard_params = self._build_picard_linear_solver_parameters(
                 linear_solver=linear_solver,

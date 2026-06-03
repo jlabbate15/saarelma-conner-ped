@@ -88,6 +88,7 @@ class saarelma_connor:
         nFC_x0 = None, # m^-3, FREE PARAMETER, Franck-Condon neutral density at the separatrix
         ne_x0 = None, # m^-3, electron density at the separatrix (boundary condition, default is to use from pfile)
         psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition); overridden by find_inner_boundary if nFC_threshold or nCX_threshold is set
+        ncx_x0_ratio = 0.1, # ratio of nCX at the separatrix to nFC at the separatrix (used in coupled solver)
         nFC_threshold = 0.01, # fraction of nFC at the separatrix below which the inner boundary is placed (None to disable)
         nCX_threshold = 0.01, # fraction of nCX at the separatrix below which the inner boundary is placed (None to disable)
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
@@ -120,6 +121,7 @@ class saarelma_connor:
         self.nFC_threshold = nFC_threshold
         self.nCX_threshold = nCX_threshold
 
+        self.ncx_x0_ratio = ncx_x0_ratio
 
         self.mu0 = 4 * np.pi * 10**-7 # N/A**2, vacuum magnetic permeability constant
         self.P_tot_e = P_tot_e
@@ -221,6 +223,7 @@ class saarelma_connor:
     def update_free_params(self, alpha_crit, C_KBM, De_chie_etg, nFC_x0,
                            nFC_threshold=None, nCX_threshold=None,
                            psi_N_inner_boundary=None,
+                           ncx_x0_ratio=None,
                            clear_solution=False):
         """Update free parameters.
 
@@ -243,6 +246,9 @@ class saarelma_connor:
             If given, the inner boundary is placed at this psi_N value directly
             and the adaptive threshold-based logic is disabled (both thresholds
             forced to None for this run).
+        ncx_x0_ratio : float, optional
+            Override the ratio of nCX at the separatrix to nFC at the separatrix (used in coupled solver).
+            If omitted, keeps the value from construction.
         clear_solution : bool, default True
             If True, drop cached BVP solution attributes from a previous
             :meth:`solve` call.  Set False inside the Picard loop.
@@ -262,6 +268,9 @@ class saarelma_connor:
                 self.nFC_threshold = nFC_threshold
             if nCX_threshold is not None:
                 self.nCX_threshold = nCX_threshold
+        if ncx_x0_ratio is not None:
+            self.ncx_x0_ratio = ncx_x0_ratio
+            self.nCX_x0 = self.ncx_x0_ratio * self.nFC_x0
 
         if clear_solution:
             for _attr in ('sol', 'sol_first', 'x_sol', 'ne_sol', 'dne_dx_sol',
