@@ -409,6 +409,7 @@ class saarelma_connor_firedrake(saarelma_connor):
                 + B_KBM_fd * ne * dT_tot_dx_fd * ne_dx
                 + D_NEO_fd * ne_dx
             )
+            
             F1 = (g_fd * flux_a33 * v_e.dx(0) - ne * Si_fd * (nFC + nCX) * v_e) * dx
 
         if ne_inner_bc == "neumann":
@@ -962,10 +963,17 @@ class saarelma_connor_firedrake(saarelma_connor):
         self._fd_cache["B_KBM_fd"] = f
 
         # Frozen background T_e + T_i and d(T_e+T_i)/dx on x for Eq. A33 (linearize=False).
-        T_tot_on_x = np.interp(x_dofs, self.x_init, self.T_e_pres + self.T_i_pres)
+        T_e_pres = self.T_e_pres * 1.60218e-19 # J
+        T_i_pres = self.T_i_pres * 1.60218e-19 # J
+        T_tot_on_x = np.interp(x_dofs, self.x_init, T_e_pres + T_i_pres)
         dT_tot_on_x = np.interp(
-            x_dofs, self.x_init, np.gradient(self.T_e_pres + self.T_i_pres, self.x_init),
+            x_dofs, self.x_init, np.gradient(T_e_pres + T_i_pres, self.x_init),
         )
+        
+        # Debugging
+        self.T_tot_x = T_tot_on_x
+        self.dT_tot_x = dT_tot_on_x
+
         f = Function(V, name="T_tot")
         f.dat.data[:] = T_tot_on_x
         self._fd_cache["T_tot_fd"] = f
