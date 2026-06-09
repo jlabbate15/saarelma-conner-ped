@@ -403,7 +403,7 @@ class saarelma_connor_firedrake(saarelma_connor):
                 )
             # Expanded flux inside <|grad r|^2> ... v_e' (Labbate appendix A33).
             flux_a33 = (
-                (C_ETG_fd / ne_for_etg) * ne_dx
+                (C_ETG_fd / ne) * ne_dx
                 + A_KBM_fd * ne_dx
                 + B_KBM_fd * T_tot_fd * ne_dx * ne_dx
                 + B_KBM_fd * ne * dT_tot_dx_fd * ne_dx
@@ -426,7 +426,7 @@ class saarelma_connor_firedrake(saarelma_connor):
                 A_KBM_fd = self._fd_cache["A_KBM_fd"]
                 B_KBM_fd = self._fd_cache["B_KBM_fd"]
                 D_bc_a33 = (
-                    C_ETG_fd / ne_for_etg
+                    C_ETG_fd / ne
                     + A_KBM_fd
                     + B_KBM_fd * T_tot_fd * dne_dx_inner_c
                     + B_KBM_fd * ne * dT_tot_dx_fd
