@@ -795,9 +795,21 @@ class saarelma_connor_firedrake(saarelma_connor):
         elif bc_origin == "user":
             ne_inner_val = float(ne_inner)
             dne_dx_inner_val = float(dne_dx_inner)
+        elif bc_origin == "p-file user combo":
+            if ne_inner_bc == "neumann":
+                dne_dx_pres        = np.gradient(self.n_e_pres, self.x_init)
+                dne_dx_inner_val   = float(np.interp(self.x_inner, self.x_init, dne_dx_pres))
+
+                ne_inner_val = float(ne_inner)
+                self.ne_inner = ne_inner_val
+            elif ne_inner_bc == "dirichlet":
+                ne_inner_val = float(ne_inner)
+                self.ne_inner = ne_inner_val
+
+                dne_dx_inner_val = float(dne_dx_inner)
         else:
             raise ValueError(
-                f"bc_origin must be 'p-file' or 'user', got {bc_origin!r}."
+                f"bc_origin must be 'p-file' or 'user' or 'p-file user combo', got {bc_origin!r}."
             )
 
         ne_inner_bc = str(ne_inner_bc).lower()
@@ -909,7 +921,7 @@ class saarelma_connor_firedrake(saarelma_connor):
 
             s_ne   = 0.5 * (1.0 - np.tanh((x_dofs - center) / (0.5 * width)))
             s_neut = 1.0 - s_ne
-            ne_init_data  = self.ne_x0  + (ne_inner_val - self.ne_x0) * s_ne
+            ne_init_data  = self.ne_x0  + (ne_inner_val - self.ne_x0) * s_ne # would be really nice to replace this ne_inner_val with the core density in our loop
             nFC_init_data = self.nFC_x0 * s_neut
             nCX_init_data = self.nCX_x0 * s_neut
 

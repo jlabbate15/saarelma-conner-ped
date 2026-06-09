@@ -1,0 +1,196 @@
+alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner, message
+153303.03100, 0.1, 0.1, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 0.1, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 0.1, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 0.1, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 0.1, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 0.1, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 35 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 0.1, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 29 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 16 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 1.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 0.1, 1.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 0.1, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 1.0, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 46 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 0.1, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 0.1, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 0.1, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 1.0, 0.1, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 0.1, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 0.1, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 1.0, 0.1, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 20 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 1.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 1.0, 1.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 46 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 1.0, 1.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 1.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 1.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 1.0, 1.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 20 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 10.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 1.0, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 46 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 10.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 10.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 1.0, 10.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 1.0, 10.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 1.0, 10.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 20 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 0.1, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 10.0, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 46 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 0.1, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 0.1, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 0.1, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 10.0, 0.1, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 0.1, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 0.1, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 10.0, 0.1, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 20 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 1.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 10.0, 1.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 46 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 10.0, 1.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 1.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 1.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 10.0, 1.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 20 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 10.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 10.0, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 46 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 10.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 10.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 10.0, 10.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+153303.03100, 10.0, 10.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+153303.03100, 10.0, 10.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 20 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
