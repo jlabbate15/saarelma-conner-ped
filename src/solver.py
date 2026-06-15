@@ -228,10 +228,10 @@ class saarelma_connor:
             self.nCX_x0 = nCX_x0 if nCX_x0 is not None else self.ncx_x0_ratio * self.nFC_x0 # set nCX boundary condition, defaults to 0.1 * nFC_x0
             self._fd_cache = {}
 
-    def calc_pressure_quantities(self,n_e,x):
+    def calc_pressure_quantities_sc(self,n_e,x):
         """Calculate the pressure, alpha, and D_KBM on the psi_N_pres grid."""
         n_e = interp1d(x, n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
-        _pres = n_e * self.T_e_pres
+        _pres = n_e * self.T_e_pres * 1.60218e-19 # Pa
         _alpha = (
             -(2 * np.gradient(self.V_plasma, self.psi_pres) / ((2 * np.pi) ** 2))
             * self.mu0
@@ -575,7 +575,7 @@ class saarelma_connor:
             self.kappa = (zmax_top - zmax_bottom) / (2*self.a) # dimensionless, elongation
 
             # Plasma parameters (skip the magnetic axis to avoid degenerate zero-area/volume flux surface)
-            self.Ip = self.eq['ip'] # MA, Plasma current
+            self.Ip = self.eq['ip'] / 1e6 # MA, Plasma current
             # self.pres = self.eq['pres'][1:] # pressure is NOT an input to this model
             self.psi_pres = np.linspace(self.eq['psimag'], self.eq['psibry'], len(self.eq['pres']))[1:]
             self.psi_N_pres = (self.psi_pres - self.eq['psimag']) / (self.eq['psibry'] - self.eq['psimag'])
@@ -690,8 +690,20 @@ class saarelma_connor:
         self.volavgP : float
             Volume-averaged pressure (same units as self.pres).
         """
+
         dV_dpsi = np.gradient(self.V_plasma, self.psi_N_pres)
-        self.volavgP = (simpson(self.pres * dV_dpsi, self.psi_N_pres)
+
+        T_tot_xdofs = self.T_e_xdofs
+        if self.T_rat_flag: # use both electron and ion temperatures
+            T_i_xdofs = np.interp(self.x_sol, self.x_init, self.T_i_pres)
+            T_tot_xdofs = T_tot_xdofs + T_i_xdofs
+
+        pressure = self.ne_sol * T_tot_xdofs * 1.60218e-19  # Pa
+
+        psi_N_xdofs = np.interp(self.x_sol, self.x_init, self.psi_N_pres) # convert x_dofs to psi_N
+        pressure = np.interp(self.psi_N_pres, psi_N_xdofs, pressure) # Pa on psi_N_pres grid
+
+        self.volavgP = (simpson(pressure * dV_dpsi, self.psi_N_pres)
                         / simpson(dV_dpsi, self.psi_N_pres))
 
     def calc_betan(self):
@@ -715,10 +727,11 @@ class saarelma_connor:
         bp_avg = np.mean(bp_lcfs)
 
         betat = self.volavgP / (self.bt**2 / (2 * self.mu0))
-        betap = self.volavgP / (bp_avg**2 / (2 * self.mu0))
+        # betap = self.volavgP / (bp_avg**2 / (2 * self.mu0))
+        # beta = ((1/betat) + (1/betap))**(-1)
 
-        beta = ((1/betat) + (1/betap))**(-1)
-        self.betan = beta * (self.a*self.bt/self.Ip)
+        # EPED / Troyon: β_N = β_t[%] * a * abs(B_t) [T] / I_p[MA] -> this is what OpenFUSIONToolkit uses for β_N
+        self.betan = 100 * betat * (self.a * abs(self.bt) / self.Ip)
 
     def form_factor(self,type = 'ex'):
         """Calculate the form factor for FC or charge-exchange cases
@@ -1312,7 +1325,7 @@ class saarelma_connor:
                     ne_sol_prev = self.sol.y[0]
 
                 # Calculate pressure, alpha, and D_KBM
-                self.calc_pressure_quantities(n_e=ne_sol_prev,x=self.x_prev)
+                self.calc_pressure_quantities_sc(n_e=ne_sol_prev,x=self.x_prev)
 
                 # First step (Eq 16 in Saarelma et al., 2023, no CX neutrals)
                 if i == 0:
@@ -1621,6 +1634,7 @@ class saarelma_connor:
 
         # All quantities below are evaluated in sorted-x (spatial) order.
         T_e = np.interp(x, self.x_init, self.T_e_pres)
+        self.T_e_xdofs = T_e
         G_KBM_grid = self.C_KBM * (self.c_s * self.rho_s**2) / self.a # on psi_Te_eval/x_init grid
         G_KBM = np.interp(x, self.x_init, G_KBM_grid)
         alpha_nodp = np.interp(x, self.x_init, self._alpha_nodp_xinit)
@@ -2401,7 +2415,7 @@ class saarelma_connor:
         return A_interp(self.psi_RZ_N)
 
 
-    def feed_eped(self):
+    def setup_epednn(self):
         """Once a pedestal density profile is calculated, feed this profile to EPED and run EPED or EPEDNN to determine pedestal pressure height and width
 
         Parameters
@@ -2417,10 +2431,31 @@ class saarelma_connor:
             Pedestal width (normalized poloidal flux)
         """
 
+        print("Setting up EPEDNN...")
+
         # Requires dependency "juliacall" to translate Python inputs to FUSE EPED.jl
         # Requires dependency EPEDNN
 
+        import juliapkg
+
+        # 1. Tell juliapkg to add your local EPEDNN package in development mode.
+        # This registers it with the isolated Julia environment PythonCall uses.
+        # Pass the UUID explicitly here:
+        juliapkg.add(
+            "EPEDNN", 
+            uuid="e64856f0-3bb8-4376-b4b7-c03396503991", 
+            path="/Users/nelsonlab/codes/saarelma-conner-ped/dependencies/EPEDNN.jl", 
+            dev=True
+        )
+
+        # 2. Resolve and instantiate. THIS is what fixes your missing dependency error!
+        juliapkg.resolve()
+
+        # 3. Now that the environment is set up, load juliacall and your package
         from juliacall import Main as jl
+        jl.seval('using EPEDNN')
+
+        # from juliacall import Main as jl
 
         # 1. Load the Julia EPEDNN module (Assuming EPEDNN is already installed in your Julia environment)
         '''
@@ -2448,38 +2483,42 @@ class saarelma_connor:
             using EPEDNN
         '''
         # you can run Julia commands in Python using jl.seval('command')
-        jl.seval('using Pkg')
-        jl.seval('Pkg.activate(".")  # optional but recommended: use this repo as the active Julia project')
-        jl.seval('Pkg.develop(path="/Users/nelsonlab/codes/saarelma-conner-ped/dependencies/EPEDNN.jl")')
-        jl.seval('Pkg.instantiate()')
-        jl.seval('using EPEDNN')
+        # jl.seval('using Pkg')
+        # jl.seval('Pkg.activate(".")  # optional but recommended: use this repo as the active Julia project')
+        # jl.seval('Pkg.develop(path="/Users/nelsonlab/codes/saarelma-conner-ped/dependencies/EPEDNN.jl")')
+        # jl.seval('Pkg.instantiate()')
+        # jl.seval('using EPEDNN')
 
         # 2. Load the pre-trained EPED neural network model
         # This mimics the EPEDNN.loadmodelonce("EPED1NNmodel.bson") step
         model_filename = "EPED1NNmodel.bson" 
-        eped_model = jl.EPEDNN.loadmodelonce(model_filename)
+        self.epednn_model = jl.EPEDNN.loadmodelonce(model_filename)
+        self.bt = np.array(self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2])
 
-        # 3. Define your inputs in Python
+
+    def feed_epednn(self):
+        """Feed the pedestal pressure and width to the EPEDNN model"""
+        
+        # Define inputs in Python
         # These map exactly to the InputEPED struct we saw in the Julia code
         self.neped = interp1d(self.x_sol, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
-        self.bt = self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2]
         self.calc_betan()
         inputs = {
-            "a": self.a,           # Minor radius (m)
-            "betan": self.betan,       # Normalized beta
-            "bt": self.bt,        # Toroidal magnetic field at the magnetic axis (T)
-            "delta": self.delta,       # Effective triangularity
-            "ip": self.Ip,          # Plasma current (MA)
-            "kappa": self.kappa,       # Elongation
-            "m": self.M_eff,           # Effective mass (must be 2.0 for D or 2.5 for D-T)
-            "neped": self.neped,       # Pedestal density (in 10^19 m^-3)
-            "r": self.Rmajor,           # Major radius (m)
-            "zeffped": self.Z_i      # Effective charge
+            "a": float(self.a),           # Minor radius (m)
+            "betan": float(self.betan[0]),       # Normalized beta
+            "bt": float(abs(self.bt[0])),                # Toroidal magnetic field at the magnetic axis (T)
+            "delta": float(self.delta),       # Effective triangularity
+            "ip": float(self.Ip),          # Plasma current (MA)
+            "kappa": float(self.kappa),       # Elongation
+            "m": float(self.M_eff),           # Effective mass (must be 2.0 for D or 2.5 for D-T)
+            "neped": float(self.neped),       # Pedestal density (in 10^19 m^-3)
+            "r": float(self.Rmajor),           # Major radius (m)
+            "zeffped": float(self.Z_i)      # Effective charge
         }
 
-        # 4. Call the Julia model using the Python inputs
+        # Call the Julia model using the Python inputs
         # We pass the inputs into the Julia function, along with the keyword arguments
-        solution = eped_model(
+        solution = self.epednn_model(
             inputs["a"], 
             inputs["betan"], 
             inputs["bt"], 
@@ -2491,10 +2530,10 @@ class saarelma_connor:
             inputs["r"], 
             inputs["zeffped"],
             only_powerlaw=False,        # Set to True if you only want the scaling law
-            warn_nn_train_bounds=True   # Warns if inputs are outside the training data
+            warn_nn_train_bounds=True   # Warns if inputs are outside the training data. Good for debugging
         )
 
-        # 5. Extract the results back into Python
+        # Extract the results back into Python
         # The solution structure has pressure and width for different modes (GH, G, H)
         self.pedestal_pressure = solution.pressure.GH.H  # in MPa
         self.pedestal_width = solution.width.GH.H        # in normalized poloidal flux

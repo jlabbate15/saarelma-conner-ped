@@ -655,7 +655,7 @@ Multiplying the expression by $-1$, bringing terms onto the left-hand side, and 
 
 We extend the formulation to incorporate a total pressure gradient-driven transport model. The total particle diffusion coefficient $D$ combines a turbulent pedestal contribution $\Dped$ and a neoclassical baseline contribution $D_{\mathrm{NEO}}(x)$:
 \begin{equation}
-D = \Dped + D_{\mathrm{NEO}}(x)
+D = \Dped + D_{\mathrm{NEO}}(x) = D_{KBM} + D_{ETG} + D_{NEO}
 \end{equation}
 The turbulent pedestal transport incorporates Electron Temperature Gradient (ETG) scale anomalies and Kinetic Ballooning Mode (KBM) scale instabilities. The KBM term is driven by the total pressure gradient, $dp/dx$. Assuming quasineutrality such that the ion density $n_i \approx \ne$, the total pressure is $p = \ne T_e + n_i T_i \approx \ne (T_e + T_i)$. Following their known scalings, we define:
 \begin{equation}
@@ -718,41 +718,70 @@ Multiplying the expression by $-1$, bringing terms onto the left-hand side, and 
 \begin{widetext}
 \begin{align}
 &\int_{\xin}^{0} \gradrsq \left[ \frac{C_{\mathrm{ETG}}(x)}{\ne} \frac{d\ne}{dx} + A_{KBM}\frac{dn_e}{dx}+ B_{\mathrm{KBM}}(x) (T_e + T_i) \left(\frac{d\ne}{dx}\right)^2 + B_{\mathrm{KBM}}(x) \ne \frac{d(T_e + T_i)}{dx} \frac{d\ne}{dx} + D_{\mathrm{NEO}}(x) \frac{d\ne}{dx} \right] v_e'  dx 
-\notag \\ & - \int_{\xin}^{0} \ne\Si\bigl(\fsa{\nfc}+\fsa{\ncx}\bigr) v_e dx + \delta_{\mathrm{N}}\left. \gradrsq\right|_{x=\xin} \left. D \right|_{x=\xin} n'_{e,\mathrm{inner}}, v_e(\xin) = 0
+\notag \\ & - \int_{\xin}^{0} \ne\Si\bigl(\fsa{\nfc}+\fsa{\ncx}\bigr) v_e dx + \delta_{\mathrm{N}}\left. \gradrsq\right|_{x=\xin} \left. D \right|_{x=\xin} n'_{e,\mathrm{inner}} v_e(\xin) = 0
 \end{align}
 \end{widetext}
 
 Note I am neglecting the neutral pressures here but I think in principle you could include them it might just be an awful differential equation.
 
 
+
 \subsection{Non-dimensionalization of Eq.~(A33)}
 \label{sec:nondim-A33}
 
 The strong and weak forms derived in App.~\ref{sec:ne-weak-total-pressure}
-couple quantities that span many orders of magnitude in SI units
+involve quantities that span many orders of magnitude in SI units
 ($\ne \!\sim\! 10^{19}$~m$^{-3}$, $\Si \!\sim\! 10^{-14}$~m$^{3}$/s,
-$T_{e}\!+\!T_{i} \!\sim\! 10^{-17}$~J, etc.).
-That dynamic range degrades the conditioning of the Newton/Picard
-linear solves currently used in \texttt{solver.py}. We rescale Eq.~(A33)
-onto $\mathcal{O}(1)$ quantities so that all dimensional information is
-absorbed into a small number of dimensionless coefficients.
+$T_{e}\!+\!T_{i} \!\sim\! 10^{-17}$~J,
+$D_{\mathrm{NEO}} \!\sim\! 10^{0}$~m$^{2}$/s, etc.). We rescale
+Eq.~(A33) onto $\mathcal{O}(1)$ unknowns using a \emph{minimal}
+non-dimensionalisation: only four reference scales are chosen freely,
+equal to the number of independent SI dimensions in the problem
+(length, density, energy, time). All other reference scales follow
+from those four by Buckingham's $\pi$-theorem, and the final
+dimensionless equation has no remaining multiplicative prefactor.
 
-\subsubsection{Reference scales}
+\subsubsection{Independent reference scales}
 
-Choose the following constant scales at solver setup:
+The model's four independent SI dimensions are length [m], number
+density [m$^{-3}$], energy [J], and time [s]. We pick one numerical
+reference constant per dimension, all evaluated at the separatrix:
+\begin{subequations}
+\label{eq:nondim-scales-A8}
 \begin{align}
-  L      &= |\xin|,
-  & n_{0}   &= n_{e,0},
-  \\
-  T_{0}    &= T_{e}(0) + T_{i}(0),
-  & S_{0}   &= \Si(0),
-  \\
-  D_{0}    &\;\;\text{(e.g. } D_{\mathrm{NEO}}(0)\text{)},
-  & g_{0}   &= \gradrsq\big|_{x=0},
+  L     &\equiv |\xin|
+        &&\text{[length, m],} \\
+  n_{0} &\equiv n_{e,0}
+        &&\text{[density, m$^{-3}$],} \\
+  T_{0} &\equiv T_{e}(0) + T_{i}(0)
+        &&\text{[energy, J],} \\
+  \tau  &\equiv \frac{1}{n_{0}\,S_{0}},\;
+              S_{0} \equiv \Si(0)
+        &&\text{[time, s].}
 \end{align}
-i.e.\ a radial scale, an electron density, an electron-plus-ion temperature,
-an ionisation rate coefficient, a diffusion coefficient, and a metric factor,
-respectively. Each is a numerical constant evaluated at the separatrix.
+\end{subequations}
+The choice $\tau = (n_{0}\,S_{0})^{-1}$ is the ionisation time at the
+separatrix. It is the only timescale in the model that does not
+require a transport coefficient as input, so the resulting
+non-dimensionalisation is independent of $D_{\mathrm{NEO}}$,
+$C_{\mathrm{ETG}}$, $A_{\mathrm{KBM}}$, or $B_{\mathrm{KBM}}$.
+
+The flux-surface average $\fsa{|\nabla r|^{2}}$ is dimensionless when
+$r$ is a length, so it is rescaled by itself,
+$\hat{g}(\hat{x}) = \gradrsq$.\footnote{The units listed for
+$\fsa{|\nabla r|^{2}}$ in Table~\ref{tab:variables} (m$^{-2}$) are
+inconsistent with this convention; the entry should read
+``dimensionless''.}
+The remaining derived (dependent) scales follow from
+\eqref{eq:nondim-scales-A8} algebraically:
+\begin{align}
+  [V]_{0} &= \frac{L}{\tau} = L\,n_{0}\,S_{0}
+          &&\text{[velocity, m/s],}\\
+  [D]_{0} &= \frac{L^{2}}{\tau} = L^{2}\,n_{0}\,S_{0}
+          &&\text{[diffusivity, m$^{2}$/s],}\\
+  [p]_{0} &= n_{0}\,T_{0}
+          &&\text{[pressure, Pa].}
+\end{align}
 
 \subsubsection{Dimensionless variables}
 
@@ -764,149 +793,432 @@ Define
   \hat{n}_{\mathrm{FC}}  &= \fsa{\nfc}/n_{0},
   & \hat{n}_{\mathrm{CX}} &= \fsa{\ncx}/n_{0},
   \\
-  \hat{T}(\hat{x}) &= \frac{T_{e} + T_{i}}{T_{0}},
-  & \hat{S}_{i}(\hat{x}) &= \Si/S_{0},
+  \hat{T}(\hat{x}) &= \frac{T_{e}(x) + T_{i}(x)}{T_{0}},
+  & \hat{S}_{i}(\hat{x}) &= \Si(x)/S_{0},
   \\
-  \hat{S}_{\mathrm{CX}}(\hat{x}) &= \Scx/S_{0},
-  & \hat{g}(\hat{x})     &= \gradrsq/g_{0},
+  \hat{S}_{\mathrm{CX}}(\hat{x}) &= \Scx(x)/S_{0},
+  & \hat{g}(\hat{x})     &= \gradrsq.
 \end{align}
-so that $\hat{x} \in [-1,0]$ and $\hat{n}_{e}(0) = 1$.
-The dimensionless transport coefficients are
+With $n_{0}=n_{e,0}$, $\hat{x}\in[-1,0]$ and $\hat{n}_{e}(0)=1$
+exactly. Differential operators transform as
 \begin{align}
-  \hat{D}_{\mathrm{NEO}}(\hat{x}) &= D_{\mathrm{NEO}}/D_{0},
+  \frac{d}{dx}      &= \frac{1}{L}\frac{d}{d\hat{x}},
   &
-  \hat{C}_{\mathrm{ETG}}(\hat{x}) &= \frac{C_{\mathrm{ETG}}}{D_{0}\,n_{0}},
-  \\
-  \hat{A}_{\mathrm{KBM}}(\hat{x}) &= A_{\mathrm{KBM}}/D_{0},
-  &
-  \hat{B}_{\mathrm{KBM}}(\hat{x}) &= \frac{B_{\mathrm{KBM}}\,n_{0}\,T_{0}}{L\,D_{0}}.
+  \frac{d\ne}{dx}   &= \frac{n_{0}}{L}\frac{d\hat{n}_{e}}{d\hat{x}}.
+  \label{eq:chain-A8}
 \end{align}
-The scaling of $\hat{C}_{\mathrm{ETG}}$ ensures
-$\hat{C}_{\mathrm{ETG}}/\hat{n}_{e}$ contributes to $\hat{D}$ at order
-unity, and the scaling of $\hat{B}_{\mathrm{KBM}}$ absorbs the $n_{0}\,T_{0}/L$
-that appears when $dp/dx$ is rescaled.
 
-\subsubsection{Dimensionless diffusion coefficient}
+\subsubsection{Dimensionless transport coefficients}
 
-Substituting into the diffusion definition (Eq.~A29) gives
+The four transport quantities in the diffusion definition (Eq.~A29) are
+each rescaled so that their natural product in $\hat{D}$ is
+dimensionless once divided by $[D]_{0}=L^{2}\,n_{0}\,S_{0}$.
+
+\textit{Neoclassical contribution.}
+$D_{\mathrm{NEO}}$ has units of $[D]_{0}$, so directly
 \begin{equation}
-  D\!\left(\ne,\,\dnexnow\right)
-  \;=\; D_{0}\,\hat{D}\!\left(\hat{n}_{e},\,\frac{d\hat{n}_{e}}{d\hat{x}}\right),
+  \hat{D}_{\mathrm{NEO}}(\hat{x})
+  \;=\; \frac{D_{\mathrm{NEO}}(x)}{L^{2}\,n_{0}\,S_{0}}.
+  \label{eq:hat-D-NEO}
 \end{equation}
+
+\textit{ETG contribution.}
+Since $D_{\mathrm{ETG}}=C_{\mathrm{ETG}}/\ne$ has units of $[D]_{0}$,
+$C_{\mathrm{ETG}}$ has units of $[D]_{0}\,n_{0}$. Demanding
+$D_{\mathrm{ETG}}=[D]_{0}\,\hat{C}_{\mathrm{ETG}}/\hat{n}_{e}$ yields
+\begin{equation}
+  \hat{C}_{\mathrm{ETG}}(\hat{x})
+  \;=\; \frac{C_{\mathrm{ETG}}(x)}{L^{2}\,n_{0}^{2}\,S_{0}}.
+  \label{eq:hat-C-ETG}
+\end{equation}
+
+\textit{KBM contributions.}
+$A_{\mathrm{KBM}}$ has units of $[D]_{0}$, so
+\begin{equation}
+  \hat{A}_{\mathrm{KBM}}(\hat{x})
+  \;=\; \frac{A_{\mathrm{KBM}}(x)}{L^{2}\,n_{0}\,S_{0}}.
+  \label{eq:hat-A-KBM}
+\end{equation}
+$B_{\mathrm{KBM}}$ multiplies $dp/dx$ to give $[D]_{0}$, so its
+SI units are
+\begin{equation}
+  [B_{\mathrm{KBM}}]
+  \;=\;\frac{[D]_{0}}{[dp/dx]}
+  \;=\;\frac{L^{2}\,n_{0}\,S_{0}}{n_{0}\,T_{0}/L}
+  \;=\;\frac{L^{3}\,S_{0}}{T_{0}},
+\end{equation}
+and therefore
+\begin{equation}
+  \hat{B}_{\mathrm{KBM}}(\hat{x})
+  \;=\; \frac{B_{\mathrm{KBM}}(x)\,T_{0}}{L^{3}\,S_{0}}.
+  \label{eq:hat-B-KBM}
+\end{equation}
+
+\textit{Term-by-term verification of $\hat{D}$.}
+Substituting the dimensionless variables and
+Eqs.~\eqref{eq:hat-D-NEO}--\eqref{eq:hat-B-KBM} term-by-term into the
+SI definition of $D$ from Eq.~(A29):
+\begin{align}
+  \frac{C_{\mathrm{ETG}}}{\ne}
+  &= \frac{(L^{2}\,n_{0}^{2}\,S_{0})\,\hat{C}_{\mathrm{ETG}}}{n_{0}\,\hat{n}_{e}}
+   = (L^{2}\,n_{0}\,S_{0})\,\frac{\hat{C}_{\mathrm{ETG}}}{\hat{n}_{e}},
+  \label{eq:term-ETG-A8}
+  \\
+  A_{\mathrm{KBM}}
+  &= (L^{2}\,n_{0}\,S_{0})\,\hat{A}_{\mathrm{KBM}},
+  \label{eq:term-A-A8}
+  \\
+  B_{\mathrm{KBM}}\,(T_{e}{+}T_{i})\,\frac{d\ne}{dx}
+  &= \frac{L^{3}\,S_{0}}{T_{0}}\hat{B}_{\mathrm{KBM}}\!\cdot\! T_{0}\hat{T}\!\cdot\!\frac{n_{0}}{L}\frac{d\hat{n}_{e}}{d\hat{x}}
+  \notag\\
+  &= (L^{2}\,n_{0}\,S_{0})\,\hat{B}_{\mathrm{KBM}}\,\hat{T}\,\frac{d\hat{n}_{e}}{d\hat{x}},
+  \label{eq:term-B1-A8}
+  \\
+  B_{\mathrm{KBM}}\,\ne\,\frac{d(T_{e}{+}T_{i})}{dx}
+  &= \frac{L^{3}\,S_{0}}{T_{0}}\hat{B}_{\mathrm{KBM}}\!\cdot\! n_{0}\hat{n}_{e}\!\cdot\!\frac{T_{0}}{L}\frac{d\hat{T}}{d\hat{x}}
+  \notag\\
+  &= (L^{2}\,n_{0}\,S_{0})\,\hat{B}_{\mathrm{KBM}}\,\hat{n}_{e}\,\frac{d\hat{T}}{d\hat{x}},
+  \label{eq:term-B2-A8}
+  \\
+  D_{\mathrm{NEO}}
+  &= (L^{2}\,n_{0}\,S_{0})\,\hat{D}_{\mathrm{NEO}}.
+  \label{eq:term-NEO-A8}
+\end{align}
+Each of the five contributions carries the same dimensional prefactor
+$L^{2}\,n_{0}\,S_{0} = [D]_{0}$, so $D = [D]_{0}\,\hat{D}$ with
 \begin{widetext}
 \begin{align}
   \hat{D}\!\left(\hat{n}_{e},\,\frac{d\hat{n}_{e}}{d\hat{x}}\right)
-  \;=\;&
-  \frac{\hat{C}_{\mathrm{ETG}}(\hat{x})}{\hat{n}_{e}}
-  \;+\; \hat{A}_{\mathrm{KBM}}(\hat{x})
-  \;+\; \hat{B}_{\mathrm{KBM}}(\hat{x})\,\hat{T}\,\frac{d\hat{n}_{e}}{d\hat{x}}
+  \;=\;& \frac{\hat{C}_{\mathrm{ETG}}(\hat{x})}{\hat{n}_{e}}
+       + \hat{A}_{\mathrm{KBM}}(\hat{x})
+       + \hat{B}_{\mathrm{KBM}}(\hat{x})\,\hat{T}\,\frac{d\hat{n}_{e}}{d\hat{x}}
   \notag \\
-  & \;+\; \hat{B}_{\mathrm{KBM}}(\hat{x})\,\hat{n}_{e}\,\frac{d\hat{T}}{d\hat{x}}
-  \;+\; \hat{D}_{\mathrm{NEO}}(\hat{x}).
-  \label{eq:hatD-A8}
+       &+ \hat{B}_{\mathrm{KBM}}(\hat{x})\,\hat{n}_{e}\,\frac{d\hat{T}}{d\hat{x}}
+       + \hat{D}_{\mathrm{NEO}}(\hat{x}).
+  \label{eq:hat-D-A8}
 \end{align}
 \end{widetext}
 
-\subsubsection{Non-dimensional strong form}
+\subsubsection{Dimensionless strong form}
 
-Using $d/dx = (1/L)\,d/d\hat{x}$ and $d\ne/dx = (n_{0}/L)\,d\hat{n}_{e}/d\hat{x}$
-in the strong form (Eq.~A30) gives
+Substituting $D=[D]_{0}\,\hat{D}$ together with the chain-rule
+relations~\eqref{eq:chain-A8} into the left-hand side of the strong
+form (Eq.~A30):
+\begin{widetext}
+\begin{align}
+  \frac{d}{dx}\!\left[\gradrsq\,D\,\frac{d\ne}{dx}\right]
+  &= \frac{1}{L}\frac{d}{d\hat{x}}\!\left[\hat{g}\,(L^{2}\,n_{0}\,S_{0})\,\hat{D}\,\frac{n_{0}}{L}\frac{d\hat{n}_{e}}{d\hat{x}}\right]
+  \notag \\
+  &= \frac{1}{L}\cdot\frac{L^{2}\,n_{0}^{2}\,S_{0}}{L}\,\frac{d}{d\hat{x}}\!\left[\hat{g}\,\hat{D}\,\frac{d\hat{n}_{e}}{d\hat{x}}\right]
+  \notag \\
+  &= n_{0}^{2}\,S_{0}\,\frac{d}{d\hat{x}}\!\left[\hat{g}\,\hat{D}\,\frac{d\hat{n}_{e}}{d\hat{x}}\right].
+  \label{eq:LHS-A8}
+\end{align}
+\end{widetext}
+The right-hand side of Eq.~(A30) becomes
+\begin{align}
+  -\,\ne\,\Si\,\bigl(\fsa{\nfc}+\fsa{\ncx}\bigr)
+  &= -\,(n_{0}\hat{n}_{e})(S_{0}\hat{S}_{i})\,n_{0}\bigl(\hat{n}_{\mathrm{FC}}+\hat{n}_{\mathrm{CX}}\bigr)
+  \notag \\
+  &= -\,n_{0}^{2}\,S_{0}\,\hat{n}_{e}\,\hat{S}_{i}\,\bigl(\hat{n}_{\mathrm{FC}}+\hat{n}_{\mathrm{CX}}\bigr).
+  \label{eq:RHS-A8}
+\end{align}
+The two factors of $n_{0}^{2}\,S_{0}$ cancel identically, yielding the
+dimensionless strong form
 \begin{widetext}
 \begin{equation}
   \frac{d}{d\hat{x}}\!\left[\hat{g}\,\hat{D}\!\left(\hat{n}_{e},\,\frac{d\hat{n}_{e}}{d\hat{x}}\right)\,\frac{d\hat{n}_{e}}{d\hat{x}}\right]
   \;=\;
-  -\,\Lambda\,\hat{n}_{e}\,\hat{S}_{i}\,\bigl(\hat{n}_{\mathrm{FC}} + \hat{n}_{\mathrm{CX}}\bigr),
+  -\,\hat{n}_{e}\,\hat{S}_{i}\,\bigl(\hat{n}_{\mathrm{FC}} + \hat{n}_{\mathrm{CX}}\bigr).
   \label{eq:strong-hat-A8}
 \end{equation}
 \end{widetext}
-with the single dimensionless coupling parameter
+There is no residual dimensionless prefactor in
+Eq.~\eqref{eq:strong-hat-A8}: the choice $\tau=1/(n_{0}\,S_{0})$ has set
+the natural diffusion scale $[D]_{0}=L^{2}/\tau$ \emph{simultaneously}
+with the natural source scale, so the diffusive and source contributions
+have identical dimensional prefactors.
+
+\subsubsection{Dimensionless weak form}
+
+Multiply Eq.~\eqref{eq:strong-hat-A8} by an arbitrary test function
+$v_{e}\in V$ and integrate over $\hat{\Omega} = [-1,0]$:
+\begin{widetext}
 \begin{equation}
-  \Lambda \;=\; \frac{n_{0}\,S_{0}\,L^{2}}{g_{0}\,D_{0}}
-       \;=\; \frac{L^{2}/(g_{0}\,D_{0})}{1/(n_{0}\,S_{0})}
-       \;=\; \frac{\tau_{\mathrm{diff}}}{\tau_{\mathrm{ion}}},
-  \label{eq:Lambda-A8}
+  \int_{-1}^{0} \frac{d}{d\hat{x}}\!\left[\hat{g}\,\hat{D}\,\frac{d\hat{n}_{e}}{d\hat{x}}\right]v_{e}\,d\hat{x}
+  \;=\;
+  -\int_{-1}^{0} \hat{n}_{e}\,\hat{S}_{i}\,\bigl(\hat{n}_{\mathrm{FC}}+\hat{n}_{\mathrm{CX}}\bigr) v_{e}\,d\hat{x}.
 \end{equation}
-i.e.\ the ratio of the radial diffusive timescale
-$\tau_{\mathrm{diff}} = L^{2}/(g_{0}\,D_{0})$ to the ionisation timescale
-$\tau_{\mathrm{ion}} = 1/(n_{0}\,S_{0})$.
+\end{widetext}
+Apply integration by parts to the left-hand side, using
+$\int u'\,v\,d\hat{x}=[u\,v]_{-1}^{0}-\int u\,v'\,d\hat{x}$ with
+$u=\hat{g}\,\hat{D}\,(d\hat{n}_{e}/d\hat{x})$ and $v=v_{e}$:
+\begin{widetext}
+\begin{equation}
+  \left.\hat{g}\,\hat{D}\,\frac{d\hat{n}_{e}}{d\hat{x}}\,v_{e}\right|_{-1}^{0}
+  \;-\;\int_{-1}^{0}\hat{g}\,\hat{D}\,\frac{d\hat{n}_{e}}{d\hat{x}}\,v_{e}'\,d\hat{x}
+  \;=\;
+  -\int_{-1}^{0}\hat{n}_{e}\,\hat{S}_{i}\,\bigl(\hat{n}_{\mathrm{FC}}+\hat{n}_{\mathrm{CX}}\bigr) v_{e}\,d\hat{x}.
+\end{equation}
+\end{widetext}
+Multiplying through by $-1$ and moving every term to the left-hand side,
+\begin{widetext}
+\begin{equation}
+  \int_{-1}^{0}\hat{g}\,\hat{D}\,\frac{d\hat{n}_{e}}{d\hat{x}}\,v_{e}'\,d\hat{x}
+  \;-\;\int_{-1}^{0}\hat{n}_{e}\,\hat{S}_{i}\,\bigl(\hat{n}_{\mathrm{FC}}+\hat{n}_{\mathrm{CX}}\bigr)v_{e}\,d\hat{x}
+  \;-\;\left.\hat{g}\,\hat{D}\,\frac{d\hat{n}_{e}}{d\hat{x}}\,v_{e}\right|_{-1}^{0}
+  \;=\;0.
+  \label{eq:weak-pre-bc-A8}
+\end{equation}
+\end{widetext}
 
-\subsubsection{Non-dimensional weak form}
+\textit{Boundary terms.}
+At $\hat{x}=0$ the Dirichlet condition $\hat{n}_{e}(0)=1$ forces
+$v_{e}(0)=0$, so the upper-end contribution vanishes. At
+$\hat{x}=-1$ the inner-boundary contribution is either zero
+(Dirichlet, $v_{e}(-1)=0$) or, in the Neumann case, the prescribed
+slope is substituted. Defining
+\begin{equation}
+  \hat{n}'_{e,\mathrm{inner}}
+  \;\equiv\; \left.\frac{d\hat{n}_{e}}{d\hat{x}}\right|_{\hat{x}=-1}
+  \;=\; \frac{L\,n'_{e,\mathrm{inner}}}{n_{0}},
+  \label{eq:hat-flux-A8}
+\end{equation}
+and $\delta_{\mathrm{N}}=1$ for Neumann (zero for Dirichlet), the
+remaining boundary contribution in Eq.~\eqref{eq:weak-pre-bc-A8} is
+\begin{equation}
+  -\!\left[\hat{g}\,\hat{D}\,\frac{d\hat{n}_{e}}{d\hat{x}}\,v_{e}\right]_{-1}^{0}
+  \;=\;
+  +\,\delta_{\mathrm{N}}\,\hat{g}(-1)\,\left.\hat{D}\right|_{\hat{x}=-1}\,\hat{n}'_{e,\mathrm{inner}}\,v_{e}(-1).
+\end{equation}
 
-Multiply Eq.~\eqref{eq:strong-hat-A8} by $v_{e} \in V$, integrate over
-$\hat{\Omega} = [-1,0]$, integrate by parts, and apply
-$v_{e}(0)=0$ and the inner-boundary treatment from
-App.~\ref{sec:ne-weak-total-pressure}.  The non-dimensional analogue of
-Eq.~(A33) is: find $\hat{n}_{e} \in V$ such that for all $v_{e} \in V$,
+\textit{Final residual.}
+Substituting the expansion~\eqref{eq:hat-D-A8} of $\hat{D}$ into the
+volume integrand of \eqref{eq:weak-pre-bc-A8}, the dimensionless
+analogue of Eq.~(A33) is: find $\hat{n}_{e}\in V$ such that for all
+$v_{e}\in V$,
 \begin{widetext}
 \begin{align}
   &\int_{-1}^{0}\!\hat{g}\!\left[
        \frac{\hat{C}_{\mathrm{ETG}}}{\hat{n}_{e}}\frac{d\hat{n}_{e}}{d\hat{x}}
-       + \hat{A}_{\mathrm{KBM}}\frac{d\hat{n}_{e}}{d\hat{x}}
-       + \hat{B}_{\mathrm{KBM}}\,\hat{T}\!\left(\frac{d\hat{n}_{e}}{d\hat{x}}\right)^{\!2}
-       + \hat{B}_{\mathrm{KBM}}\,\hat{n}_{e}\,\frac{d\hat{T}}{d\hat{x}}\,\frac{d\hat{n}_{e}}{d\hat{x}}
-       + \hat{D}_{\mathrm{NEO}}\,\frac{d\hat{n}_{e}}{d\hat{x}}
-     \right]\!v_{e}'\,d\hat{x}
+     + \hat{A}_{\mathrm{KBM}}\frac{d\hat{n}_{e}}{d\hat{x}}
+     + \hat{B}_{\mathrm{KBM}}\,\hat{T}\!\left(\frac{d\hat{n}_{e}}{d\hat{x}}\right)^{\!2}
+     + \hat{B}_{\mathrm{KBM}}\,\hat{n}_{e}\,\frac{d\hat{T}}{d\hat{x}}\,\frac{d\hat{n}_{e}}{d\hat{x}}
+     + \hat{D}_{\mathrm{NEO}}\,\frac{d\hat{n}_{e}}{d\hat{x}}
+  \right]\!v_{e}'\,d\hat{x}
   \notag \\
   & \quad
-       -\int_{-1}^{0}\!\Lambda\,\hat{n}_{e}\,\hat{S}_{i}\,\bigl(\hat{n}_{\mathrm{FC}}+\hat{n}_{\mathrm{CX}}\bigr) v_{e}\,d\hat{x}
-       + \delta_{\mathrm{N}}\,\hat{g}(-1)\,\left.\hat{D}\right|_{\hat{x}=-1}\,\hat{n}'_{e,\mathrm{inner}}\,v_{e}(-1)
-  \;=\; 0,
+  -\,\int_{-1}^{0}\,\hat{n}_{e}\,\hat{S}_{i}\,\bigl(\hat{n}_{\mathrm{FC}}+\hat{n}_{\mathrm{CX}}\bigr)v_{e}\,d\hat{x}
+  \;+\;\delta_{\mathrm{N}}\,\hat{g}(-1)\,\left.\hat{D}\right|_{\hat{x}=-1}\,\hat{n}'_{e,\mathrm{inner}}\,v_{e}(-1)
+  \;=\;0.
   \label{eq:weak-hat-A8}
 \end{align}
 \end{widetext}
-where the rescaled inner-boundary slope is
-\begin{equation}
-  \hat{n}'_{e,\mathrm{inner}}
-  \;=\; \frac{L\,n'_{e,\mathrm{inner}}}{n_{0}}.
-\end{equation}
+No multiplicative dimensionless parameter appears anywhere in
+Eq.~\eqref{eq:weak-hat-A8}; the only dimensionless \emph{coefficients}
+are $\hat{C}_{\mathrm{ETG}}$, $\hat{A}_{\mathrm{KBM}}$,
+$\hat{B}_{\mathrm{KBM}}$, $\hat{D}_{\mathrm{NEO}}$, each carrying
+genuine physics information.
 
-\subsubsection{Non-dimensional boundary conditions}
+\subsubsection{Dimensionless boundary conditions}
 
-The Dirichlet conditions at the separatrix become
+Translating each Dirichlet/Neumann condition from
+App.~\ref{sec:domain} into the rescaled variables:
 \begin{align}
-  \hat{n}_{e}(0)        &= 1,
-  \\
-  \hat{n}_{\mathrm{FC}}(0) &= \fsa{\nfc}_{0}/n_{0},
-  \\
+  \hat{n}_{e}(0)        &= 1, \\
+  \hat{n}_{\mathrm{FC}}(0) &= \fsa{\nfc}_{0}/n_{0}, \\
   \hat{n}_{\mathrm{CX}}(0) &= \fsa{\ncx}_{0}/n_{0},
 \end{align}
-and the inner-boundary alternatives become
+and at the inner boundary,
 \begin{equation}
   \hat{n}_{e}(-1) \;=\; n_{e,\mathrm{inner}}/n_{0}
   \quad\text{(Dirichlet)}
 \end{equation}
-or
-\begin{equation}
-  \left.\frac{d\hat{n}_{e}}{d\hat{x}}\right|_{\hat{x}=-1}
-  \;=\; \hat{n}'_{e,\mathrm{inner}}
-  \quad\text{(Neumann)}.
-\end{equation}
+or Eq.~\eqref{eq:hat-flux-A8} (Neumann).
 
-\subsubsection{Order-of-magnitude estimate of $\Lambda$}
+\subsubsection{Order-of-magnitude estimates}
 
 For typical DIII-D pedestal parameters,
 $L \!\sim\! 5\!\times\!10^{-2}$~m,
 $n_{0} \!\sim\! 5\!\times\!10^{19}$~m$^{-3}$,
-$T_{0} \!\sim\! 200$~eV $\!\approx\! 3.2\!\times\!10^{-17}$~J,
-$S_{0} \!\sim\! 3\!\times\!10^{-14}$~m$^{3}$/s,
-$D_{0} \!\sim\! 0.5$~m$^{2}$/s, and $g_{0} \!\sim\! \mathcal{O}(1)$.
-Then
+$T_{0} \!\sim\! 200$~eV $\!\approx\! 3.2\!\times\!10^{-17}$~J, and
+$S_{0} \!\sim\! 3\!\times\!10^{-14}$~m$^{3}$/s. The derived scales
+follow:
+\begin{align}
+  \tau    &= \frac{1}{n_{0}\,S_{0}}
+            \;=\; \frac{1}{(5\!\times\!10^{19})(3\!\times\!10^{-14})}
+            \;\approx\; 6.7\!\times\!10^{-7}~\text{s},
+  \\
+  [V]_{0} &= \frac{L}{\tau}
+            \;=\; \frac{5\!\times\!10^{-2}}{6.7\!\times\!10^{-7}}
+            \;\approx\; 7.5\!\times\!10^{4}~\text{m/s},
+  \\
+  [D]_{0} &= \frac{L^{2}}{\tau}
+            \;=\; \frac{(5\!\times\!10^{-2})^{2}}{6.7\!\times\!10^{-7}}
+            \;\approx\; 3.8\!\times\!10^{3}~\text{m}^{2}/\text{s}.
+\end{align}
+With representative SI transport coefficients
+$D_{\mathrm{NEO}} \!\sim\! 0.5$~m$^{2}$/s and
+$C_{\mathrm{ETG}} \!\sim\! D_{\mathrm{ETG}}\,\ne \!\sim\! 2.5\!\times\!10^{19}$~m$^{-1}$\,s$^{-1}$,
+the dimensionless coefficients are
+\begin{align}
+  \hat{D}_{\mathrm{NEO}}
+  &\;\approx\; \frac{0.5}{3.8\!\times\!10^{3}}
+   \;\approx\; 1.3\!\times\!10^{-4},
+  \\
+  \hat{C}_{\mathrm{ETG}}
+  &\;\approx\; \frac{2.5\!\times\!10^{19}}{(2.5\!\times\!10^{-3})(2.5\!\times\!10^{39})(3\!\times\!10^{-14})}
+  \notag\\
+  &\;\approx\; 1.3\!\times\!10^{-4}.
+\end{align}
+The smallness of the dimensionless diffusion contributions reflects
+the physically meaningful fact that the pedestal is a thin boundary
+layer in which slow diffusion competes with fast ionisation. The
+high-derivative term in Eq.~\eqref{eq:strong-hat-A8} carries a small
+prefactor but is balanced by large $d\hat{n}_{e}/d\hat{x}$ inside the
+boundary layer (singular-perturbation behaviour); the equation itself
+is well-posed without further rescaling.
+
+\subsubsection{Optional numerical preconditioning}
+\label{sec:precond-A8}
+
+For the SNES/Newton solves of Eq.~\eqref{eq:weak-hat-A8} it is sometimes
+useful to introduce an additional, purely numerical, scale $D_{0}$ that
+brings each assembled coefficient near unity in floating point.
+Defining
+\begin{align}
+  \tilde{D}_{\mathrm{NEO}} &= \frac{D_{\mathrm{NEO}}}{D_{0}}, &
+  \tilde{C}_{\mathrm{ETG}} &= \frac{C_{\mathrm{ETG}}}{D_{0}\,n_{0}},
+  \\
+  \tilde{A}_{\mathrm{KBM}} &= \frac{A_{\mathrm{KBM}}}{D_{0}}, &
+  \tilde{B}_{\mathrm{KBM}} &= \frac{B_{\mathrm{KBM}}\,n_{0}\,T_{0}}{L\,D_{0}},
+\end{align}
+the strong form acquires a single Damk\"ohler-like prefactor:
 \begin{equation}
-  \Lambda
-  \;\approx\;
-  \frac{(5\!\times\!10^{19})(3\!\times\!10^{-14})(5\!\times\!10^{-2})^{2}}{(1)(0.5)}
-  \;\approx\; 7.5,
+  \frac{d}{d\hat{x}}\!\left[\hat{g}\,\tilde{D}\,\frac{d\hat{n}_{e}}{d\hat{x}}\right]
+  \;=\;-\,\Lambda\,\hat{n}_{e}\,\hat{S}_{i}\,(\hat{n}_{\mathrm{FC}}+\hat{n}_{\mathrm{CX}}),
 \end{equation}
-so the diffusive and source terms in Eq.~\eqref{eq:strong-hat-A8} are
-balanced near order unity. The five contributions in
-Eq.~\eqref{eq:hatD-A8} all become $\mathcal{O}(1)$ by construction, which
-should improve the conditioning of the Newton Jacobian relative to the SI
-residual currently constructed in \texttt{\_build\_f1\_weak\_form}.
+\begin{equation}
+  \Lambda \;\equiv\; \frac{n_{0}\,S_{0}\,L^{2}}{D_{0}}
+  \;=\; \frac{[D]_{0}}{D_{0}}.
+\end{equation}
+Choosing $D_{0}=D_{\mathrm{NEO}}(0)\sim 0.5$~m$^{2}$/s gives
+$\Lambda \sim 7.5\!\times\!10^{3}$ but makes
+$\tilde{D}_{\mathrm{NEO}}\sim\tilde{D}_{\mathrm{ETG}}\sim 1$, which can
+be preferable for the floating-point Jacobian. Setting
+$D_{0}=[D]_{0}=L^{2}/\tau$ recovers the foundational form
+\eqref{eq:strong-hat-A8} ($\Lambda=1$). Both choices yield identical
+SI solutions; the difference is only in the conditioning of the linear
+solves.
+
+\subsubsection{Non-dimensionalisation of the neutral equations}
+\label{sec:nondim-neutrals}
+
+The same four reference scales \eqref{eq:nondim-scales-A8} are used to
+rescale the FC- and CX-neutral fluid equations of
+App.~\ref{sec:domain}.  No new scales are introduced.
+
+\paragraph{Velocity-scale rescalings.}
+The Franck--Condon streaming speed
+$|V_{\mathrm{FC}}| = \sqrt{8\,E_{\mathrm{FC}}/(\pi^{2}\,M_{\mathrm{eff}}\,M_{i})}$
+is a constant of the equilibrium, while the CX speed
+$|V_{\mathrm{CX}}|(x)$ is the local ion thermal speed.  Both have units
+of velocity, so we rescale by $[V]_{0} = L/\tau = L\,n_{0}\,S_{0}$:
+\begin{align}
+  \hat V_{\mathrm{FC}} &\equiv \frac{|V_{\mathrm{FC}}|}{L\,n_{0}\,S_{0}}, &
+  \hat V_{\mathrm{CX}}(\hat x) &\equiv \frac{|V_{\mathrm{CX}}|(x)}{L\,n_{0}\,S_{0}}.
+  \label{eq:hat-V-A8}
+\end{align}
+The form factors $f_{\mathrm{FC}}$ and $f_{\mathrm{CX}}$ are already
+dimensionless and are unchanged.
+
+\paragraph{FC-neutral equation.}
+Starting from the SI strong form (cf.\ App.~\ref{sec:domain})
+\begin{equation}
+  |V_{\mathrm{FC}}|\,\frac{d}{dx}\!\bigl[f_{\mathrm{FC}}\,\fsa{|\nabla r|^{2}}\,\fsa{\nfc}\bigr]
+  \;=\;\ne\,(\Si + \Scx)\,\fsa{\nfc},
+\end{equation}
+substitute $|V_{\mathrm{FC}}| = (L\,n_{0}\,S_{0})\,\hat V_{\mathrm{FC}}$,
+$d/dx = L^{-1}\,d/d\hat x$, $\fsa{\nfc} = n_{0}\,\hat n_{\mathrm{FC}}$,
+$\hat g = \fsa{|\nabla r|^{2}}$, $\ne = n_{0}\,\hat n_{e}$,
+$\Si = S_{0}\,\hat S_{i}$, $\Scx = S_{0}\,\hat S_{\mathrm{CX}}$:
+\begin{align}
+  \mathrm{LHS}
+  &= (L\,n_{0}\,S_{0})\,\hat V_{\mathrm{FC}}
+     \cdot\frac{1}{L}\,\frac{d}{d\hat x}\!\bigl[f_{\mathrm{FC}}\,\hat g\,n_{0}\,\hat n_{\mathrm{FC}}\bigr]
+   \notag\\
+  &= n_{0}^{2}\,S_{0}\,\hat V_{\mathrm{FC}}\,\frac{d}{d\hat x}\!\bigl[f_{\mathrm{FC}}\,\hat g\,\hat n_{\mathrm{FC}}\bigr],\\
+  \mathrm{RHS}
+  &= (n_{0}\,\hat n_{e})(S_{0}\,\hat S_{i} + S_{0}\,\hat S_{\mathrm{CX}})(n_{0}\,\hat n_{\mathrm{FC}})
+   \notag\\
+  &= n_{0}^{2}\,S_{0}\,\hat n_{e}\,(\hat S_{i}+\hat S_{\mathrm{CX}})\,\hat n_{\mathrm{FC}}.
+\end{align}
+The common factor $n_{0}^{2}\,S_{0}$ cancels, leaving the dimensionless
+strong form
+\begin{equation}
+  \hat V_{\mathrm{FC}}\,\frac{d}{d\hat x}\!\bigl[f_{\mathrm{FC}}\,\hat g\,\hat n_{\mathrm{FC}}\bigr]
+  \;=\; \hat n_{e}\,(\hat S_{i}+\hat S_{\mathrm{CX}})\,\hat n_{\mathrm{FC}}.
+  \label{eq:strong-hat-nFC-A8}
+\end{equation}
+
+\paragraph{CX-neutral equation.}
+The SI strong form (cf.\ App.~\ref{sec:domain})
+\begin{equation}
+  \frac{d}{dx}\!\bigl[|V_{\mathrm{CX}}|\,f_{\mathrm{CX}}\,\fsa{|\nabla r|^{2}}\,\fsa{\ncx}\bigr]
+  \;=\;\ne\!\left(\Si\,\fsa{\ncx} - \tfrac{1}{2}\,\Scx\,\fsa{\nfc}\right)
+\end{equation}
+rescales analogously.  Substituting and combining the
+$\frac{1}{L}\!\cdot\! L$ from $d/dx$ and $|V_{\mathrm{CX}}|$,
+\begin{align}
+  \mathrm{LHS}
+  &= \frac{1}{L}\,\frac{d}{d\hat x}\!\bigl[(L\,n_{0}\,S_{0})\hat V_{\mathrm{CX}}\,f_{\mathrm{CX}}\,\hat g\,n_{0}\,\hat n_{\mathrm{CX}}\bigr]
+   \notag\\
+  &= n_{0}^{2}\,S_{0}\,\frac{d}{d\hat x}\!\bigl[\hat V_{\mathrm{CX}}\,f_{\mathrm{CX}}\,\hat g\,\hat n_{\mathrm{CX}}\bigr],\\
+  \mathrm{RHS}
+  &= n_{0}^{2}\,S_{0}\,\hat n_{e}\!\left(\hat S_{i}\,\hat n_{\mathrm{CX}}
+       - \tfrac{1}{2}\,\hat S_{\mathrm{CX}}\,\hat n_{\mathrm{FC}}\right).
+\end{align}
+The common $n_{0}^{2}\,S_{0}$ cancels, giving
+\begin{equation}
+  \frac{d}{d\hat x}\!\bigl[\hat V_{\mathrm{CX}}\,f_{\mathrm{CX}}\,\hat g\,\hat n_{\mathrm{CX}}\bigr]
+  \;=\; \hat n_{e}\!\left(\hat S_{i}\,\hat n_{\mathrm{CX}}
+       - \tfrac{1}{2}\,\hat S_{\mathrm{CX}}\,\hat n_{\mathrm{FC}}\right).
+  \label{eq:strong-hat-nCX-A8}
+\end{equation}
+
+\paragraph{Weak forms (matching the strong-residual convention used in
+\texttt{solver.py}).}
+Multiplying \eqref{eq:strong-hat-nFC-A8} by a test function
+$v_{\mathrm{F}}\in V$ and integrating over $\hat\Omega = [-1,0]$
+(no integration by parts) gives
+\begin{equation}
+  \int_{-1}^{0}\!\!\left[\hat V_{\mathrm{FC}}\,\frac{d}{d\hat x}\!\bigl[f_{\mathrm{FC}}\,\hat g\,\hat n_{\mathrm{FC}}\bigr]
+       - \hat n_{e}\,(\hat S_{i}+\hat S_{\mathrm{CX}})\,\hat n_{\mathrm{FC}}\right]\!v_{\mathrm{F}}\,d\hat x
+  \;=\; 0.
+  \label{eq:weak-hat-nFC-A8}
+\end{equation}
+Similarly, with $v_{\mathrm{C}}\in V$ for \eqref{eq:strong-hat-nCX-A8},
+\begin{equation}
+  \int_{-1}^{0}\!\!\left[\frac{d}{d\hat x}\!\bigl[\hat V_{\mathrm{CX}}\,f_{\mathrm{CX}}\,\hat g\,\hat n_{\mathrm{CX}}\bigr]
+       - \hat n_{e}\!\left(\hat S_{i}\,\hat n_{\mathrm{CX}}
+              - \tfrac{1}{2}\,\hat S_{\mathrm{CX}}\,\hat n_{\mathrm{FC}}\right)\right]\!v_{\mathrm{C}}\,d\hat x
+  \;=\; 0.
+  \label{eq:weak-hat-nCX-A8}
+\end{equation}
+Both equations are first-order, with characteristics flowing from the
+separatrix inward, so the single Dirichlet inflow conditions
+\begin{align}
+  \hat n_{\mathrm{FC}}(0) &= \fsa{\nfc}_{0}/n_{0}, &
+  \hat n_{\mathrm{CX}}(0) &= \fsa{\ncx}_{0}/n_{0},
+\end{align}
+suffice to close the system together with the two $\hat n_{e}$
+boundary conditions of Sec.~\ref{sec:nondim-A33}.
 
 \subsubsection{Implementation roadmap}
 
-Implementing Eqs.~\eqref{eq:strong-hat-A8}--\eqref{eq:weak-hat-A8} in
-\texttt{solver.py} requires:
+Implementing Eqs.~\eqref{eq:weak-hat-A8},
+\eqref{eq:weak-hat-nFC-A8}--\eqref{eq:weak-hat-nCX-A8} in
+\texttt{solver-nondim.py} requires:
 \begin{enumerate}
   \item Rebuilding the Firedrake \texttt{IntervalMesh} on $[-1,0]$
     (or, equivalently, storing $L$ and dividing every gradient by $L$
@@ -915,19 +1227,38 @@ Implementing Eqs.~\eqref{eq:strong-hat-A8}--\eqref{eq:weak-hat-A8} in
     (\texttt{C\_ETG\_fd}, \texttt{D\_NEO\_fd}, \texttt{A\_KBM\_fd},
     \texttt{B\_KBM\_fd}, \texttt{T\_tot\_fd}, \texttt{dT\_tot\_dx\_fd},
     \texttt{Si\_fd}, \texttt{Scx\_fd}, \texttt{Vcx\_fd}, \texttt{g\_fd})
-    by its rescaled counterpart
-    ($\hat{C}_{\mathrm{ETG}}$, $\hat{D}_{\mathrm{NEO}}$, etc.).
-  \item Multiplying the source integrand in
-    \texttt{\_build\_f1\_weak\_form} by the constant $\Lambda$
-    of Eq.~\eqref{eq:Lambda-A8}.
-  \item Replacing the Dirichlet/Neumann boundary data in
-    \texttt{solve\_coupled} with the rescaled values
-    $\hat{n}_{e}(0)=1$, $\hat{n}_{e}(-1) = n_{e,\mathrm{inner}}/n_{0}$,
-    and $\hat{n}'_{e,\mathrm{inner}} = L\,n'_{e,\mathrm{inner}}/n_{0}$.
-  \item Recovering the SI solution at the end of \texttt{solve\_coupled}
-    via $\ne(x) = n_{0}\,\hat{n}_{e}(x/L)$ and analogous rescalings for
-    $\fsa{\nfc}$ and $\fsa{\ncx}$.
+    by its rescaled counterpart per
+    Eqs.~\eqref{eq:hat-D-NEO}--\eqref{eq:hat-B-KBM} and
+    \eqref{eq:hat-V-A8}.  In particular,
+    $\hat S_{i,\mathrm{CX}} = S_{i,\mathrm{CX}}/S_{0}$,
+    $\hat T = (T_{e}+T_{i})/T_{0}$, and $\hat g = \fsa{|\nabla r|^{2}}$
+    are dimensionless and can be evaluated directly from their SI
+    inputs.
+  \item Replacing the Dirichlet/Neumann boundary data with
+    $\hat n_{e}(0)=1$,
+    $\hat n_{e}(-1)=n_{e,\mathrm{inner}}/n_{0}$,
+    $\hat n'_{e,\mathrm{inner}}=L\,n'_{e,\mathrm{inner}}/n_{0}$,
+    $\hat n_{\mathrm{FC}}(0)=\fsa{\nfc}_{0}/n_{0}$, and
+    $\hat n_{\mathrm{CX}}(0)=\fsa{\ncx}_{0}/n_{0}$.
+  \item Assembling the three residuals
+    \eqref{eq:weak-hat-A8},
+    \eqref{eq:weak-hat-nFC-A8}--\eqref{eq:weak-hat-nCX-A8} into
+    a single mixed Newton residual $\hat F(\hat u) = 0$ on
+    $\hat W = \hat V \times \hat V \times \hat V$ and solving with
+    Firedrake's SNES driver.
+  \item Recovering the SI solution at the end of
+    \texttt{solve\_coupled\_nondim} via
+    $\ne(x)=n_{0}\,\hat n_{e}(x/L)$,
+    $\fsa{\nfc}(x)=n_{0}\,\hat n_{\mathrm{FC}}(x/L)$,
+    $\fsa{\ncx}(x)=n_{0}\,\hat n_{\mathrm{CX}}(x/L)$.
 \end{enumerate}
+No SNES source-term scaling is required (since no $\Lambda$ appears in
+Eqs.~\eqref{eq:weak-hat-A8}, \eqref{eq:weak-hat-nFC-A8}--\eqref{eq:weak-hat-nCX-A8}).
+If the floating-point conditioning of the foundational form proves
+insufficient, the preconditioning of Sec.~\ref{sec:precond-A8} can be
+applied to the $\hat n_{e}$ diffusion coefficients only, leaving the
+source integrand and the neutral equations as written.
+
 
 
 \section{Variable identities}
