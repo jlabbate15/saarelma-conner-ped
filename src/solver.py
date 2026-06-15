@@ -784,6 +784,21 @@ class saarelma_connor:
 
         self.x_inner = interp1d(self.psi_N_pres, self.x_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_inner_boundary)
 
+        # Equilibrium-only coefficient for the Connor-Hastie alpha when
+        # written in the dp/dx form (the chain rule absorbs the dx/dpsi
+        # Jacobian).  Precomputed on the parent (sorted) self.x_init grid
+        # so that downstream Firedrake-DOF grids can use np.interp without
+        # ever needing np.gradient on a possibly unsorted DOF array.
+        # See calc_pressure_quantities and App. A.7 in the writeup.
+        _dxdpsi_xinit = np.gradient(self.x_init, self.psi_pres)
+        _dVdpsi_xinit = np.gradient(self.V_plasma, self.psi_pres)
+        self._alpha_nodp_xinit = (
+            -(2 * _dVdpsi_xinit / ((2 * np.pi) ** 2))
+            * self.mu0
+            * np.sqrt(self.V_plasma / (2 * self.Rmajor * np.pi ** 2))
+            * _dxdpsi_xinit
+        ) # alpha = self._alpha_nodp_xinit * dp/dx (with dp/dx evaluated on the same grid)
+
     def find_inner_boundary(self):
         """Adaptively locate the inner boundary by finding where the neutral
         densities (FC and/or CX) fall below user-supplied thresholds.
@@ -1581,58 +1596,62 @@ class saarelma_connor:
         When ``average_alpha_pedestal`` is True (default), use the mean of
         local ``alpha`` over the pedestal ``x in [x_inner, 0]`` in Eq.~(25)
         instead of a flux-surface-local ``alpha``.
+
+        Implementation notes
+        --------------------
+        ``self._fd_cache["x_dofs"]`` is the per-DOF x coordinate as stored by
+        Firedrake; for ``CG_p`` with ``p>=2`` the DOFs are grouped by entity
+        (vertices first, then cell interiors) and so the array is **not**
+        monotonic in space.  ``np.gradient`` interprets consecutive samples
+        as adjacent in x, so we must sort to spatial order before any
+        finite-difference call and unsort the outputs that are subsequently
+        written into ``Function.dat.data`` (which expects DOF order).
+
+        The equilibrium-only piece of ``alpha_nodp`` is precomputed on the
+        parent ``self.x_init`` grid in :meth:`setup_solver_grids`; here we
+        only need ``np.interp`` (which does not require its first argument
+        to be sorted).  The single ``np.gradient`` left at runtime is
+        ``dpdx``, whose dependence on ``n_e`` forces the sort.
         """
-        x = self._fd_cache["x_dofs"]
+        x_dofs_arr = self._fd_cache["x_dofs"]
+        sort_idx = np.argsort(x_dofs_arr)
+        unsort_idx = np.argsort(sort_idx) # inverse permutation: a[sort][unsort] == a
+        x = x_dofs_arr[sort_idx]
+        n_e_sorted = np.asarray(n_e)[sort_idx]
 
-        # change to x_dofs grid
-        V_plasma = np.interp(x, self.x_init, self.V_plasma)
-        psi_xdofs = np.interp(x, self.x_init, self.psi_pres)
+        # All quantities below are evaluated in sorted-x (spatial) order.
         T_e = np.interp(x, self.x_init, self.T_e_pres)
-        G_KBM = self.C_KBM * (self.c_s * self.rho_s**2) / self.a # on psi_Te_eval grid
-        G_KBM = np.interp(x, self.x_init, G_KBM) # on x_dofs grid
-        self.G_KBM = G_KBM
+        G_KBM_grid = self.C_KBM * (self.c_s * self.rho_s**2) / self.a # on psi_Te_eval/x_init grid
+        G_KBM = np.interp(x, self.x_init, G_KBM_grid)
+        alpha_nodp = np.interp(x, self.x_init, self._alpha_nodp_xinit)
 
-        _pres = n_e * T_e # eV*m^(-3), on x_dofs grid
-        _pres = _pres * (1.60218e-19) # Pa=J*m^(-3), on x_dofs grid
-        self.pres = _pres # debugging, eV*m^(-3)
-
-        # gradients on x_dof
-        dpdpsi = np.gradient(_pres, psi_xdofs)
-        dVdpsi = np.gradient(V_plasma, psi_xdofs)
-
-        _alpha = (
-            -(2 * dVdpsi / ((2 * np.pi) ** 2))
-            * self.mu0
-            * np.sqrt(V_plasma / (2 * self.Rmajor * np.pi ** 2))
-        ) # on x_dofs grid
-        self.alpha_nodp = _alpha
-        _alpha = _alpha * dpdpsi
+        _pres = n_e_sorted * T_e * 1.60218e-19 # Pa = J/m^3
+        dpdx = np.gradient(_pres, x) # x is now monotonic
+        _alpha = alpha_nodp * dpdx # standard Connor-Hastie alpha, sorted-x order
 
         if average_alpha_pedestal:
-            # ped_mask = (self.x_init >= float(self.x_inner)) & (self.x_init <= 0.0)
-            # if not np.any(ped_mask):
-            #     ped_mask = np.ones_like(self.x_init, dtype=bool)
-            alpha_bar = float(np.mean(_alpha)) # average in pedestal region
+            alpha_bar = float(np.mean(_alpha))
             self.alpha_bar_ped = alpha_bar
-            self._D_KBM = np.where(
-                alpha_bar > self.alpha_crit,
-                (alpha_bar - self.alpha_crit) * G_KBM,
-                0.0,
-            )
-
-            # Coefficients for Eq. A33 expanded flux (UFL via A_KBM_fd / B_KBM_fd).
-            self._A_KBM = np.where(alpha_bar > self.alpha_crit, -G_KBM * self.alpha_crit, 0.0)
-            self._B_KBM = np.where(alpha_bar > self.alpha_crit, G_KBM * self.alpha_nodp, 0.0)
-            # print(f'alpha (post-average) = {alpha_bar}')
+            gate = alpha_bar > self.alpha_crit
+            D_KBM_sorted = np.where(gate, (alpha_bar - self.alpha_crit) * G_KBM, 0.0)
+            A_KBM_sorted = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
+            B_KBM_sorted = np.where(gate, G_KBM * alpha_nodp, 0.0)
         else:
-            self._D_KBM = np.where(
-                _alpha > self.alpha_crit,
-                (_alpha - self.alpha_crit) * G_KBM,
-                0.0,
-            )
-            self._A_KBM = np.where(_alpha > self.alpha_crit, -G_KBM * self.alpha_crit, 0.0)
-            self._B_KBM = np.where(_alpha > self.alpha_crit, G_KBM * self.alpha_nodp, 0.0)
-        # self._fd_cache["D_KBM_fd"] = self._D_KBM
+            gate = _alpha > self.alpha_crit
+            D_KBM_sorted = np.where(gate, (_alpha - self.alpha_crit) * G_KBM, 0.0)
+            A_KBM_sorted = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
+            B_KBM_sorted = np.where(gate, G_KBM * alpha_nodp, 0.0)
+
+        # Outputs assigned to Firedrake Function.dat.data in solve_coupled
+        # must be in DOF order: undo the sort.
+        self._D_KBM = D_KBM_sorted[unsort_idx]
+        self._A_KBM = A_KBM_sorted[unsort_idx]
+        self._B_KBM = B_KBM_sorted[unsort_idx]
+
+        # Diagnostic attributes; keep DOF order so they line up with x_dofs.
+        self.G_KBM = G_KBM[unsort_idx]
+        self.alpha_nodp = alpha_nodp[unsort_idx]
+        self.pres = _pres[unsort_idx]
 
     def _firedrake_mesh_key(self, x_left, mesh_n, fe_degree):
         return (round(float(x_left), 12), int(mesh_n), int(fe_degree))
