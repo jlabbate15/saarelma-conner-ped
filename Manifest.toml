@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.5"
+julia_version = "1.12.6"
 manifest_format = "2.0"
 project_hash = "712f97f5e869d35ebe48b2d996720c9600a6c7de"
 
@@ -253,7 +253,7 @@ version = "0.9.5"
 
 [[deps.EPEDNN]]
 deps = ["BSON", "Dates", "Flux", "Memoize"]
-path = "dependencies/EPEDNN.jl"
+path = "/Users/nelsonlab/codes/saarelma-conner-ped/dependencies/EPEDNN.jl"
 uuid = "e64856f0-3bb8-4376-b4b7-c03396503991"
 version = "1.0.7"
 

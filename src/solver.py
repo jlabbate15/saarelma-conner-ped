@@ -3,6 +3,18 @@ from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.integrate import simpson, solve_bvp, cumulative_trapezoid
 import matplotlib.pyplot as plt
 from src.adas.adas_ionisation import scd_adas
+try:
+    from firedrake import (
+        IntervalMesh, FunctionSpace, MixedFunctionSpace, Function,
+        TestFunctions, TrialFunction, Constant, DirichletBC,
+        dx, ds, split, solve, lhs, rhs,
+        LinearVariationalProblem, LinearVariationalSolver,
+        SpatialCoordinate,
+    )
+    _FIREDRAKE_AVAILABLE = True
+except Exception as _firedrake_import_err:  # raise an error if Firedrake is not available
+    _FIREDRAKE_AVAILABLE = False
+    _FIREDRAKE_IMPORT_ERR = _firedrake_import_err
 
 
 class saarelma_connor:
@@ -40,18 +52,18 @@ class saarelma_connor:
         m^-3, FREE PARAMETER, Franck-Condon neutral density at the separatrix (boundary condition)
     ne_x0 : float
         m^-3, electron density at the separatrix (boundary condition)
-    dne_dx0 : float
-        m^-3, gradient of electron density at the separatrix (boundary condition)
     psi_N_inner_boundary : float
-        normalized poloidal flux at the inner boundary (boundary condition).
-        Used as a fallback when nFC_threshold and nCX_threshold are both None,
-        or when the adaptive search fails to find a crossing.
+        psi_N to choose the inner boundary boundary condition. If None, inner boundary is chosen based on nFC_threshold and nCX_threshold.
+    nCX_x0 : float
+        m^-3, CX neutral density at the separatrix (boundary condition). If None, defaults to ncx_x0_ratio * nFC_x0
+    ncx_x0_ratio : float
+        ratio of nCX at the separatrix to nFC at the separatrix. Used if nCX_x0 is None
     nFC_threshold : float or None
         Fraction of the separatrix FC neutral density (nFC_x0) below which the
-        inner boundary is placed.  Default 0.01 (1 %).  Set to None to disable.
+        inner boundary is placed.  Default 0.01 (1 %).  Set to None to disable. Not used if psi_N_inner_boundary!=None
     nCX_threshold : float or None
         Fraction of the peak estimated CX neutral density below which the inner
-        boundary is placed.  Default 0.01 (1 %).  Set to None to disable.
+        boundary is placed.  Default 0.01 (1 %).  Set to None to disable. Not used if psi_N_inner_boundary!=None
     mhd_loc : string
         Location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
     kprof_loc : string
@@ -70,6 +82,10 @@ class saarelma_connor:
         True if the poloidal flux is normalized by 2pi, False if the poloidal flux is not normalized by 2pi
     species : string
         Species of ions, currently supporting: D, D-T
+    error_check : bool
+        True if you want to use the exact published equations from Samuli's 2023 paper, False if you want to use the corrected equations
+    equations_to_solve : string
+        Equations to solve, currently supporting: 'coupled' (full 3-fluid system of ODEs), 'SC' (simplified 3-fluid system to one ODE)
     initial_guess : string
         Initial guess for the electron density profile, currently supporting: pfile
     verbose : bool
@@ -88,6 +104,7 @@ class saarelma_connor:
         nFC_x0 = None, # m^-3, FREE PARAMETER, Franck-Condon neutral density at the separatrix
         ne_x0 = None, # m^-3, electron density at the separatrix (boundary condition, default is to use from pfile)
         psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition); overridden by find_inner_boundary if nFC_threshold or nCX_threshold is set
+        nCX_x0=None, # m^-3, CX neutral density at the separatrix (Dirichlet BC at x = 0). If None, defaults to 0.1 * nFC_x0 (used in coupled solver)
         ncx_x0_ratio = 0.1, # ratio of nCX at the separatrix to nFC at the separatrix (used in coupled solver)
         nFC_threshold = 0.01, # fraction of nFC at the separatrix below which the inner boundary is placed (None to disable)
         nCX_threshold = 0.01, # fraction of nCX at the separatrix below which the inner boundary is placed (None to disable)
@@ -99,12 +116,14 @@ class saarelma_connor:
         T_rat = 1,
         pol_norm = False, # True for when the poloidal flux is not normalized by 2pi. COCOS 7 convention is pol_norm=False, so poloidal flux is normalized by 2pi
         species = 'D', # species of ions, currently supporting: D, D-T
-        verbose = False,
         error_check = False, # check if Samuli's 2023 paper Eq. 15 is correct or not
+        equations_to_solve = 'coupled', # equations to solve, currently supporting: 'coupled', 'SC'
         initial_guess = 'pfile', # initial guess for the electron density profile, currently supporting: pfile, linear
+        verbose = False,
     ):
 
         # User-specified flags
+        self.equations_to_solve = equations_to_solve
         self.error_check = error_check
         self.T_rat_flag = T_rat_flag
         self.T_rat = T_rat
@@ -205,6 +224,10 @@ class saarelma_connor:
             psi_N_inner_boundary=psi_N_inner_boundary,
         )
 
+        if equations_to_solve == 'coupled':
+            self.nCX_x0 = nCX_x0 if nCX_x0 is not None else self.ncx_x0_ratio * self.nFC_x0 # set nCX boundary condition, defaults to 0.1 * nFC_x0
+            self._fd_cache = {}
+
     def calc_pressure_quantities(self,n_e,x):
         """Calculate the pressure, alpha, and D_KBM on the psi_N_pres grid."""
         n_e = interp1d(x, n_e, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
@@ -277,6 +300,10 @@ class saarelma_connor:
                           'exp_term_arr', 'nFC_sol', 'integral_from_0'):
                 if hasattr(self, _attr):
                     delattr(self, _attr)
+
+        if self.equations_to_solve == 'coupled':
+            self.invalidate_firedrake_cache()
+
 
     def inner_boundary_limits(self, outer_threshold=None, safety_margin=0.01,
                               x_res=100, psi_N_default=0.85):
@@ -1162,9 +1189,8 @@ class saarelma_connor:
         sol.y[1] = (n0 / L) * sol.y[1]
         self.sol = sol
 
-
-    def compute_post_solve_neutrals(self):
-        """Franck--Condon and charge-exchange densities after ``solve()``.
+    def compute_post_solve_SC_neutrals(self):
+        """Franck--Condon and charge-exchange densities after ``solve_simplified()``.
 
         Uses the same closures as ``find_inner_boundary`` (Eqs.~(11)--(12) in
         Saarelma et al., 2023): exponential attenuation of FC neutrals
@@ -1210,8 +1236,7 @@ class saarelma_connor:
         nCX = np.maximum(flux_term + fc_term, 0.0)
         return nFC, nCX
 
-
-    def solve(self,soln_method='sc_2order',tol=1e-3,max_iter=50,x_res=100,free_params=None):
+    def solve_SC(self,soln_method='sc_2order',tol=1e-3,max_iter=50,x_res=100,free_params=None):
         """Iteratively solve Equation (15) in S. Saarelma et al 2023 Nucl. Fusion 63 052002
 
         1. Sets up coefficient interpolators mapping psi_N quantities to x.
@@ -1432,7 +1457,7 @@ class saarelma_connor:
 
             # FC/CX on the converged BVP grid (Eqs. 11--12)
             self.exp_term_arr = exp_term_arr  # last Picard iterate, on x_prev
-            self.nFC_sol, self.nCX_sol = self.compute_post_solve_neutrals()
+            self.nFC_sol, self.nCX_sol = self.compute_post_solve_SC_neutrals()
             if not (len(self.x_sol) == len(self.ne_sol) == len(self.nFC_sol)):
                 raise RuntimeError(
                     "Parent solve profile length mismatch on x_sol: "
@@ -1441,6 +1466,821 @@ class saarelma_connor:
                 )
 
             return self.x_sol, self.ne_sol, self.dne_dx_sol
+
+
+    def invalidate_firedrake_cache(self):
+        """Drop cached Firedrake meshes, coefficients, and linear solvers.
+
+        Called automatically by :meth:`update_free_params`.  Call manually
+        after changing equilibrium inputs or other quantities that affect
+        ``setup_solver_grids`` / ``calc_gradr``.
+        """
+        self._fd_cache = {}
+
+    def _plot_profiles(self, x_dofs, ne, nFC, nCX, title=""):
+        """Plot n_e, <n_FC>, <n_CX> vs x with a secondary psi_N axis on top.
+
+        Used as a diagnostic from ``solve_firedrake`` (gated on ``verbose``)
+        to visualise either the initial guess or any intermediate / final
+        profile triple.
+
+        Parameters
+        ----------
+        x_dofs : ndarray
+            Per-DOF x coordinates (m), unsorted (as stored in dat.data).
+        ne, nFC, nCX : ndarray
+            Profiles in the same DOF order as ``x_dofs`` (m^-3).
+        title : str
+            Figure suptitle.
+        """
+        # Sort by ascending x for clean line plots (DOF order is not guaranteed
+        # to be spatial).
+        sort_idx = np.argsort(x_dofs) # if setup correctly, this should not do anything
+        x_plot = x_dofs[sort_idx]
+        profiles = [ne[sort_idx], nFC[sort_idx], nCX[sort_idx]]
+        labels   = [r"$n_e$",
+                    r"$\langle n_{FC} \rangle$",
+                    r"$\langle n_{CX} \rangle$"]
+        colours  = ["tab:blue", "tab:orange", "tab:green"]
+
+        # x <-> psi_N mapping built off the parent grid (self.x_init is
+        # monotonically increasing toward the separatrix; self.psi_N_pres
+        # is the corresponding normalised poloidal flux).  Used by
+        # secondary_xaxis to render psi_N on top of each panel.
+        x_to_psiN = interp1d(self.x_init, self.psi_N_pres,
+                            kind='linear', bounds_error=False,
+                            fill_value='extrapolate')
+        psiN_to_x = interp1d(self.psi_N_pres, self.x_init,
+                            kind='linear', bounds_error=False,
+                            fill_value='extrapolate')
+
+        fig, axes = plt.subplots(1, 3, figsize=(14, 4), constrained_layout=True)
+        if title:
+            fig.suptitle(title, fontsize=12)
+        for ax, prof, label, col in zip(axes, profiles, labels, colours):
+            ax.plot(x_plot, prof, lw=2, color=col)
+            ax.set_xlabel(r"$x$ (m)")
+            ax.set_ylabel(f"{label} (m$^{{-3}}$)")
+            ax.grid(True, alpha=0.3)
+            secax = ax.secondary_xaxis('top',
+                                    functions=(x_to_psiN, psiN_to_x))
+            secax.set_xlabel(r"$\psi_N$")
+        plt.show()
+
+    @staticmethod
+    def _build_petsc_solver_parameters(linear_solver="lu",
+                                    ksp_rtol=1e-8,
+                                    ksp_max_it=200):
+        """PETSc options for SNES ``solve(F == 0, ...)`` (full Newton path)."""
+        linear_solver = str(linear_solver).lower()
+        if linear_solver not in ("lu", "gamg"):
+            raise ValueError(
+                f"linear_solver must be 'lu' or 'gamg', got {linear_solver!r}."
+            )
+
+        params = {
+            "snes_type": "newtonls",
+            "snes_max_it": 50,
+            "snes_atol": 1.0e-8,
+            "snes_rtol": 1.0e-8,
+            "snes_linesearch_type": "bt",
+            "mat_type": "aij",
+        }
+
+        if linear_solver == "lu":
+            params.update({
+                "ksp_type": "preonly",
+                "pc_type": "lu",
+            })
+        else:
+            params.update({
+                "ksp_type": "gmres",
+                "ksp_rtol": float(ksp_rtol),
+                "ksp_max_it": int(ksp_max_it),
+                "ksp_gmres_restart": 30,
+                "pc_type": "gamg",
+                "mg_levels_ksp_type": "richardson",
+                "mg_levels_pc_type": "sor",
+                "mg_levels_ksp_max_it": 5,
+            })
+
+        return params
+
+    def _ensure_firedrake_coefficient_grids(self, x_res, force=False):
+        """Run ``form_factor`` + ``setup_solver_grids`` once per ``x_res``."""
+        key = int(x_res)
+        if force or self._fd_cache.get("x_res") != key:
+            self.form_factor(type='FC')
+            self.form_factor(type='cx')
+            self.setup_solver_grids(res=x_res)
+            self._fd_cache["x_res"] = key
+
+    def calc_pressure_quantities(self, n_e, average_alpha_pedestal=True):
+        """Pressure, ``alpha``, and ``D_KBM`` on the ``x_dofs`` (from separatrix to x_inner) grid.
+
+        When ``average_alpha_pedestal`` is True (default), use the mean of
+        local ``alpha`` over the pedestal ``x in [x_inner, 0]`` in Eq.~(25)
+        instead of a flux-surface-local ``alpha``.
+        """
+        x = self._fd_cache["x_dofs"]
+
+        # change to x_dofs grid
+        V_plasma = np.interp(x, self.x_init, self.V_plasma)
+        psi_xdofs = np.interp(x, self.x_init, self.psi_pres)
+        T_e = np.interp(x, self.x_init, self.T_e_pres)
+        G_KBM = self.C_KBM * (self.c_s * self.rho_s**2) / self.a # on psi_Te_eval grid
+        G_KBM = np.interp(x, self.x_init, G_KBM) # on x_dofs grid
+        self.G_KBM = G_KBM
+
+        _pres = n_e * T_e # eV*m^(-3), on x_dofs grid
+        _pres = _pres * (1.60218e-19) # Pa=J*m^(-3), on x_dofs grid
+        self.pres = _pres # debugging, eV*m^(-3)
+
+        # gradients on x_dof
+        dpdpsi = np.gradient(_pres, psi_xdofs)
+        dVdpsi = np.gradient(V_plasma, psi_xdofs)
+
+        _alpha = (
+            -(2 * dVdpsi / ((2 * np.pi) ** 2))
+            * self.mu0
+            * np.sqrt(V_plasma / (2 * self.Rmajor * np.pi ** 2))
+        ) # on x_dofs grid
+        self.alpha_nodp = _alpha
+        _alpha = _alpha * dpdpsi
+
+        if average_alpha_pedestal:
+            # ped_mask = (self.x_init >= float(self.x_inner)) & (self.x_init <= 0.0)
+            # if not np.any(ped_mask):
+            #     ped_mask = np.ones_like(self.x_init, dtype=bool)
+            alpha_bar = float(np.mean(_alpha)) # average in pedestal region
+            self.alpha_bar_ped = alpha_bar
+            self._D_KBM = np.where(
+                alpha_bar > self.alpha_crit,
+                (alpha_bar - self.alpha_crit) * G_KBM,
+                0.0,
+            )
+
+            # Coefficients for Eq. A33 expanded flux (UFL via A_KBM_fd / B_KBM_fd).
+            self._A_KBM = np.where(alpha_bar > self.alpha_crit, -G_KBM * self.alpha_crit, 0.0)
+            self._B_KBM = np.where(alpha_bar > self.alpha_crit, G_KBM * self.alpha_nodp, 0.0)
+            # print(f'alpha (post-average) = {alpha_bar}')
+        else:
+            self._D_KBM = np.where(
+                _alpha > self.alpha_crit,
+                (_alpha - self.alpha_crit) * G_KBM,
+                0.0,
+            )
+            self._A_KBM = np.where(_alpha > self.alpha_crit, -G_KBM * self.alpha_crit, 0.0)
+            self._B_KBM = np.where(_alpha > self.alpha_crit, G_KBM * self.alpha_nodp, 0.0)
+        # self._fd_cache["D_KBM_fd"] = self._D_KBM
+
+    def _firedrake_mesh_key(self, x_left, mesh_n, fe_degree):
+        return (round(float(x_left), 12), int(mesh_n), int(fe_degree))
+
+    def construct_C_ETG(self): # on x_init grid
+        DeltaT_e = np.gradient(self.T_e_pres * (1.60218e-19), self.x_init) # gradient in J/m, T_e_pres is in eV
+        self.C_ETG = self.De_chie_etg * self.P_tot_e / (self.S_plasma * abs(DeltaT_e)) # evaluated at x_init
+
+    def _ne_on_parent_grid(self, ne_mesh_data):
+        """Interpolate FE ``n_e`` DOF values onto ``self.x_init``."""
+        x_dofs = self._fd_cache["x_dofs"]
+        order = np.argsort(x_dofs)
+        return np.interp(
+            self.x_init, x_dofs[order], ne_mesh_data[order],
+            left=np.nan, right=np.nan,
+        )
+
+    def _ensure_firedrake_discretization(self, x_left, mesh_n, fe_degree, force=False):
+        """Build or reuse mesh, spaces, and coefficient Functions on the mesh."""
+        mesh_key = self._firedrake_mesh_key(x_left, mesh_n, fe_degree)
+        if (not force
+                and self._fd_cache.get("mesh_key") == mesh_key
+                and "mesh" in self._fd_cache):
+            return (
+                self._fd_cache["mesh"],
+                self._fd_cache["V"],
+                self._fd_cache["W"],
+                self._fd_cache["x_dofs"],
+                self._fd_cache["g_fd"],
+                self._fd_cache["Si_fd"],
+                self._fd_cache["Scx_fd"],
+                self._fd_cache["Vcx_fd"],
+            )
+
+        mesh = IntervalMesh(mesh_n, x_left, 0.0)
+        V = FunctionSpace(mesh, "CG", fe_degree)
+        W = MixedFunctionSpace([V, V, V])
+
+        x_coord_func = Function(V).interpolate(SpatialCoordinate(mesh)[0])
+        x_dofs = x_coord_func.dat.data.copy() # value of x at each finite element node
+
+        def _make_func(arr, name=""): # interpolate from self.x_init to x_dofs
+            f = Function(V, name=name)
+            f.dat.data[:] = np.interp(x_dofs, self.x_init, arr)
+            return f
+
+        g_fd = _make_func(self.gradr2_fsa, "gradr2_fsa")
+        Si_fd = _make_func(self.S_i_pres, "S_i")
+        Scx_fd = _make_func(self.S_cx_pres, "S_cx")
+        Vcx_fd = _make_func(abs(self.V_cx_pres), "V_cx")
+
+        self._fd_cache.pop("u", None)
+        self._fd_cache.pop("u_prev", None)
+        self._fd_cache.update({
+            "mesh_key": mesh_key,
+            "mesh": mesh,
+            "V": V,
+            "W": W,
+            "x_dofs": x_dofs,
+            "g_fd": g_fd,
+            "Si_fd": Si_fd,
+            "Scx_fd": Scx_fd,
+            "Vcx_fd": Vcx_fd,
+        })
+        return mesh, V, W, x_dofs, g_fd, Si_fd, Scx_fd, Vcx_fd
+
+    def _get_or_create_mixed_solution(self, W, force=False):
+        """Return cached ``(u, u_prev)`` on ``W``, or allocate new Functions."""
+        if (not force
+                and self._fd_cache.get("W") is W
+                and "u" in self._fd_cache
+                and "u_prev" in self._fd_cache):
+            return self._fd_cache["u"], self._fd_cache["u_prev"]
+
+        u = Function(W, name="u")
+        u_prev = Function(W, name="u_prev")
+        self._fd_cache["W"] = W
+        self._fd_cache["u"] = u
+        self._fd_cache["u_prev"] = u_prev
+        return u, u_prev
+
+    def _build_f1_weak_form(
+            self,
+            ne, ne_for_etg,
+            g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
+            Si_fd, nFC, nCX, v_e, ne_inner_bc, dne_dx_inner_c):
+        """Electron-density weak form for ``v_e``."""
+        ne_dx = ne.dx(0)
+
+        T_tot_fd = self._fd_cache.get("T_tot_fd")
+        dT_tot_dx_fd = self._fd_cache.get("dT_tot_dx_fd")
+        A_KBM_fd = self._fd_cache.get("A_KBM_fd")
+        B_KBM_fd = self._fd_cache.get("B_KBM_fd")
+        if (T_tot_fd is None or dT_tot_dx_fd is None
+                or A_KBM_fd is None or B_KBM_fd is None):
+            raise RuntimeError(
+                "Eq. A33 weak form requires T_tot_fd, dT_tot_dx_fd, "
+                "A_KBM_fd, and B_KBM_fd in _fd_cache (built in solve_firedrake)."
+            )
+        # Expanded flux inside <|grad r|^2> ... v_e' (Labbate appendix A33).
+        flux_a33 = (
+            (C_ETG_fd / ne) * ne_dx
+            + A_KBM_fd * ne_dx
+            + B_KBM_fd * T_tot_fd * ne_dx * ne_dx
+            + B_KBM_fd * ne * dT_tot_dx_fd * ne_dx
+            + D_NEO_fd * ne_dx
+        )
+        
+        F1 = (g_fd * flux_a33 * v_e.dx(0) - ne * Si_fd * (nFC + nCX) * v_e) * dx
+
+        if ne_inner_bc == "neumann":
+            T_tot_fd = self._fd_cache["T_tot_fd"]
+            dT_tot_dx_fd = self._fd_cache["dT_tot_dx_fd"]
+            A_KBM_fd = self._fd_cache["A_KBM_fd"]
+            B_KBM_fd = self._fd_cache["B_KBM_fd"]
+            D_bc_a33 = (
+                C_ETG_fd / ne
+                + A_KBM_fd
+                + B_KBM_fd * T_tot_fd * dne_dx_inner_c
+                + B_KBM_fd * ne * dT_tot_dx_fd
+                + D_NEO_fd
+            )
+            F1 = F1 + g_fd * D_bc_a33 * dne_dx_inner_c * v_e * ds(1)
+        return F1
+
+    def newton_solve(self, linear_solver="lu", ksp_rtol=1e-6, ksp_max_it=1000, params_dict=None, v=False):
+        """Full Newton via SNES on the nonlinear residual F(u)=0.
+        Parameters
+        ----------
+        linear_solver : str, default "lu"
+            Linear solver to use for the Newton solve
+        ksp_rtol : float, default 1e-6
+            Relative tolerance for the linear solver
+        ksp_max_it : int, default 1000
+            Maximum number of iterations for the linear solver
+        params_dict : dict
+            Dictionary containing the parameters for the Newton solve
+        v : bool, default False
+            Whether to print verbose output
+        """
+        W = params_dict['W']
+        g_fd = params_dict['g_fd']
+        C_ETG_fd = params_dict['C_ETG_fd']
+        D_NEO_fd = params_dict['D_NEO_fd']
+        D_KBM_fd = params_dict['D_KBM_fd']
+        Si_fd = params_dict['Si_fd']
+        Scx_fd = params_dict['Scx_fd']
+        Vcx_fd = params_dict['Vcx_fd']
+        VFC_const = params_dict['VFC_const']
+        fFC_const = params_dict['fFC_const']
+        fCX_const = params_dict['fCX_const']
+        half = params_dict['half']
+        ne_inner_bc = params_dict['ne_inner_bc']
+        dne_dx_inner_c = params_dict['dne_dx_inner_c']
+        bcs = params_dict['bcs']
+        u = params_dict['u']
+        v_e, v_F, v_C = TestFunctions(W)
+        ne_curr, nFC_curr, nCX_curr = split(u)
+
+        F1 = self._build_f1_weak_form(
+            ne_curr, ne_curr,
+            g_fd, C_ETG_fd, D_NEO_fd, D_KBM_fd,
+            Si_fd, nFC_curr, nCX_curr, v_e,
+            ne_inner_bc, dne_dx_inner_c
+        )
+        F2 = ((VFC_const * fFC_const * g_fd * nFC_curr).dx(0) * v_F
+                - ne_curr * (Si_fd + Scx_fd) * nFC_curr * v_F) * dx
+        F3 = ((Vcx_fd * fCX_const * g_fd * nCX_curr).dx(0) * v_C
+                - ne_curr * (
+                    Si_fd * nCX_curr - half * Scx_fd * nFC_curr
+                ) * v_C) * dx
+
+        F = F1 + F2 + F3
+        newton_params = self._build_petsc_solver_parameters(
+            linear_solver=linear_solver,
+            ksp_rtol=ksp_rtol,
+            ksp_max_it=ksp_max_it,
+        )
+        solve(F == 0, u, bcs=bcs, solver_parameters=newton_params)
+
+    def solve_coupled(self,
+                      x_res=200,
+                      fe_degree=2,
+                      ne_inner_bc="neumann",
+                      bc_origin="p-file",
+                      ne_inner=None,
+                      dne_dx_inner=None,
+                      initial_guess="linear",
+                      tanh_width=None,
+                      tanh_center=None,
+                      linear_solver="lu",
+                      ksp_rtol=1e-8,
+                      ksp_max_it=200,
+                      reuse_setup=True,
+                      verbose=None):
+        """Firedrake-based solver for the *coupled three-equation* Saarelma-Connor
+        neutral-transport pedestal model in its un-reduced form.
+
+        System solved
+        =============
+        Origin: Saarelma & Connor 2023 Nucl. Fusion 63 052002 Eq. (4)-(6)
+        Unknowns:
+            n_e(x)         (electron density; treated as a flux function)
+            <n_FC>(x)      (FSA Franck-Condon neutral density)
+            <n_CX>(x)      (FSA charge-exchange neutral density)
+        with flux-surface average (FSA) defined by  <A>(x) = oint R^2 A dtheta / oint R^2 dtheta
+        on the radial coordinate x = r - r_sep (separatrix at x = 0, core at x<0).
+
+        With form factors
+            f_FC(x) = <|grad r|^2 n_FC> / ( <n_FC> <|grad r|^2> )
+            f_CX(x) = <|grad r|^2 n_CX> / ( <n_CX> <|grad r|^2> )
+        the coupled system to solve is:
+
+            d/dx [ <|grad r|^2> D dn_e/dx ]  with
+                D = D_NEO + D_KBM + C_ETG/n_e,
+                D_KBM from Eqs. (24)--(25) (pedestal-averaged alpha),
+                = - n_e S_i ( <n_FC> + <n_CX> )
+
+            |V_FC| d/dx [ f_FC <n_FC> <|grad r|^2> ]
+                = + n_e (S_i + S_CX) <n_FC>
+
+            d/dx [ |V_CX| f_CX <n_CX> <|grad r|^2> ]
+                =  n_e ( <n_CX> S_i - (S_CX/2) <n_FC> )
+
+        Boundary conditions
+        ===================
+            n_e (x = 0)         = ne_x0         (Dirichlet at separatrix)
+            n_e (x = x_inner)   = ne_inner      (Dirichlet, inner pedestal boundary)
+            <n_FC>(x = 0)       = nFC_x0        (Dirichlet at separatrix)
+            <n_CX>(x = 0)       = nCX_x0        (Dirichlet at separatrix)
+        The first-order ODEs for <n_FC> and <n_CX> have characteristic flowing
+        from the separatrix inward (V_{*,r} < 0), so a single Dirichlet BC at
+        x = 0 is well-posed.  The diffusion equation is second-order in n_e and
+        takes Dirichlet at both ends.
+
+        Parameters
+            ----------
+            x_res : int
+                Resolution of solver grid
+            fe_degree : int
+                Polynomial degree of the CG finite-element basis.
+            ne_inner_bc : {"neumann", "dirichlet"}, default "neumann"
+                Whether to use a Neumann or Dirichlet BC at the inner electron density boundary
+            bc_origin : {"p-file", "user"}, default "p-file"
+                Origin of the inner electron density boundary condition:
+                - ``"p-file"`` (default): read the inner-boundary values
+                    from the p-file.
+                - ``"user"``: use the values provided by the user.
+            ne_inner : float or None
+                Value of n_e at the inner boundary x = x_inner used for the Dirichlet BC when ne_inner_bc == "dirichlet" and you want a user-specified value (if bc_origin == "user")
+            dne_dx_inner : float or None
+                Value of dn_e/dx at the inner boundary x = x_inner used for the Neumann BC when ne_inner_bc == "neumann" and you want a user-specified value (if bc_origin == "user")
+            initial_guess : {"linear", "pfile", "tanh"}
+                * ``"linear"`` (default) -- build the initial guess from the
+                four prescribed boundary conditions only:
+                    n_e  : linear from ne_inner at x_inner to ne_x0 at 0
+                    n_FC : linear from 0           at x_inner to nFC_x0 at 0
+                    n_CX : linear from 0           at x_inner to nCX_x0 at 0
+                No use of the p-file profile or the analytical exponential
+                decay estimate.
+                * ``"pfile"`` -- legacy guess: p-file electron density profile
+                and an analytical FC exponential decay (same construction as
+                the parent solver's first-step routine).
+                * ``"tanh"`` -- H-mode-pedestal-like tanh initial guess.
+                n_e transitions from ne_inner_val (pedestal top) to ne_x0
+                (separatrix) through a tanh of half-width ``tanh_width/2``
+                centred at ``tanh_center``.  Neutrals get the mirrored
+                shape (peaked at the separatrix, decaying inward).  Default
+                width / centre give a typical narrow pedestal just inside
+                the separatrix.
+            tanh_width : float or None
+                Pedestal width (m) for the ``"tanh"`` initial guess.  The
+                tanh argument is ``(x - tanh_center) / (tanh_width/2)``.
+                If ``None`` (default), set to ``0.1 * |x_inner|``
+            tanh_center : float or None
+                Pedestal-foot x-position (m) for the ``"tanh"`` initial
+                guess; should be <= 0.  If ``None`` (default), set to
+                ``-tanh_width`` so the pedestal sits just inside the
+                separatrix.
+            linear_solver : {"lu", "gamg"}, default ``"lu"``
+                Picard: direct/iterative solve of each linear sub-step
+                (:meth:`_build_picard_linear_solver_parameters`).  Newton:
+                linear solve of each SNES Jacobian step
+                (:meth:`_build_petsc_solver_parameters`).
+
+                * ``"lu"`` -- sparse direct LU (default; fast for 1D meshes).
+                * ``"gamg"`` -- GMRES + PETSc algebraic multigrid (GAMG)
+                preconditioner.  Prefer this when refining ``mesh_n`` /
+                ``fe_degree`` makes direct solves expensive.
+            ksp_rtol : float, default ``1e-8``
+                GMRES relative tolerance when ``linear_solver="gamg"``.
+            ksp_max_it : int, default ``200``
+                Maximum GMRES iterations per Newton step when using ``"gamg"``.
+            reuse_setup : bool, default ``True``
+                If True, reuse cached ``setup_solver_grids`` / mesh / coefficient
+                projections when ``x_res``, ``mesh_n``, ``fe_degree``, and
+                ``x_inner`` are unchanged since the last solve.  Call
+                :meth:`invalidate_firedrake_cache` after changing free parameters
+                or equilibrium inputs (also done automatically by
+                :meth:`update_free_params`).
+            verbose : bool or None
+                Override ``self.verbose`` for the duration of this solve.
+
+            Sets
+            ----
+            self.x_sol     : ndarray
+            self.ne_sol    : ndarray
+            self.nFC_sol   : ndarray
+            self.nCX_sol   : ndarray
+                Converged profiles on the (sorted) DOF grid.
+            self.u_fd      : Firedrake mixed Function (raw FE solution).
+        """
+
+        if not _FIREDRAKE_AVAILABLE:
+            raise ImportError(
+                "Firedrake is not available in this environment.  "
+                "Install Firedrake (https://www.firedrakeproject.org/) "
+                f"to use this solver.  Original import error:\n"
+                f"  {_FIREDRAKE_IMPORT_ERR}"
+            )
+
+        v = self.verbose if verbose is None else bool(verbose)
+        force_setup = not reuse_setup # True is reuse_setup is False
+
+        self._ensure_firedrake_coefficient_grids(x_res, force=force_setup)
+        self.construct_C_ETG()
+
+        # set the inner boundary location and read off the values used for
+        # either the Dirichlet or Neumann BC at x = x_inner.
+        if self.psi_N_inner_boundary is None:
+            self.find_inner_boundary() # set self.psi_N_inner_boundary and self.x_inner, where nFC and nCX fall below their thresholds
+        else:
+            self.x_inner = np.interp(self.psi_N_inner_boundary, self.psi_N_pres, self.x_init)
+
+        # ne(x_inner) -- used for the Dirichlet BC if requested, and for the
+        # initial guess at the inner boundary in all cases.
+        if bc_origin == "p-file":
+            ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres))
+            self.ne_inner = ne_inner_val
+
+            # dne/dx(x_inner) -- used for the Neumann BC if requested. Computed the same way as solver.first_step (np.gradient on the p-file n_e).
+            dne_dx_pres        = np.gradient(self.n_e_pres, self.x_init)
+            dne_dx_inner_val   = float(np.interp(self.x_inner, self.x_init, dne_dx_pres))
+        elif bc_origin == "user":
+            ne_inner_val = float(ne_inner)
+            dne_dx_inner_val = float(dne_dx_inner)
+        elif bc_origin == "p-file user combo":
+            if ne_inner_bc == "neumann":
+                dne_dx_pres        = np.gradient(self.n_e_pres, self.x_init)
+                dne_dx_inner_val   = float(np.interp(self.x_inner, self.x_init, dne_dx_pres))
+
+                ne_inner_val = float(ne_inner)
+                self.ne_inner = ne_inner_val
+            elif ne_inner_bc == "dirichlet":
+                ne_inner_val = float(ne_inner)
+                self.ne_inner = ne_inner_val
+
+                dne_dx_inner_val = float(dne_dx_inner)
+        else:
+            raise ValueError(
+                f"bc_origin must be 'p-file' or 'user' or 'p-file user combo', got {bc_origin!r}."
+            )
+
+        ne_inner_bc = str(ne_inner_bc).lower()
+        if ne_inner_bc not in ("dirichlet", "neumann"):
+            raise ValueError(
+                f"ne_inner_bc must be 'dirichlet' or 'neumann', "
+                f"got {ne_inner_bc!r}."
+            )
+
+        x_left  = float(self.x_inner)
+        x_right = 0.0
+        if x_left >= x_right:
+            raise ValueError(
+                f"x_inner = {x_left} must be strictly less than 0 (separatrix)."
+            )
+
+        if v:
+            print(f"[coupled solver] x_inner        = {self.x_inner:.4e} m")
+            print(f"[coupled solver] ne_inner_bc    = {ne_inner_bc!r}")
+            print(f"[coupled solver] ne(x_inner)    = {ne_inner_val:.3e} m^-3 ({bc_origin})")
+            print(f"[coupled solver] dne/dx(x_in)   = {dne_dx_inner_val:.3e} m^-4 ({bc_origin})")
+            print(f"[coupled solver] ne_x0          = {self.ne_x0:.3e} m^-3")
+            print(f"[coupled solver] nFC_x0         = {self.nFC_x0:.3e} m^-3")
+            print(f"[coupled solver] nCX_x0         = {self.nCX_x0:.3e} m^-3")
+
+        mesh, V, W, x_dofs, g_fd, Si_fd, Scx_fd, Vcx_fd = (
+            self._ensure_firedrake_discretization(
+                x_left, x_res, fe_degree, force=force_setup,
+            )
+        )
+
+        # define constants for the Firedrake system
+        VFC_const = Constant(abs(self.V_FC))
+        fFC_const = Constant(self.fFC)
+        fCX_const = Constant(self.fCX)
+        half      = Constant(0.5)
+
+        u, u_prev = self._get_or_create_mixed_solution(W, force=force_setup)
+
+        # set up initial guess
+        if initial_guess == "linear":
+            # BC-only initial guess: linear ramps between the four
+            # prescribed Dirichlet values.  n_FC and n_CX ramp linearly
+            # from 0 at x_inner (physically reasonable -- the neutrals
+            # have been ionised away deep in the plasma) to their
+            # separatrix values at x = 0.
+            xi = (x_dofs - x_left) / (x_right - x_left)         # in [0,1]
+            ne_init_data  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
+            nFC_init_data = self.nFC_x0 * xi
+            nCX_init_data = self.nCX_x0 * xi
+
+            u.subfunctions[0].dat.data[:] = ne_init_data
+            u.subfunctions[1].dat.data[:] = nFC_init_data
+            u.subfunctions[2].dat.data[:] = nCX_init_data
+            u_prev.assign(u)
+
+        elif initial_guess == "pfile":
+            # p-file n_e; n_FC from d<n_FC>/dx = ne (Si+Scx)/(fFC |V_FC|) <n_FC>
+            # integrated separatrix -> inner, evaluated only at mesh DOFs (x_dofs).
+            ne_init_data = np.interp(x_dofs, self.x_init, self.n_e_pres)
+
+            order_desc = np.argsort(x_dofs)[::-1]
+            x_desc = x_dofs[order_desc]
+            ne_desc = np.interp(x_desc, self.x_init, self.n_e_pres)
+            Si_desc = np.interp(x_desc, self.x_init, self.S_i_pres)
+            Scx_desc = np.interp(x_desc, self.x_init, self.S_cx_pres)
+            integrand_init = (
+                ne_desc * (Si_desc + Scx_desc) / (self.fFC * abs(self.V_FC))
+            )
+            cumint_desc = cumulative_trapezoid(integrand_init, x_desc, initial=0.0)
+            nFC_on_desc = self.nFC_x0 * np.exp(cumint_desc)
+
+            nFC_init_data = np.empty_like(x_dofs)
+            nFC_init_data[order_desc] = nFC_on_desc
+
+            ratio_CX = self.nCX_x0 / self.nFC_x0 if self.nFC_x0 > 0 else 0.0
+            nCX_init_data = ratio_CX * nFC_init_data
+
+            u.subfunctions[0].dat.data[:] = ne_init_data
+            u.subfunctions[1].dat.data[:] = nFC_init_data
+            u.subfunctions[2].dat.data[:] = nCX_init_data
+            u_prev.assign(u)
+
+        elif initial_guess == "tanh":
+            # H-mode-pedestal-like tanh initial guess.
+            #   s_ne(x)   = 0.5 * (1 - tanh((x - center) / (width/2)))
+            #               -> 1 deep inside the pedestal, -> 0 at the separatrix
+            #   n_e(x)    = ne_x0 + (ne_inner_val - ne_x0) * s_ne(x)
+            # Neutrals get the mirrored shape (peaked at separatrix):
+            #   s_neut(x) = 1 - s_ne(x)
+            #   n_FC(x)   = nFC_x0 * s_neut(x)
+            #   n_CX(x)   = nCX_x0 * s_neut(x)
+            width  = float(tanh_width)  if tanh_width  is not None else 0.1 * abs(x_left)
+            center = float(tanh_center) if tanh_center is not None else -width
+            if width <= 0:
+                raise ValueError(f"tanh_width must be positive, got {width}.")
+
+            s_ne   = 0.5 * (1.0 - np.tanh((x_dofs - center) / (0.5 * width)))
+            s_neut = 1.0 - s_ne
+            ne_init_data  = self.ne_x0  + (ne_inner_val - self.ne_x0) * s_ne # would be really nice to replace this ne_inner_val with the core density in our loop
+            nFC_init_data = self.nFC_x0 * s_neut
+            nCX_init_data = self.nCX_x0 * s_neut
+
+            u.subfunctions[0].dat.data[:] = ne_init_data
+            u.subfunctions[1].dat.data[:] = nFC_init_data
+            u.subfunctions[2].dat.data[:] = nCX_init_data
+            u_prev.assign(u)
+
+        else:
+            raise ValueError(
+                f"Unknown initial_guess={initial_guess!r}; expected "
+                f"'linear', 'pfile', or 'tanh'."
+            )
+
+        # D_KBM (Eqs. 24--25, pedestal-averaged alpha) from the initial n_e.
+        # Newton: frozen after this step.
+        self.calc_pressure_quantities(
+            u.subfunctions[0].dat.data, average_alpha_pedestal=True, # this is n_e on x_dofs, which goes from separatrix to x_inner
+        )
+        C_ETG = np.interp(x_dofs, self.x_init, self.C_ETG)
+        if v:
+            print(f'D_ETG = {C_ETG/ne_init_data}\n\n')
+            print(f'D_NEO = {self.D_NEO}\n\n')
+            print(f'D_KBM = {self._D_KBM}\n\n')
+        
+        f = Function(V, name="C_ETG")
+        f.dat.data[:] = C_ETG
+        self._fd_cache["C_ETG_fd"] = f
+
+        f = Function(V, name="D_NEO")
+        f.dat.data[:] = np.interp(x_dofs, self.x_init, self.D_NEO) # self.D_NEO is on self.x_init grid
+        self._fd_cache["D_NEO_fd"] = f
+
+        f = Function(V, name="D_KBM")
+        f.dat.data[:] = self._D_KBM
+        self._fd_cache["D_KBM_fd"] = f
+
+        f = Function(V, name="A_KBM")
+        f.dat.data[:] = self._A_KBM
+        self._fd_cache["A_KBM_fd"] = f
+
+        f = Function(V, name="B_KBM")
+        f.dat.data[:] = self._B_KBM
+        self._fd_cache["B_KBM_fd"] = f
+
+        # Frozen background T_e + T_i and d(T_e+T_i)/dx on x for Eq. A33
+        T_e_pres = self.T_e_pres * 1.60218e-19 # J
+        T_i_pres = self.T_i_pres * 1.60218e-19 # J
+        T_tot_on_x = np.interp(x_dofs, self.x_init, T_e_pres + T_i_pres)
+        dT_tot_on_x = np.interp(
+            x_dofs, self.x_init, np.gradient(T_e_pres + T_i_pres, self.x_init),
+        )
+
+        f = Function(V, name="T_tot")
+        f.dat.data[:] = T_tot_on_x
+        self._fd_cache["T_tot_fd"] = f
+        f = Function(V, name="dT_tot_dx")
+        f.dat.data[:] = dT_tot_on_x
+        self._fd_cache["dT_tot_dx_fd"] = f
+
+        if v:
+            self._plot_profiles(
+                x_dofs=x_dofs,
+                ne=u.subfunctions[0].dat.data,
+                nFC=u.subfunctions[1].dat.data,
+                nCX=u.subfunctions[2].dat.data,
+                title=f"Initial guess: '{initial_guess}'",
+            )
+
+        # ------------------------------------------------------------------
+        # Boundary conditions for the coupled (n_e, <n_FC>, <n_CX>) system.
+        # IntervalMesh boundary IDs:  1 = left (x = x_inner),  2 = right (x = 0).
+        #
+        # The system is order 4 overall (n_e is 2nd order, <n_FC> and <n_CX>
+        # are 1st order each) so it needs exactly 4 BCs.  Three of them are
+        # always Dirichlet at the separatrix (where the physical values are
+        # known):
+        #
+        #   n_e (x = 0)        = ne_x0
+        #   <n_FC>(x = 0)      = nFC_x0
+        #   <n_CX>(x = 0)      = nCX_x0
+        #
+        # x = 0 is also the *inflow* boundary for the first-order ODEs (because
+        # V_{FC,r}, V_{CX,r} < 0 -- neutrals stream inward), so a single
+        # Dirichlet at x = 0 is the well-posed choice for each neutral
+        # species.  Putting them at x_inner instead would be ill-posed
+        # (outflow boundary).
+        #
+        # The fourth BC -- on n_e at x_inner -- is the only one where there's
+        # a real modelling choice: Neumann (match the core-side particle flux)
+        # or Dirichlet (anchor to a known core-side density).
+        #
+        # NEUMANN vs DIRICHLET AT x_inner -- PROS AND CONS
+        # -------------------------------------------------
+        # Neumann  (dn_e/dx |_{x_inner} = dne_dx_inner):
+        #   + Saarelma-consistent (assumption A7 in docs/derivation_eq{15,16}.tex).
+        #     The pedestal-top density emerges from the model rather than being
+        #     prescribed, so the solve is genuinely *predictive* for n_e(x_inner).
+        #   + Physically matches the pedestal to the core-side particle flux
+        #     Gamma_e ~ -D_ped <|grad r|^2> dn_e/dx, which is what you usually
+        #     know (or believe) from the core transport / source modelling.
+        #   - Sensitive to noise in the p-file gradient at x_inner.
+        #   - Two Neumann BCs (one at each end) would be ill-posed; this
+        #     setup uses Neumann at x_inner + Dirichlet at x=0, which is fine.
+        #
+        # Dirichlet (n_e(x_inner) = ne_inner):
+        #   + Forces the solve to pass through a known pedestal-top density,
+        #     useful when reproducing a specific experimental profile.
+        #   + Robust to noise in the inner-boundary *gradient*.
+        #   - No longer predictive at the pedestal top; you are inputting one
+        #     of the things the model could otherwise tell you.
+        #   - Inconsistent with how the parent solver's first_step / Eq.(15),(16)
+        #     derivations close the inner boundary.
+        #
+        # If x_inner is deep enough that the p-file n_e value and the p-file
+        # n_e gradient at that point are mutually consistent (and consistent
+        # with the model), Neumann and Dirichlet converge to similar profiles.
+        # ------------------------------------------------------------------
+        ne_x0_c    = Constant(self.ne_x0)
+        ne_inner_c = Constant(ne_inner_val)        # used only for Dirichlet
+        nFC_x0_c   = Constant(self.nFC_x0)
+        nCX_x0_c   = Constant(self.nCX_x0)
+        dne_dx_inner_c = Constant(dne_dx_inner_val)  # used only for Neumann
+
+        bcs = [
+            DirichletBC(W.sub(0), ne_x0_c,  2),  # n_e (0)        -- separatrix
+            DirichletBC(W.sub(1), nFC_x0_c, 2),  # <n_FC>(0)      -- separatrix
+            DirichletBC(W.sub(2), nCX_x0_c, 2),  # <n_CX>(0)      -- separatrix
+        ]
+        if ne_inner_bc == "dirichlet":
+            bcs.append(DirichletBC(W.sub(0), ne_inner_c, 1))  # n_e (x_inner)
+
+        # Variational forms for each of the three equations
+        #
+        # Second-order diffusion for n_e: D = D_NEO + D_KBM + C_ETG/n_e (Plan A).
+        # D_KBM from Eqs. (24)--(25) with pedestal-averaged alpha; updated each
+        # Picard step, frozen for Newton from the initial guess.
+        #
+        # First-order ODE for <n_FC>.  We use the strong
+        # residual form (no IBP) so the Galerkin solution converges to
+        # the same profile that a forward marching solve from the inflow
+        # boundary x = 0 would produce:
+        #     int [ |V_FC| d/dx(f_FC g n_FC) - n_e (S_i + S_CX) n_FC ] v_F dx = 0.
+        #
+        # First-order ODE for <n_CX>, written symmetrically:
+        #     int [ |V_CX| d/dx(f_CX g n_CX)
+        #           - n_e ( S_i n_CX - (S_CX/2) n_FC ) ] v_C dx = 0,
+        # ------------------------------------------------------------------
+        C_ETG_fd = self._fd_cache["C_ETG_fd"]
+        D_NEO_fd = self._fd_cache["D_NEO_fd"]
+        D_KBM_fd = self._fd_cache["D_KBM_fd"]
+        params_dict = {
+            'W': W,
+            'g_fd': g_fd,
+            'C_ETG_fd': C_ETG_fd,
+            'D_NEO_fd': D_NEO_fd,
+            'D_KBM_fd': D_KBM_fd,
+            'Si_fd': Si_fd,
+            'Scx_fd': Scx_fd,
+            'Vcx_fd': Vcx_fd,
+            'VFC_const': VFC_const,
+            'fFC_const': fFC_const,
+            'fCX_const': fCX_const,
+            'half': half,
+            'u_prev': u_prev,
+            'ne_inner_bc': ne_inner_bc,
+            'dne_dx_inner_c': dne_dx_inner_c,
+            'bcs': bcs,
+            'u': u,
+        }
+        self.newton_solve(linear_solver=linear_solver, ksp_rtol=ksp_rtol, ksp_max_it=ksp_max_it, params_dict=params_dict, v=v)
+
+        # extract the converged profiles from the Firedrake solution and save/return them
+        ne_fd, nFC_fd, nCX_fd = u.subfunctions
+
+        sort_x_idx  = np.argsort(x_dofs)
+        self.x_sol   = x_dofs[sort_x_idx]
+        self.ne_sol  = ne_fd .dat.data[sort_x_idx]
+        self.nFC_sol = nFC_fd.dat.data[sort_x_idx]
+        self.nCX_sol = nCX_fd.dat.data[sort_x_idx]
+
+        self.u_fd = u
+        self.W_fd = W
+        self.V_fd = V
+
+        return self.x_sol, self.ne_sol, self.nFC_sol, self.nCX_sol
+
 
 
     def fsa(self,A,flux_surfaces='T_e'):
@@ -1540,7 +2380,8 @@ class saarelma_connor:
         A_interp = interp1d(psi_N_A, A, kind='linear',
                             bounds_error=False, fill_value=np.nan)
         return A_interp(self.psi_RZ_N)
-    
+
+
     def feed_eped(self):
         """Once a pedestal density profile is calculated, feed this profile to EPED and run EPED or EPEDNN to determine pedestal pressure height and width
 
@@ -1590,7 +2431,7 @@ class saarelma_connor:
         # you can run Julia commands in Python using jl.seval('command')
         jl.seval('using Pkg')
         jl.seval('Pkg.activate(".")  # optional but recommended: use this repo as the active Julia project')
-        jl.seval('Pkg.develop(path="../dependencies/EPEDNN.jl")')
+        jl.seval('Pkg.develop(path="/Users/nelsonlab/codes/saarelma-conner-ped/dependencies/EPEDNN.jl")')
         jl.seval('Pkg.instantiate()')
         jl.seval('using EPEDNN')
 
@@ -1601,7 +2442,7 @@ class saarelma_connor:
 
         # 3. Define your inputs in Python
         # These map exactly to the InputEPED struct we saw in the Julia code
-        self.neped = interp1d(self.x_prev, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
+        self.neped = interp1d(self.x_sol, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
         self.bt = self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2]
         self.calc_betan()
         inputs = {
