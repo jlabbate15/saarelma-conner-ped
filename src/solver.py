@@ -693,18 +693,29 @@ class saarelma_connor:
 
         dV_dpsi = np.gradient(self.V_plasma, self.psi_N_pres)
 
-        T_tot_xdofs = self.T_e_xdofs
-        if self.T_rat_flag: # use both electron and ion temperatures
-            T_i_xdofs = np.interp(self.x_sol, self.x_init, self.T_i_pres)
-            T_tot_xdofs = T_tot_xdofs + T_i_xdofs
+        if self.EPEDNN_betan == 'pfile':
+            pressure = (self.n_e_pres * (self.T_e_pres + self.T_i_pres)) * 1.60218e-19 # Pa
+            self.volavgP = (simpson(pressure * dV_dpsi, self.psi_N_pres)
+                            / simpson(dV_dpsi, self.psi_N_pres))
+        else:
+            assert False, 'EPEDNN_betan method not supported'
 
-        pressure = self.ne_sol * T_tot_xdofs * 1.60218e-19  # Pa
+            # In the future, the code below will be stitched with a core simulation
+            """
+            T_tot_xdofs = self.T_e_xdofs
+            if self.T_rat_flag: # use both electron and ion temperatures, neglect neutrals
+                T_i_xdofs = np.interp(self.x_sol, self.x_init, self.T_i_pres)
+                T_tot_xdofs = T_tot_xdofs + T_i_xdofs
+            ne = self.ne_sol + core_n_e
+            pressure = self.ne_sol * T_tot_xdofs * 1.60218e-19  # Pa, assuming quasi-neutrality
 
-        psi_N_xdofs = np.interp(self.x_sol, self.x_init, self.psi_N_pres) # convert x_dofs to psi_N
-        pressure = np.interp(self.psi_N_pres, psi_N_xdofs, pressure) # Pa on psi_N_pres grid
+            psi_N_xdofs = np.interp(self.x_sol, self.x_init, self.psi_N_pres) # convert x_dofs to psi_N
+            pressure = np.interp(self.psi_N_pres, psi_N_xdofs, pressure) # Pa on psi_N_pres grid
 
-        self.volavgP = (simpson(pressure * dV_dpsi, self.psi_N_pres)
-                        / simpson(dV_dpsi, self.psi_N_pres))
+            self.volavgP = (simpson(pressure * dV_dpsi, self.psi_N_pres)
+                            / simpson(dV_dpsi, self.psi_N_pres))
+            """
+
 
     def calc_betan(self):
         """Calculate the normalized beta
@@ -727,6 +738,7 @@ class saarelma_connor:
         bp_avg = np.mean(bp_lcfs)
 
         betat = self.volavgP / (self.bt**2 / (2 * self.mu0))
+        self.betat = betat
         # betap = self.volavgP / (bp_avg**2 / (2 * self.mu0))
         # beta = ((1/betat) + (1/betap))**(-1)
 
