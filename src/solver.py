@@ -1646,12 +1646,13 @@ class saarelma_connor:
 
         # All quantities below are evaluated in sorted-x (spatial) order.
         T_e = np.interp(x, self.x_init, self.T_e_pres)
+        T_i = np.interp(x, self.x_init, self.T_i_pres)
         self.T_e_xdofs = T_e
         G_KBM_grid = self.C_KBM * (self.c_s * self.rho_s**2) / self.a # on psi_Te_eval/x_init grid
         G_KBM = np.interp(x, self.x_init, G_KBM_grid)
         alpha_nodp = np.interp(x, self.x_init, self._alpha_nodp_xinit)
 
-        _pres = n_e_sorted * T_e * 1.60218e-19 # Pa = J/m^3
+        _pres = n_e_sorted * (T_e + T_i) * 1.60218e-19 # Pa = J/m^3, neglecting neutral pressures and assuming quasi-neutral plasma
         dpdx = np.gradient(_pres, x) # x is now monotonic
         _alpha = alpha_nodp * dpdx # standard Connor-Hastie alpha, sorted-x order
 
@@ -2048,11 +2049,9 @@ class saarelma_connor:
                 f"got {ne_inner_bc!r}."
             )
 
-        x_left  = float(self.x_inner)
-        x_right = 0.0
-        if x_left >= x_right:
+        if float(self.x_inner) >= 0.0:
             raise ValueError(
-                f"x_inner = {x_left} must be strictly less than 0 (separatrix)."
+                f"x_inner = {self.x_inner} must be strictly less than 0 (separatrix)."
             )
 
         if v:
@@ -2066,7 +2065,7 @@ class saarelma_connor:
 
         mesh, V, W, x_dofs, g_fd, Si_fd, Scx_fd, Vcx_fd = (
             self._ensure_firedrake_discretization(
-                x_left, x_res, fe_degree, force=force_setup,
+                float(self.x_inner), x_res, fe_degree, force=force_setup,
             )
         )
 
@@ -2085,7 +2084,7 @@ class saarelma_connor:
             # from 0 at x_inner (physically reasonable -- the neutrals
             # have been ionised away deep in the plasma) to their
             # separatrix values at x = 0.
-            xi = (x_dofs - x_left) / (x_right - x_left)         # in [0,1]
+            xi = (x_dofs - self.x_inner) / (0 - self.x_inner) # x range is from x_inner to 0
             ne_init_data  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
             nFC_init_data = self.nFC_x0 * xi
             nCX_init_data = self.nCX_x0 * xi
@@ -2131,7 +2130,7 @@ class saarelma_connor:
             #   s_neut(x) = 1 - s_ne(x)
             #   n_FC(x)   = nFC_x0 * s_neut(x)
             #   n_CX(x)   = nCX_x0 * s_neut(x)
-            width  = float(tanh_width)  if tanh_width  is not None else 0.1 * abs(x_left)
+            width  = float(tanh_width)  if tanh_width  is not None else 0.1 * abs(self.x_inner)
             center = float(tanh_center) if tanh_center is not None else -width
             if width <= 0:
                 raise ValueError(f"tanh_width must be positive, got {width}.")
