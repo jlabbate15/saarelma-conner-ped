@@ -574,6 +574,13 @@ class saarelma_connor_nondim(saarelma_connor):
 
         if initial_guess == "linear":
             xi = (x_dofs_si - x_left_si) / (x_right_si - x_left_si)
+            if ne_inner_bc == "dirichlet": # ne_inner_val is known
+                ne_init  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
+            elif ne_inner_bc == "neumann": # ne_inner_val is unknown
+                if dne_dx_inner_val >= 0:
+                    raise ValueError(f"dne/dx(x_inner) = {dne_dx_inner_val:.3e} m^-4 must be negative for Neumann boundary condition.")
+                ne_inner_val = dne_dx_inner_val*self.x_inner + self.ne_x0
+                ne_init  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
             ne_init  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
             nFC_init = self.nFC_x0 * xi
             nCX_init = self.nCX_x0 * xi
@@ -599,14 +606,38 @@ class saarelma_connor_nondim(saarelma_connor):
 
         elif initial_guess == "tanh":
             width  = float(tanh_width)  if tanh_width  is not None else 0.1 * abs(x_left_si)
-            center = float(tanh_center) if tanh_center is not None else -width
             if width <= 0:
                 raise ValueError(f"tanh_width must be positive, got {width}.")
-            s_ne   = 0.5 * (1.0 - np.tanh((x_dofs_si - center) / (0.5 * width)))
-            s_neut = 1.0 - s_ne
-            ne_init  = self.ne_x0 + (ne_inner_val - self.ne_x0) * s_ne
-            nFC_init = self.nFC_x0 * s_neut
-            nCX_init = self.nCX_x0 * s_neut
+            if ne_inner_bc == "dirichlet": # ne_inner_val is known
+                center = float(tanh_center) if tanh_center is not None else -width
+                s_ne   = 0.5 * (1.0 - np.tanh((x_dofs_si - center) / (0.5 * width)))
+                s_neut = 1.0 - s_ne
+                ne_init  = self.ne_x0 + (ne_inner_val - self.ne_x0) * s_ne
+                nFC_init = self.nFC_x0 * s_neut
+                nCX_init = self.nCX_x0 * s_neut
+            elif ne_inner_bc == "neumann":
+                if dne_dx_inner_val >= 0:
+                    raise ValueError(
+                        f"dne/dx(x_inner) = {dne_dx_inner_val:.3e} m^-4 must be negative for Neumann boundary condition."
+                    )
+                # default: x_inner sits one width inside the foot of the tanh
+                # so sech^2 at x_inner is well-conditioned (~0.07)
+                center = float(tanh_center) if tanh_center is not None else self.x_inner + width
+                arg = (self.x_inner - center) / (0.5 * width)
+                sech2 = 1.0 / np.cosh(arg) ** 2
+                if sech2 < 1e-6:
+                    raise ValueError(
+                        "tanh transition is too far from x_inner to match the requested "
+                        "slope; reduce |center - x_inner| or increase width."
+                    )
+                ne_inner_val = self.ne_x0 - dne_dx_inner_val * width / sech2
+                self.ne_inner = ne_inner_val
+
+                s_ne   = 0.5 * (1.0 - np.tanh((x_dofs_si - center) / (0.5 * width)))
+                s_neut = 1.0 - s_ne
+                ne_init  = self.ne_x0 + (ne_inner_val - self.ne_x0) * s_ne
+                nFC_init = self.nFC_x0 * s_neut
+                nCX_init = self.nCX_x0 * s_neut
 
         else:
             raise ValueError(

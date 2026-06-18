@@ -105,7 +105,7 @@ class saarelma_connor:
         ne_x0 = None, # m^-3, electron density at the separatrix (boundary condition, default is to use from pfile)
         psi_N_inner_boundary = 0.85, # normalized poloidal flux at the inner boundary (boundary condition); overridden by find_inner_boundary if nFC_threshold or nCX_threshold is set
         nCX_x0=None, # m^-3, CX neutral density at the separatrix (Dirichlet BC at x = 0). If None, defaults to 0.1 * nFC_x0 (used in coupled solver)
-        ncx_x0_ratio = 0.1, # ratio of nCX at the separatrix to nFC at the separatrix (used in coupled solver)
+        ncx_x0_ratio = None, # ratio of nCX at the separatrix to nFC at the separatrix (used in coupled solver)
         nFC_threshold = 0.01, # fraction of nFC at the separatrix below which the inner boundary is placed (None to disable)
         nCX_threshold = 0.01, # fraction of nCX at the separatrix below which the inner boundary is placed (None to disable)
         mhd_loc = 'eqdsk', # location of MHD equilibrium parameters, currently supporting: Tokamaker eqdsk
@@ -222,6 +222,7 @@ class saarelma_connor:
             nFC_threshold=nFC_threshold,
             nCX_threshold=nCX_threshold,
             psi_N_inner_boundary=psi_N_inner_boundary,
+            ncx_x0_ratio=ncx_x0_ratio,
         )
 
         if equations_to_solve == 'coupled':
@@ -2085,7 +2086,18 @@ class saarelma_connor:
             # have been ionised away deep in the plasma) to their
             # separatrix values at x = 0.
             xi = (x_dofs - self.x_inner) / (0 - self.x_inner) # x range is from x_inner to 0
-            ne_init_data  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
+            if ne_inner_bc == "dirichlet":  # ne_inner_val is known
+                ne_init_data = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
+            elif ne_inner_bc == "neumann":  # derive ne_inner_val from the slope
+                if dne_dx_inner_val >= 0:
+                    raise ValueError(
+                        f"dne/dx(x_inner) = {dne_dx_inner_val:.3e} m^-4 must be "
+                        "negative for Neumann boundary condition (n_e decreases "
+                        "outward in the pedestal)."
+                    )
+                ne_inner_val  = dne_dx_inner_val * self.x_inner + self.ne_x0
+                self.ne_inner = ne_inner_val
+                ne_init_data  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
             nFC_init_data = self.nFC_x0 * xi
             nCX_init_data = self.nCX_x0 * xi
 
@@ -2130,16 +2142,43 @@ class saarelma_connor:
             #   s_neut(x) = 1 - s_ne(x)
             #   n_FC(x)   = nFC_x0 * s_neut(x)
             #   n_CX(x)   = nCX_x0 * s_neut(x)
-            width  = float(tanh_width)  if tanh_width  is not None else 0.1 * abs(self.x_inner)
-            center = float(tanh_center) if tanh_center is not None else -width
+            width = float(tanh_width) if tanh_width is not None else 0.1 * abs(self.x_inner)
             if width <= 0:
                 raise ValueError(f"tanh_width must be positive, got {width}.")
 
-            s_ne   = 0.5 * (1.0 - np.tanh((x_dofs - center) / (0.5 * width)))
-            s_neut = 1.0 - s_ne
-            ne_init_data  = self.ne_x0  + (ne_inner_val - self.ne_x0) * s_ne # would be really nice to replace this ne_inner_val with the core density in our loop
-            nFC_init_data = self.nFC_x0 * s_neut
-            nCX_init_data = self.nCX_x0 * s_neut
+            if ne_inner_bc == "dirichlet":  # ne_inner_val is known
+                center = float(tanh_center) if tanh_center is not None else -width
+                s_ne   = 0.5 * (1.0 - np.tanh((x_dofs - center) / (0.5 * width)))
+                s_neut = 1.0 - s_ne
+                ne_init_data  = self.ne_x0 + (ne_inner_val - self.ne_x0) * s_ne
+                nFC_init_data = self.nFC_x0 * s_neut
+                nCX_init_data = self.nCX_x0 * s_neut
+            elif ne_inner_bc == "neumann":  # derive ne_inner_val from the slope
+                if dne_dx_inner_val >= 0:
+                    raise ValueError(
+                        f"dne/dx(x_inner) = {dne_dx_inner_val:.3e} m^-4 must be "
+                        "negative for Neumann boundary condition (n_e decreases "
+                        "outward in the pedestal)."
+                    )
+                # default: x_inner sits one width inside the foot of the tanh
+                # so sech^2 at x_inner is well-conditioned (~0.07)
+                center = (float(tanh_center) if tanh_center is not None
+                          else self.x_inner + width)
+                arg = (self.x_inner - center) / (0.5 * width)
+                sech2 = 1.0 / np.cosh(arg) ** 2
+                if sech2 < 1e-6:
+                    raise ValueError(
+                        "tanh transition is too far from x_inner to match the "
+                        "requested slope; reduce |center - x_inner| or increase width."
+                    )
+                ne_inner_val  = self.ne_x0 - dne_dx_inner_val * width / sech2
+                self.ne_inner = ne_inner_val
+
+                s_ne   = 0.5 * (1.0 - np.tanh((x_dofs - center) / (0.5 * width)))
+                s_neut = 1.0 - s_ne
+                ne_init_data  = self.ne_x0 + (ne_inner_val - self.ne_x0) * s_ne
+                nFC_init_data = self.nFC_x0 * s_neut
+                nCX_init_data = self.nCX_x0 * s_neut
 
             u.subfunctions[0].dat.data[:] = ne_init_data
             u.subfunctions[1].dat.data[:] = nFC_init_data
