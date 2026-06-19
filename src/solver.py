@@ -88,6 +88,8 @@ class saarelma_connor:
         Equations to solve, currently supporting: 'coupled' (full 3-fluid system of ODEs), 'SC' (simplified 3-fluid system to one ODE)
     initial_guess : string
         Initial guess for the electron density profile, currently supporting: pfile
+    nCX_ic : string
+        Initial condition for the CX density profile, currently supporting: 'solve' (solve for the CX density profile), 'scale nFC' (scale the FC density profile by the specified initial condition ratio)
     verbose : bool
         True if verbose output is desired, False if verbose output is not desired
     """
@@ -119,6 +121,7 @@ class saarelma_connor:
         error_check = False, # check if Samuli's 2023 paper Eq. 15 is correct or not
         equations_to_solve = 'coupled', # equations to solve, currently supporting: 'coupled', 'SC'
         initial_guess = 'pfile', # initial guess for the electron density profile, currently supporting: pfile, linear
+        nCX_ic="solve",
         verbose = False,
     ):
 
@@ -746,7 +749,7 @@ class saarelma_connor:
         # EPED / Troyon: β_N = β_t[%] * a * abs(B_t) [T] / I_p[MA] -> this is what OpenFUSIONToolkit uses for β_N
         self.betan = 100 * betat * (self.a * abs(self.bt) / self.Ip)
 
-    def form_factor(self,type = 'ex'):
+    def form_factor(self,x,type = 'ex'):
         """Calculate the form factor for FC or charge-exchange cases
         Currently just sets to 1, but can be updated to use a more sophisticated to account for poloidal asymmetries in the FC and CX neutral profiles.
 
@@ -754,6 +757,8 @@ class saarelma_connor:
         ----------
         self : object
             instance of saarelma_connor class
+        x : array
+            radial grid to evaluate the form factor on
         type : string
             type of form factor to calculate, supporting: FC, cx
         """
@@ -762,9 +767,9 @@ class saarelma_connor:
         # grad(r) and nFC or nCX are needed
 
         if type == 'FC':
-            self.fFC = 1
+            self.fFC = np.ones_like(x)
         elif type == 'cx':
-            self.fCX = 1
+            self.fCX = np.ones_like(x)
 
 
     def setup_solver_grids(self,res = 100):
@@ -1611,9 +1616,9 @@ class saarelma_connor:
         """Run ``form_factor`` + ``setup_solver_grids`` once per ``x_res``."""
         key = int(x_res)
         if force or self._fd_cache.get("x_res") != key:
-            self.form_factor(type='FC')
-            self.form_factor(type='cx')
             self.setup_solver_grids(res=x_res)
+            self.form_factor(type='FC',x=self.x_init)
+            self.form_factor(type='cx',x=self.x_init)
             self._fd_cache["x_res"] = key
 
     def calc_pressure_quantities(self, n_e, average_alpha_pedestal=True):

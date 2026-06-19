@@ -365,6 +365,7 @@ class saarelma_connor_nondim(saarelma_connor):
         hat_A_KBM_sorted = A_KBM_si / self._D0_nd
         hat_B_KBM_sorted = B_KBM_si / self._KBMB_scale_nd
         hat_D_KBM_sorted = D_KBM_si / self._D0_nd
+        self.D_KBM_si = D_KBM_si[unsort_idx]
 
         self._hat_A_KBM = hat_A_KBM_sorted[unsort_idx]
         self._hat_B_KBM = hat_B_KBM_sorted[unsort_idx]
@@ -424,16 +425,16 @@ class saarelma_connor_nondim(saarelma_connor):
 
     def _build_f2_weak_form_nondim(
             self, hat_ne, hat_nFC, hat_g_fd, hat_Si_fd, hat_Scx_fd,
-            hat_VFC_const, fFC_const, v_F):
+            hat_VFC_const, fFC_fd, v_F):
         """Dimensionless FC-neutral weak form -- Eq. (eq:weak-hat-nFC-A8)."""
-        flux_FC = hat_VFC_const * (fFC_const * hat_g_fd * hat_nFC).dx(0)
+        flux_FC = hat_VFC_const * (fFC_fd * hat_g_fd * hat_nFC).dx(0)
         return (flux_FC - hat_ne * (hat_Si_fd + hat_Scx_fd) * hat_nFC) * v_F * dx
 
     def _build_f3_weak_form_nondim(
             self, hat_ne, hat_nFC, hat_nCX, hat_g_fd,
-            hat_Si_fd, hat_Scx_fd, hat_Vcx_fd, fCX_const, half, v_C):
+            hat_Si_fd, hat_Scx_fd, hat_Vcx_fd, fCX_fd, half, v_C):
         """Dimensionless CX-neutral weak form -- Eq. (eq:weak-hat-nCX-A8)."""
-        flux_CX = (hat_Vcx_fd * fCX_const * hat_g_fd * hat_nCX).dx(0)
+        flux_CX = (hat_Vcx_fd * fCX_fd * hat_g_fd * hat_nCX).dx(0)
         rhs = hat_ne * (hat_Si_fd * hat_nCX - half * hat_Scx_fd * hat_nFC)
         return (flux_CX - rhs) * v_C * dx
 
@@ -455,6 +456,7 @@ class saarelma_connor_nondim(saarelma_connor):
                       ksp_rtol=1e-8,
                       ksp_max_it=200,
                       reuse_setup=True,
+                      nCX_ic="solve",
                       verbose=None):
         """Non-dimensional Firedrake solver for the coupled three-equation
         Saarelma--Connor neutral-transport pedestal model.
@@ -522,13 +524,13 @@ class saarelma_connor_nondim(saarelma_connor):
             ne_inner_val = float(ne_inner)
             dne_dx_inner_val = float(dne_dx_inner)
         elif bc_origin == "p-file user combo":
-            if ne_inner_bc == "neumann":
+            if ne_inner_bc == "neumann": # user specifies n_e(x_inner)
                 dne_dx_pres = np.gradient(self.n_e_pres, self.x_init)
                 dne_dx_inner_val = float(np.interp(self.x_inner, self.x_init, dne_dx_pres))
                 ne_inner_val = float(ne_inner)
                 self.ne_inner = ne_inner_val
-            elif ne_inner_bc == "dirichlet":
-                ne_inner_val = float(ne_inner)
+            elif ne_inner_bc == "dirichlet": # user specifies dn_e/dx(x_inner)
+                ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres))
                 self.ne_inner = ne_inner_val
                 dne_dx_inner_val = float(dne_dx_inner)
         else:
@@ -556,11 +558,20 @@ class saarelma_connor_nondim(saarelma_connor):
                 x_res, fe_degree, force=force_setup,
             )
         )
+        x_dofs_si = self._from_hat_x(hat_x_dofs)  # m
+        x_left_si = -self._L_nd
+        x_right_si = 0.0
 
         # Constants (App. A.8 Eq. (eq:hat-V-A8))
         hat_VFC_const = Constant(abs(self.V_FC) / self._V0_nd)
-        fFC_const     = Constant(self.fFC)
-        fCX_const     = Constant(self.fCX)
+        # fFC, fCX are spatial profiles on x_init; represent them as scalar
+        # Functions on V (not Constant(array), which would have wrong UFL shape).
+        fFC_arr = np.interp(x_dofs_si, self.x_init, self.fFC)
+        fCX_arr = np.interp(x_dofs_si, self.x_init, self.fCX)
+        fFC_fd = Function(V, name="fFC")
+        fFC_fd.dat.data[:] = fFC_arr
+        fCX_fd = Function(V, name="fCX")
+        fCX_fd.dat.data[:] = fCX_arr
         half          = Constant(0.5)
 
         u, u_prev = self._get_or_create_mixed_solution_nondim(W, force=force_setup)
@@ -568,82 +579,98 @@ class saarelma_connor_nondim(saarelma_connor):
         # ------------------------------------------------------------------
         # Initial guess (in SI, then rescaled to hat-units).
         # ------------------------------------------------------------------
-        x_dofs_si = self._from_hat_x(hat_x_dofs)  # m
-        x_left_si = -self._L_nd
-        x_right_si = 0.0
-
+        # initial guesses for n_e are structured with the assumption that ne (and dnedx) are known at x_inner
         if initial_guess == "linear":
             xi = (x_dofs_si - x_left_si) / (x_right_si - x_left_si)
-            if ne_inner_bc == "dirichlet": # ne_inner_val is known
-                ne_init  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
-            elif ne_inner_bc == "neumann": # ne_inner_val is unknown
-                if dne_dx_inner_val >= 0:
-                    raise ValueError(f"dne/dx(x_inner) = {dne_dx_inner_val:.3e} m^-4 must be negative for Neumann boundary condition.")
-                ne_inner_val = dne_dx_inner_val*self.x_inner + self.ne_x0
-                ne_init  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
             ne_init  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
-            nFC_init = self.nFC_x0 * xi
-            nCX_init = self.nCX_x0 * xi
-
         elif initial_guess == "pfile":
             ne_init = np.interp(x_dofs_si, self.x_init, self.n_e_pres)
-
-            order_desc = np.argsort(x_dofs_si)[::-1]
-            x_desc = x_dofs_si[order_desc]
-            ne_desc = np.interp(x_desc, self.x_init, self.n_e_pres)
-            Si_desc = np.interp(x_desc, self.x_init, self.S_i_pres)
-            Scx_desc = np.interp(x_desc, self.x_init, self.S_cx_pres)
-            integrand_init = (
-                ne_desc * (Si_desc + Scx_desc) / (self.fFC * abs(self.V_FC))
-            )
-            cumint_desc = cumulative_trapezoid(integrand_init, x_desc, initial=0.0)
-            nFC_on_desc = self.nFC_x0 * np.exp(cumint_desc)
-            nFC_init = np.empty_like(x_dofs_si)
-            nFC_init[order_desc] = nFC_on_desc
-
-            ratio_CX = self.nCX_x0 / self.nFC_x0 if self.nFC_x0 > 0 else 0.0
-            nCX_init = ratio_CX * nFC_init
-
         elif initial_guess == "tanh":
             width  = float(tanh_width)  if tanh_width  is not None else 0.1 * abs(x_left_si)
             if width <= 0:
                 raise ValueError(f"tanh_width must be positive, got {width}.")
-            if ne_inner_bc == "dirichlet": # ne_inner_val is known
-                center = float(tanh_center) if tanh_center is not None else -width
-                s_ne   = 0.5 * (1.0 - np.tanh((x_dofs_si - center) / (0.5 * width)))
-                s_neut = 1.0 - s_ne
-                ne_init  = self.ne_x0 + (ne_inner_val - self.ne_x0) * s_ne
-                nFC_init = self.nFC_x0 * s_neut
-                nCX_init = self.nCX_x0 * s_neut
-            elif ne_inner_bc == "neumann":
-                if dne_dx_inner_val >= 0:
-                    raise ValueError(
-                        f"dne/dx(x_inner) = {dne_dx_inner_val:.3e} m^-4 must be negative for Neumann boundary condition."
-                    )
-                # default: x_inner sits one width inside the foot of the tanh
-                # so sech^2 at x_inner is well-conditioned (~0.07)
-                center = float(tanh_center) if tanh_center is not None else self.x_inner + width
-                arg = (self.x_inner - center) / (0.5 * width)
-                sech2 = 1.0 / np.cosh(arg) ** 2
-                if sech2 < 1e-6:
-                    raise ValueError(
-                        "tanh transition is too far from x_inner to match the requested "
-                        "slope; reduce |center - x_inner| or increase width."
-                    )
-                ne_inner_val = self.ne_x0 - dne_dx_inner_val * width / sech2
-                self.ne_inner = ne_inner_val
-
-                s_ne   = 0.5 * (1.0 - np.tanh((x_dofs_si - center) / (0.5 * width)))
-                s_neut = 1.0 - s_ne
-                ne_init  = self.ne_x0 + (ne_inner_val - self.ne_x0) * s_ne
-                nFC_init = self.nFC_x0 * s_neut
-                nCX_init = self.nCX_x0 * s_neut
-
+            center = float(tanh_center) if tanh_center is not None else -width
+            s_ne   = 0.5 * (1.0 - np.tanh((x_dofs_si - center) / (0.5 * width)))
+            # s_neut = 1.0 - s_ne
+            ne_init  = self.ne_x0 + (ne_inner_val - self.ne_x0) * s_ne
         else:
             raise ValueError(
                 f"Unknown initial_guess={initial_guess!r}; expected "
                 "'linear', 'pfile', or 'tanh'."
             )
+
+        # ------------------------------------------------------------------
+        # KBM (frozen at the initial guess for the SNES solve, exactly as
+        # in solver.py.solve_coupled).
+        # ------------------------------------------------------------------
+        self.calc_pressure_quantities_nondim(
+            ne_init / self._n0_nd,
+            average_alpha_pedestal=True,
+        )
+
+        # use the initial guess for ne to get the initial guess for nFC from Eq. (14) in Saarelma et al. (2023)
+        order_desc = np.argsort(x_dofs_si)[::-1]
+        x_desc = x_dofs_si[order_desc]
+        ne_desc = np.interp(x_desc, self.x_init, self.n_e_pres)
+        Si_desc = np.interp(x_desc, self.x_init, self.S_i_pres)
+        fFC_desc = np.interp(x_desc, self.x_init, self.fFC)
+        Scx_desc = np.interp(x_desc, self.x_init, self.S_cx_pres)
+        integrand_init = (
+            ne_desc * (Si_desc + Scx_desc) / (fFC_desc * abs(self.V_FC))
+        )
+        cumint_desc = cumulative_trapezoid(integrand_init, x_desc, initial=0.0)
+        nFC_on_desc = self.nFC_x0 * np.exp(cumint_desc)
+        nFC_init = np.empty_like(x_dofs_si)
+        nFC_init[order_desc] = nFC_on_desc
+        if any(nFC_init < 0):
+            raise ValueError(f"nFC_init = {nFC_init} is negative, which is not allowed.")
+
+        if nCX_ic == "solve":
+            # Initial guess for nCX from the n_CX fluid governing equation
+            # (Eq. (10) of Saarelma-Connor):
+            #
+            #   |V_CX| d/dx[ f_CX g n_CX ] = n_e (n_CX S_i - (S_CX/2) n_FC)
+            #
+            # Let u = f_CX g n_CX and tau = -x (inward distance, >= 0). Then
+            #   du/dtau = -P(tau) u + Q(tau)
+            # with
+            #   P = n_e S_i / (|V_CX| f_CX g)
+            #   Q = n_e S_CX n_FC / (2 |V_CX|)   <-- Note: f_CX is no longer here!
+            # Integrating factor nu(tau) = exp(int_0^tau P dtau') gives
+            #   u(tau) = (u(0) + int_0^tau nu Q dtau') / nu(tau)
+            # with u(0) = f_CX(0) * g(0) * nCX_x0. 
+            # Finally, n_CX = u / (f_CX g).
+
+            ne_desc_init  = ne_init[order_desc]                            # m^-3
+            g_desc        = np.interp(x_desc, self.x_init, self.gradr2_fsa)
+            Vcx_desc      = np.interp(x_desc, self.x_init, np.abs(self.V_cx_pres))  # m/s
+            
+            # (Assuming self.fCX is now an array defined on self.x_init)
+            fCX_desc      = np.interp(x_desc, self.x_init, self.fCX)       
+            tau_desc      = -x_desc                                        # >= 0, ascending from 0
+        
+            P_desc        = ne_desc_init * Si_desc / (Vcx_desc * fCX_desc * g_desc)
+            Q_desc        = ne_desc_init * Scx_desc * nFC_on_desc / (2.0 * Vcx_desc) 
+            
+            int_P         = cumulative_trapezoid(P_desc, tau_desc, initial=0.0)
+            nu_desc       = np.exp(int_P)
+            nu_Q_int      = cumulative_trapezoid(nu_desc * Q_desc, tau_desc, initial=0.0)
+            
+            u_desc_0      = fCX_desc[0] * g_desc[0] * self.nCX_x0
+            u_desc        = (u_desc_0 + nu_Q_int) / nu_desc
+
+            nCX_on_desc   = u_desc / (fCX_desc * g_desc)
+            nCX_init      = np.empty_like(x_dofs_si)
+            nCX_init[order_desc] = nCX_on_desc
+        elif nCX_ic == "scale nFC":
+            nCX_init = nFC_init * self.nCX_x0 / self.nFC_x0
+        else:
+            raise ValueError(f"Unknown nCX_ic={nCX_ic!r}; expected 'solve' or 'scale nFC'.")
+
+        # diagnostics
+        self.nCX_init = nCX_init
+        self.nFC_init = nFC_init
+        self.ne_init = ne_init
 
         u.subfunctions[0].dat.data[:] = ne_init  / self._n0_nd
         u.subfunctions[1].dat.data[:] = nFC_init / self._n0_nd
@@ -655,7 +682,7 @@ class saarelma_connor_nondim(saarelma_connor):
         hat_ne_inner   = ne_init[0]   / self._n0_nd
         hat_nFC_x0     = self.nFC_x0    / self._n0_nd
         hat_nCX_x0     = self.nCX_x0    / self._n0_nd
-        hat_dne_dx_inner = self._L_nd * np.gradient(ne_init, x_dofs_si)[0] / self._n0_nd
+        hat_dne_dx_inner = self._L_nd * dne_dx_inner_val / self._n0_nd
 
         if v:
             print(f"[nondim] x_inner          = {self.x_inner:.4e} m")
@@ -667,15 +694,6 @@ class saarelma_connor_nondim(saarelma_connor):
             print(f"[nondim] hat_nFC(0)       = {hat_nFC_x0:.3e}")
             print(f"[nondim] hat_nCX(0)       = {hat_nCX_x0:.3e}")
             print(f"[nondim] hat_dne/dxhat(-1)= {hat_dne_dx_inner:.3e}")
-
-        # ------------------------------------------------------------------
-        # KBM (frozen at the initial guess for the SNES solve, exactly as
-        # in solver.py.solve_coupled).
-        # ------------------------------------------------------------------
-        self.calc_pressure_quantities_nondim(
-            u.subfunctions[0].dat.data,
-            average_alpha_pedestal=True,
-        )
 
         # Frozen ETG and NEO contributions in hat-units.
         hat_C_ETG_arr = (
@@ -714,14 +732,14 @@ class saarelma_connor_nondim(saarelma_connor):
         f = Function(V, name="hat_dT_dxhat"); f.dat.data[:] = hat_dT_dx_arr
         self._fd_cache["hat_dT_dx_fd"] = f
 
-        if v:
-            self._plot_profiles(
-                x_dofs=x_dofs_si,
-                ne=ne_init,
-                nFC=nFC_init,
-                nCX=nCX_init,
-                title=f"Initial guess (SI, from non-dim solver): '{initial_guess}'",
-            )
+        # if v:
+        self._plot_profiles(
+            x_dofs=x_dofs_si,
+            ne=ne_init,
+            nFC=nFC_init,
+            nCX=nCX_init,
+            title=f"Initial guess (SI, from non-dim solver): '{initial_guess}'",
+        )
 
         # ------------------------------------------------------------------
         # Boundary conditions in non-dim units.
@@ -765,7 +783,7 @@ class saarelma_connor_nondim(saarelma_connor):
             self._fd_cache["hat_g_fd"],
             self._fd_cache["hat_Si_fd"],
             self._fd_cache["hat_Scx_fd"],
-            hat_VFC_const, fFC_const, v_F,
+            hat_VFC_const, fFC_fd, v_F,
         )
         F3 = self._build_f3_weak_form_nondim(
             hat_ne_curr, hat_nFC_curr, hat_nCX_curr,
@@ -773,7 +791,7 @@ class saarelma_connor_nondim(saarelma_connor):
             self._fd_cache["hat_Si_fd"],
             self._fd_cache["hat_Scx_fd"],
             self._fd_cache["hat_Vcx_fd"],
-            fCX_const, half, v_C,
+            fCX_fd, half, v_C,
         )
 
         F = F1 + F2 + F3
