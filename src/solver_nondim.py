@@ -64,6 +64,7 @@ try:
         IntervalMesh, FunctionSpace, MixedFunctionSpace, Function,
         TestFunctions, Constant, DirichletBC,
         dx, ds, split, solve, SpatialCoordinate,
+        tanh as fd_tanh,
     )
     _FIREDRAKE_AVAILABLE = True
     _FIREDRAKE_IMPORT_ERR = None
@@ -380,13 +381,61 @@ class saarelma_connor_nondim(saarelma_connor):
     # Weak forms
     # ------------------------------------------------------------------
 
+    def _kbm_inline_terms(
+        self, hat_ne, hat_T_fd, hat_dT_dx_fd,
+        hat_alpha_nodp_fd, hat_G_KBM_fd,
+        alpha_crit_c, gate_eps_c,
+        boundary=False, hat_dne_dx_inner_c=None,
+    ):
+        """Build the inline (trial-dependent) UFL expressions for the
+        Connor-Hastie ``alpha``, the smoothed KBM gate, and the
+        dimensionless KBM coefficients ``hat_A_KBM`` and ``hat_B_KBM``.
+
+        Mathematics (see App.~A.7--A.8 of docs/Labbate_APAM9301_Final):
+
+            alpha(hat_x, hat_n_e)
+                = hat_alpha_nodp(hat_x) *  d/dhat_x [ hat_n_e * hat_T ]
+                = hat_alpha_nodp * ( hat_T * hat_n_e' + hat_n_e * hat_T' ),
+
+            gate_eps(z)
+                = 0.5 * (1 + tanh(z / gate_eps))    ~ Heaviside(z),
+
+            hat_A_KBM(hat_n_e) = - gate_eps(alpha - alpha_crit) * alpha_crit * hat_G_KBM,
+            hat_B_KBM(hat_n_e) = + gate_eps(alpha - alpha_crit) * hat_alpha_nodp * hat_G_KBM.
+
+        These are full UFL expressions so SNES (Newton) automatically
+        captures their dependence on the trial ``hat_n_e``.
+
+        Parameters
+        ----------
+        boundary : bool, default False
+            If True, use the prescribed inner-boundary slope
+            ``hat_dne_dx_inner_c`` for hat_n_e' inside ``alpha`` (this
+            is needed in the Neumann-flux ds(1) contribution to F1).
+            Otherwise use the volume trial derivative ``hat_ne.dx(0)``.
+        """
+        if boundary:
+            ne_dx_here = hat_dne_dx_inner_c
+        else:
+            ne_dx_here = hat_ne.dx(0)
+        alpha_ufl = hat_alpha_nodp_fd * (
+            hat_T_fd * ne_dx_here + hat_ne * hat_dT_dx_fd
+        )
+        gate_ufl = 0.5 * (
+            1.0 + fd_tanh((alpha_ufl - alpha_crit_c) / gate_eps_c)
+        )
+        hat_A_KBM_ufl = -gate_ufl * alpha_crit_c * hat_G_KBM_fd
+        hat_B_KBM_ufl =  gate_ufl * hat_alpha_nodp_fd * hat_G_KBM_fd
+        return alpha_ufl, gate_ufl, hat_A_KBM_ufl, hat_B_KBM_ufl
+
     def _build_f1_weak_form_nondim(
             self, hat_ne, hat_g_fd,
             hat_C_ETG_fd, hat_D_NEO_fd,
-            hat_A_KBM_fd, hat_B_KBM_fd,
+            hat_A_KBM_term, hat_B_KBM_term,
             hat_T_fd, hat_dT_dx_fd,
             hat_Si_fd, hat_nFC, hat_nCX,
-            v_e, ne_inner_bc, hat_dne_dx_inner_c):
+            v_e, ne_inner_bc, hat_dne_dx_inner_c,
+            hat_A_KBM_bc_term=None, hat_B_KBM_bc_term=None):
         """Dimensionless n_e weak form -- Eq. (eq:weak-hat-A8) of App. A.8.
 
         Integrals are over hat_x in [-1, 0] (the Firedrake mesh).  The
@@ -394,14 +443,30 @@ class saarelma_connor_nondim(saarelma_connor):
         added when ne_inner_bc == "neumann", evaluated using the
         Dirichlet-type expansion of hat_D consistent with the parent
         solver.
+
+        ``hat_A_KBM_term`` and ``hat_B_KBM_term`` are UFL expressions
+        (or Functions) carrying the KBM coefficients.  In the
+        ``kbm_treatment="frozen"`` path they are static Functions; in
+        the ``"inline"`` path they are UFL expressions that depend on
+        the trial ``hat_n_e``.
+
+        ``hat_A_KBM_bc_term`` / ``hat_B_KBM_bc_term`` are the analogous
+        expressions evaluated with the prescribed Neumann slope (used
+        only inside the ds(1) boundary integrand).  If left None the
+        volume expressions are reused (the static-frozen path).
         """
+        if hat_A_KBM_bc_term is None:
+            hat_A_KBM_bc_term = hat_A_KBM_term
+        if hat_B_KBM_bc_term is None:
+            hat_B_KBM_bc_term = hat_B_KBM_term
+
         ne_dx = hat_ne.dx(0)
 
         flux_a33 = (
             (hat_C_ETG_fd / hat_ne) * ne_dx
-            + hat_A_KBM_fd * ne_dx
-            + hat_B_KBM_fd * hat_T_fd * ne_dx * ne_dx
-            + hat_B_KBM_fd * hat_ne * hat_dT_dx_fd * ne_dx
+            + hat_A_KBM_term * ne_dx
+            + hat_B_KBM_term * hat_T_fd * ne_dx * ne_dx
+            + hat_B_KBM_term * hat_ne * hat_dT_dx_fd * ne_dx
             + hat_D_NEO_fd * ne_dx
         )
 
@@ -412,11 +477,13 @@ class saarelma_connor_nondim(saarelma_connor):
 
         if ne_inner_bc == "neumann":
             # Boundary id 1 = left endpoint = inner boundary = hat_x = -1.
+            # The flux at hat_x = -1 reuses the same expansion of hat_D
+            # but with the prescribed slope substituted for hat_n_e'.
             hat_D_bc = (
                 hat_C_ETG_fd / hat_ne
-                + hat_A_KBM_fd
-                + hat_B_KBM_fd * hat_T_fd * hat_dne_dx_inner_c
-                + hat_B_KBM_fd * hat_ne * hat_dT_dx_fd
+                + hat_A_KBM_bc_term
+                + hat_B_KBM_bc_term * hat_T_fd * hat_dne_dx_inner_c
+                + hat_B_KBM_bc_term * hat_ne * hat_dT_dx_fd
                 + hat_D_NEO_fd
             )
             F1 = F1 + hat_g_fd * hat_D_bc * hat_dne_dx_inner_c * v_e * ds(1)
@@ -457,6 +524,8 @@ class saarelma_connor_nondim(saarelma_connor):
                       ksp_max_it=200,
                       reuse_setup=True,
                       nCX_ic="solve",
+                      kbm_treatment="inline",
+                      kbm_gate_eps=None,
                       verbose=None):
         """Non-dimensional Firedrake solver for the coupled three-equation
         Saarelma--Connor neutral-transport pedestal model.
@@ -491,6 +560,43 @@ class saarelma_connor_nondim(saarelma_connor):
             self.hat_x_sol, self.hat_ne_sol, self.hat_nFC_sol, self.hat_nCX_sol
             self._L_nd, self._n0_nd, self._T0_nd, self._S0_nd
             self._tau_nd, self._V0_nd, self._D0_nd
+
+        KBM treatment
+        =============
+        ``kbm_treatment`` controls how the piecewise KBM gate
+        (Heaviside on alpha - alpha_crit) is handled.
+
+        ``"frozen"`` (legacy)
+            ``calc_pressure_quantities_nondim`` is called once with the
+            initial guess for hat_n_e and the resulting
+            ``hat_A_KBM`` / ``hat_B_KBM`` / ``hat_D_KBM`` are baked into
+            static Functions before the SNES solve.  The gate cannot
+            update as hat_n_e evolves -- the answer depends on which
+            side of alpha_crit the *initial guess* landed.
+
+        ``"inline"`` (default, new)
+            ``hat_A_KBM`` and ``hat_B_KBM`` are written directly as UFL
+            expressions of the trial hat_n_e (App. A.7--A.8 of the
+            writeup), with the discontinuous indicator replaced by the
+            smoothed Heaviside
+
+                gate(z) = 0.5 * (1 + tanh(z / kbm_gate_eps))
+
+            so the residual is C^infty in hat_n_e and SNES Newton can
+            differentiate it analytically.  The Connor-Hastie alpha is
+            evaluated locally as
+
+                alpha(hat_x, hat_n_e) = hat_alpha_nodp(hat_x)
+                                        * d/dhat_x [ hat_n_e * hat_T ].
+
+            The gate therefore updates self-consistently within every
+            Newton step; on convergence the model is on its own KBM
+            branch by construction.
+
+        ``kbm_gate_eps`` : float or None, default None
+            Smoothing width of the Heaviside.  ``None`` -> 5% of
+            ``alpha_crit`` (with a 1e-3 floor).  Smaller eps makes the
+            gate sharper but harder for Newton to converge.
         """
         if not _FIREDRAKE_AVAILABLE:
             raise ImportError(
@@ -732,14 +838,42 @@ class saarelma_connor_nondim(saarelma_connor):
         f = Function(V, name="hat_dT_dxhat"); f.dat.data[:] = hat_dT_dx_arr
         self._fd_cache["hat_dT_dx_fd"] = f
 
-        # if v:
-        self._plot_profiles(
-            x_dofs=x_dofs_si,
-            ne=ne_init,
-            nFC=nFC_init,
-            nCX=nCX_init,
-            title=f"Initial guess (SI, from non-dim solver): '{initial_guess}'",
+        # ------------------------------------------------------------------
+        # KBM equilibrium fields used by the *inline* (trial-dependent)
+        # KBM treatment.  These are independent of the trial hat_n_e but
+        # depend on the dimensionless scales, so they are built here
+        # (after _set_nondim_scales) rather than inside
+        # _ensure_firedrake_discretization_nondim.
+        #
+        #   hat_G_KBM(hat_x)
+        #       = G_KBM_si(x) / [D]_0
+        #       = ( C_KBM * c_s(x) * rho_s(x)^2 / a ) / (L^2 n_0 S_0).
+        #
+        #   hat_alpha_nodp(hat_x)
+        #       = alpha_nodp_si(x) * n_0 * T_0 / L
+        #         (dimensionless: alpha = hat_alpha_nodp * d(hat_n_e hat_T)/dhat_x).
+        # ------------------------------------------------------------------
+        G_KBM_grid = self.C_KBM * (self.c_s * self.rho_s ** 2) / self.a  # m^2/s
+        hat_G_KBM_arr = (
+            self._interp_si_to_hat(hat_x_dofs, G_KBM_grid) / self._D0_nd
         )
+        hat_alpha_nodp_arr = (
+            self._interp_si_to_hat(hat_x_dofs, self._alpha_nodp_xinit)
+            * (self._n0_nd * self._T0_nd / self._L_nd)
+        )
+        f = Function(V, name="hat_G_KBM");       f.dat.data[:] = hat_G_KBM_arr
+        self._fd_cache["hat_G_KBM_fd"] = f
+        f = Function(V, name="hat_alpha_nodp"); f.dat.data[:] = hat_alpha_nodp_arr
+        self._fd_cache["hat_alpha_nodp_fd"] = f
+
+        if v:
+            self._plot_profiles(
+                x_dofs=x_dofs_si,
+                ne=ne_init,
+                nFC=nFC_init,
+                nCX=nCX_init,
+                title=f"Initial guess (SI, from non-dim solver): '{initial_guess}'",
+            )
 
         # ------------------------------------------------------------------
         # Boundary conditions in non-dim units.
@@ -760,23 +894,87 @@ class saarelma_connor_nondim(saarelma_connor):
             bcs.append(DirichletBC(W.sub(0), hat_ne_inner_c, 1))
 
         # ------------------------------------------------------------------
+        # KBM treatment dispatch.
+        # ------------------------------------------------------------------
+        kbm_treatment = str(kbm_treatment).lower()
+        if kbm_treatment not in ("frozen", "inline"):
+            raise ValueError(
+                f"kbm_treatment must be 'frozen' or 'inline', got {kbm_treatment!r}."
+            )
+
+        # Smoothing width for the Heaviside in the inline gate.  Default
+        # is 5% of alpha_crit (>= 1e-3 to avoid division by zero at
+        # alpha_crit == 0).
+        if kbm_gate_eps is None:
+            kbm_gate_eps_val = max(1e-3, 0.05 * float(self.alpha_crit))
+        else:
+            kbm_gate_eps_val = float(kbm_gate_eps)
+            if kbm_gate_eps_val <= 0.0:
+                raise ValueError(
+                    f"kbm_gate_eps must be > 0, got {kbm_gate_eps_val}."
+                )
+        alpha_crit_c = Constant(float(self.alpha_crit))
+        gate_eps_c   = Constant(kbm_gate_eps_val)
+
+        # Diagnostic record for callers / notebooks.
+        self.kbm_info = {
+            "treatment":  kbm_treatment,
+            "gate_eps":   kbm_gate_eps_val,
+            "alpha_crit": float(self.alpha_crit),
+            "alpha_bar_initial_guess": float(self.alpha_bar_ped),
+        }
+
+        # ------------------------------------------------------------------
         # Assemble residuals and solve via SNES.
         # ------------------------------------------------------------------
         v_e, v_F, v_C = TestFunctions(W)
         hat_ne_curr, hat_nFC_curr, hat_nCX_curr = split(u)
+
+        if kbm_treatment == "frozen":
+            hat_A_KBM_term    = self._fd_cache["hat_A_KBM_fd"]
+            hat_B_KBM_term    = self._fd_cache["hat_B_KBM_fd"]
+            hat_A_KBM_bc_term = None  # reuse the volume term
+            hat_B_KBM_bc_term = None
+        else:  # inline
+            # Volume terms: depend on the trial via hat_ne.dx(0).
+            (_alpha_ufl, _gate_ufl,
+             hat_A_KBM_term, hat_B_KBM_term) = self._kbm_inline_terms(
+                hat_ne_curr,
+                self._fd_cache["hat_T_fd"],
+                self._fd_cache["hat_dT_dx_fd"],
+                self._fd_cache["hat_alpha_nodp_fd"],
+                self._fd_cache["hat_G_KBM_fd"],
+                alpha_crit_c, gate_eps_c,
+                boundary=False,
+            )
+            # Boundary terms (Neumann ds(1)): the prescribed slope is
+            # substituted for hat_n_e' inside alpha so the gate at the
+            # inner boundary stays consistent with the imposed flux.
+            (_, _,
+             hat_A_KBM_bc_term, hat_B_KBM_bc_term) = self._kbm_inline_terms(
+                hat_ne_curr,
+                self._fd_cache["hat_T_fd"],
+                self._fd_cache["hat_dT_dx_fd"],
+                self._fd_cache["hat_alpha_nodp_fd"],
+                self._fd_cache["hat_G_KBM_fd"],
+                alpha_crit_c, gate_eps_c,
+                boundary=True,
+                hat_dne_dx_inner_c=hat_dne_dx_inner_c,
+            )
 
         F1 = self._build_f1_weak_form_nondim(
             hat_ne_curr,
             self._fd_cache["hat_g_fd"],
             self._fd_cache["hat_C_ETG_fd"],
             self._fd_cache["hat_D_NEO_fd"],
-            self._fd_cache["hat_A_KBM_fd"],
-            self._fd_cache["hat_B_KBM_fd"],
+            hat_A_KBM_term, hat_B_KBM_term,
             self._fd_cache["hat_T_fd"],
             self._fd_cache["hat_dT_dx_fd"],
             self._fd_cache["hat_Si_fd"],
             hat_nFC_curr, hat_nCX_curr,
             v_e, ne_inner_bc, hat_dne_dx_inner_c,
+            hat_A_KBM_bc_term=hat_A_KBM_bc_term,
+            hat_B_KBM_bc_term=hat_B_KBM_bc_term,
         )
         F2 = self._build_f2_weak_form_nondim(
             hat_ne_curr, hat_nFC_curr,

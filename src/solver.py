@@ -229,7 +229,12 @@ class saarelma_connor:
         )
 
         if equations_to_solve == 'coupled':
-            self.nCX_x0 = nCX_x0 if nCX_x0 is not None else self.ncx_x0_ratio * self.nFC_x0 # set nCX boundary condition, defaults to 0.1 * nFC_x0
+            if nCX_x0 is not None:
+                self.nCX_x0 = nCX_x0 if nCX_x0 is not None 
+            elif ncx_x0_ratio is not None:
+                self.ncx_x0_ratio * self.nFC_x0 # set nCX boundary condition
+            else:
+                raise ValueError("nCX_x0 or ncx_x0_ratio must be specified")
             self._fd_cache = {}
 
     def calc_pressure_quantities_sc(self,n_e,x):
