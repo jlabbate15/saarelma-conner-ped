@@ -455,6 +455,12 @@ class saarelma_connor_nondim(saarelma_connor):
                       ksp_rtol=1e-8,
                       ksp_max_it=200,
                       reuse_setup=True,
+                      kbm_picard=False,
+                      kbm_picard_max_iters=20,
+                      kbm_picard_tol=1e-3,
+                      kbm_picard_relax=1.0,
+                      kbm_picard_auto_relax=True,
+                      kbm_picard_min_relax=0.05,
                       verbose=None):
         """Non-dimensional Firedrake solver for the coupled three-equation
         Saarelma--Connor neutral-transport pedestal model.
@@ -478,6 +484,49 @@ class saarelma_connor_nondim(saarelma_connor):
         See :meth:`saarelma_connor.solve_coupled`.  All physical inputs
         are in SI units.
 
+        KBM Picard loop (optional self-consistency on the gate)
+        =======================================================
+        The KBM coefficients hat_A_KBM, hat_B_KBM, hat_D_KBM all carry a
+        piecewise gate (alpha_bar > alpha_crit) that depends on n_e.
+        By default (``kbm_picard=False``) the gate is evaluated once from
+        the initial guess and frozen during the SNES solve.  If
+        ``kbm_picard=True`` we wrap the SNES solve in a Picard loop:
+            1. solve with current KBM coefficients,
+            2. recompute KBM from the converged hat_n_e via
+               :meth:`calc_pressure_quantities_nondim`,
+            3. overwrite the cached hat_A_KBM_fd / hat_B_KBM_fd /
+               hat_D_KBM_fd in place (so the UFL form keeps pointing at
+               the same Function objects),
+            4. re-solve using the previous solution as the initial guess.
+        Stop when the gate state is unchanged from the previous iteration
+        AND ``‖ne_new - ne_old‖ / ‖ne_old‖ < kbm_picard_tol``, or after
+        ``kbm_picard_max_iters`` iterations.
+
+        Under-relaxation on the KBM coefficients is applied as
+            A_eff = relax * A_new + (1 - relax) * A_old
+        with ``relax = kbm_picard_relax`` initially.  If
+        ``kbm_picard_auto_relax=True``, ``relax`` is halved (down to
+        ``kbm_picard_min_relax``) every time the gate flickers
+        (gate[-1] == gate[-3] != gate[-2]).
+
+        Picard parameters
+        -----------------
+        kbm_picard : bool, default False
+            If False (default) the SNES is run exactly once; behavior is
+            identical to the pre-Picard code path.
+        kbm_picard_max_iters : int, default 20
+            Maximum number of Picard iterations.
+        kbm_picard_tol : float, default 1e-3
+            Relative L2 tolerance on ``hat_n_e`` between Picard iters.
+        kbm_picard_relax : float in (0, 1], default 1.0
+            Initial under-relaxation factor for the KBM coefficient
+            update.  1.0 means no under-relaxation.
+        kbm_picard_auto_relax : bool, default True
+            If True, halve the effective relax factor whenever the gate
+            flickers across iterations.
+        kbm_picard_min_relax : float in (0, 1], default 0.05
+            Floor on the auto-relax factor.
+
         Sets
         ----
         SI-unit attributes (parent-class compatibility):
@@ -489,6 +538,12 @@ class saarelma_connor_nondim(saarelma_connor):
             self.hat_x_sol, self.hat_ne_sol, self.hat_nFC_sol, self.hat_nCX_sol
             self._L_nd, self._n0_nd, self._T0_nd, self._S0_nd
             self._tau_nd, self._V0_nd, self._D0_nd
+
+        Picard diagnostic (only meaningful with ``kbm_picard=True``):
+            self.kbm_picard_info : dict
+                Keys: enabled, converged, n_iters, alpha_bar_history,
+                gate_history, ne_rel_change_history, flicker_count,
+                effective_relax_final.
         """
         if not _FIREDRAKE_AVAILABLE:
             raise ImportError(
@@ -782,7 +837,125 @@ class saarelma_connor_nondim(saarelma_connor):
             ksp_rtol=ksp_rtol,
             ksp_max_it=ksp_max_it,
         )
-        solve(F == 0, u, bcs=bcs, solver_parameters=snes_params)
+
+        # ------------------------------------------------------------------
+        # KBM Picard loop (or single solve if kbm_picard=False).  See the
+        # method docstring for the rationale.
+        # ------------------------------------------------------------------
+        picard_max  = max(1, int(kbm_picard_max_iters)) if kbm_picard else 1
+        picard_tol  = float(kbm_picard_tol)
+        relax_init  = float(kbm_picard_relax)
+        relax_min   = float(kbm_picard_min_relax)
+        auto_relax  = bool(kbm_picard_auto_relax)
+        if not (0.0 < relax_init <= 1.0):
+            raise ValueError(
+                f"kbm_picard_relax must be in (0, 1]; got {relax_init}."
+            )
+        if not (0.0 < relax_min <= 1.0):
+            raise ValueError(
+                f"kbm_picard_min_relax must be in (0, 1]; got {relax_min}."
+            )
+
+        # gate(initial guess) was computed by calc_pressure_quantities_nondim
+        # right above; record it as the starting point of the history.
+        alpha_bar_history    = [float(self.alpha_bar_ped)]
+        gate_history         = [bool(self.alpha_bar_ped > self.alpha_crit)]
+        ne_rel_change_history = []
+        flicker_count        = 0
+        effective_relax      = relax_init
+        picard_converged     = (not kbm_picard)
+        picard_iter          = 0  # will be set in the loop
+
+        for picard_iter in range(picard_max):
+            # Snapshot ne and the KBM coefficient arrays BEFORE this solve.
+            hat_ne_pre = np.array(u.subfunctions[0].dat.data, copy=True)
+            hat_A_pre  = np.array(self._fd_cache["hat_A_KBM_fd"].dat.data, copy=True)
+            hat_B_pre  = np.array(self._fd_cache["hat_B_KBM_fd"].dat.data, copy=True)
+            hat_D_pre  = np.array(self._fd_cache["hat_D_KBM_fd"].dat.data, copy=True)
+
+            solve(F == 0, u, bcs=bcs, solver_parameters=snes_params)
+
+            hat_ne_post = np.asarray(u.subfunctions[0].dat.data)
+            denom = float(np.linalg.norm(hat_ne_pre))
+            rel_change = (
+                float(np.linalg.norm(hat_ne_post - hat_ne_pre) / denom)
+                if denom > 0.0 else float("inf")
+            )
+            ne_rel_change_history.append(rel_change)
+
+            if not kbm_picard:
+                # Single-shot path: identical to the pre-Picard code.
+                picard_converged = True
+                break
+
+            # Recompute KBM from the converged hat_n_e.
+            self.calc_pressure_quantities_nondim(
+                u.subfunctions[0].dat.data,
+                average_alpha_pedestal=True,
+            )
+            alpha_bar_history.append(float(self.alpha_bar_ped))
+            gate_history.append(bool(self.alpha_bar_ped > self.alpha_crit))
+
+            # Gate flicker detector: gate[-1] == gate[-3] != gate[-2]
+            if (auto_relax and len(gate_history) >= 3
+                    and gate_history[-1] == gate_history[-3]
+                    and gate_history[-1] != gate_history[-2]):
+                flicker_count += 1
+                effective_relax = max(relax_min, 0.5 * effective_relax)
+                if v:
+                    print(
+                        f"  [Picard] iter {picard_iter+1}: gate flicker detected "
+                        f"(count={flicker_count}); reducing relax -> "
+                        f"{effective_relax:.3f}"
+                    )
+
+            # Under-relax the KBM coefficient update; overwrite the cached
+            # Function dat data IN PLACE so the UFL form (which holds
+            # references to these Function objects) sees the new values.
+            hat_A_eff = effective_relax * self._hat_A_KBM + (1.0 - effective_relax) * hat_A_pre
+            hat_B_eff = effective_relax * self._hat_B_KBM + (1.0 - effective_relax) * hat_B_pre
+            hat_D_eff = effective_relax * self._hat_D_KBM + (1.0 - effective_relax) * hat_D_pre
+            self._fd_cache["hat_A_KBM_fd"].dat.data[:] = hat_A_eff
+            self._fd_cache["hat_B_KBM_fd"].dat.data[:] = hat_B_eff
+            self._fd_cache["hat_D_KBM_fd"].dat.data[:] = hat_D_eff
+
+            gate_unchanged = (gate_history[-1] == gate_history[-2])
+            if v:
+                print(
+                    f"  [Picard] iter {picard_iter+1}: rel_change={rel_change:.3e}, "
+                    f"alpha_bar={self.alpha_bar_ped:.3e}, "
+                    f"gate={gate_history[-1]} (prev={gate_history[-2]}), "
+                    f"relax={effective_relax:.3f}"
+                )
+
+            if gate_unchanged and rel_change < picard_tol:
+                picard_converged = True
+                break
+
+            # Use the converged solution as the initial guess for the
+            # next Picard iteration.
+            u_prev.assign(u)
+
+        n_iters = picard_iter + 1
+        self.kbm_picard_info = {
+            "enabled":               bool(kbm_picard),
+            "converged":             bool(picard_converged),
+            "n_iters":               int(n_iters),
+            "max_iters":             int(picard_max),
+            "alpha_bar_history":     list(alpha_bar_history),
+            "gate_history":          list(gate_history),
+            "ne_rel_change_history": list(ne_rel_change_history),
+            "flicker_count":         int(flicker_count),
+            "effective_relax_final": float(effective_relax),
+        }
+
+        if v and kbm_picard:
+            status = "converged" if picard_converged else "did NOT converge"
+            print(
+                f"[nondim] KBM Picard {status} in {n_iters}/{picard_max} iters "
+                f"(flickers={flicker_count}, final relax={effective_relax:.3f}, "
+                f"final ne rel change={ne_rel_change_history[-1]:.3e})."
+            )
 
         # ------------------------------------------------------------------
         # Extract converged hat profiles, then recover SI profiles.
