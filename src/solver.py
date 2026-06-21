@@ -3,6 +3,7 @@ from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.integrate import simpson, solve_bvp, cumulative_trapezoid
 import matplotlib.pyplot as plt
 from src.adas.adas_ionisation import scd_adas
+from src.adas.adas_cx import scx_adas
 try:
     from firedrake import (
         IntervalMesh, FunctionSpace, MixedFunctionSpace, Function,
@@ -179,9 +180,9 @@ class saarelma_connor:
         self.V_cx = np.sqrt(2*k_B*self.T_i_K/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
 
         # Load in cross-sections, which are only a function of temperature
-        self.cross_sections(species) # load in cross-sections
-        self.S_i = self.sigma_i # m^3/s, ionization <sigma v> profile on psi_Te_eval (scd_adas already returns the rate coefficient)
-        self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, CX rate coefficient profile on psi_Te_eval
+        self.cross_section_rates(species) # load in cross-sections
+        # self.S_i = self.sigma_i # m^3/s, ionization <sigma v> profile on psi_Te_eval (scd_adas already returns the rate coefficient)
+        # self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, CX rate coefficient profile on psi_Te_eval
 
 
         # Setup for diffusion coefficient that does not include free parameters and n_e
@@ -230,7 +231,7 @@ class saarelma_connor:
 
         if equations_to_solve == 'coupled':
             if nCX_x0 is not None:
-                self.nCX_x0 = nCX_x0 if nCX_x0 is not None 
+                self.nCX_x0 = nCX_x0
             elif ncx_x0_ratio is not None:
                 self.ncx_x0_ratio * self.nFC_x0 # set nCX boundary condition
             else:
@@ -651,7 +652,7 @@ class saarelma_connor:
             self.T_i_K = self.T_i * 1e3 * 11604.52 # K
 
 
-    def cross_sections(self,species='D'):
+    def cross_section_rates(self,species='D'):
         """Calculate the cross-sections for the ionization and charge-exchange cross-sections
         Uses ADAS ADF01 qcx#h0_ex3#h1.dat to interpolate the charge-exchange cross-sections as a function of energy
         Uses ADAS ADF23  to interpolate the ionization cross-sections as a function of energy
@@ -669,19 +670,23 @@ class saarelma_connor:
         if species == 'D':
             
             # charge-exchange cross-section
-            sigma_cx_perE = np.array([3.81*10**(-18), 3.85*10**(-18), 3.44*10**(-18), 2.71*10**(-18), 1.74*10**(-18), 8.10*10**(-20), 9.56*10**(-22), 1.46*10**(-23)]) # m^2
+            '''sigma_cx_perE = np.array([3.81*10**(-18), 3.85*10**(-18), 3.44*10**(-18), 2.71*10**(-18), 1.74*10**(-18), 8.10*10**(-20), 9.56*10**(-22), 1.46*10**(-23)]) # m^2
             E = np.array([3.23*10**(-16), 9.68*10**(-16), 3.23*10**(-15), 6.45*10**(-15), 9.68*10**(-15), 3.23*10**(-14), 9.68*10**(-14), 2.26*10**(-13)]) # J
             sigma_cx_interp = interp1d(E, sigma_cx_perE, kind='linear',fill_value='extrapolate',bounds_error=False)
-            self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i*self.M_eff) * self.V_cx**2) # m^2, charge-exchange cross-section
+            self.sigma_cx = sigma_cx_interp(0.5 * (self.M_i*self.M_eff) * self.V_cx**2) # m^2, charge-exchange cross-section'''
 
             # ionization rate coefficient profile: scd_adas(n_e, T_e[eV]) at each psi_Te_eval point.
+            # also including CX rate coefficients from ADAS ADF11 https://open.adas.ac.uk/detail/adf11/ccd96/ccd96_d.dat
             # n_e is given on psi_ne_eval, so interpolate it onto psi_Te_eval first.
             n_e_at_Te = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear',
-                                 bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval) # NEEDS TO BE CHANGED!
+                                 bounds_error=False, fill_value='extrapolate')(self.psi_Te_eval)
+            n_e_input = np.mean(n_e_at_Te)
             T_e_eV = self.T_e * 1e3 # keV -> eV
-            self.sigma_i = np.array([
-                scd_adas(n_e_at_Te[i], T_e_eV[i]) for i in range(len(self.psi_Te_eval))
+            self.S_i = np.array([
+                # scd_adas(n_e_at_Te[i], T_e_eV[i]) for i in range(len(self.psi_Te_eval))
+                scd_adas(n_e_input, T_e_eV[i]) for i in range(len(self.psi_Te_eval))
             ]) # m^3/s, on psi_Te_eval
+            self.S_cx = scx_adas(np.ones_like(T_e_eV) * n_e_input, T_e_eV)
 
         else:
             assert False, 'species not supported'
