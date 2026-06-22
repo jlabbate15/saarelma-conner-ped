@@ -385,7 +385,7 @@ class saarelma_connor_nondim(saarelma_connor):
         self, hat_ne, hat_T_fd, hat_dT_dx_fd,
         hat_alpha_nodp_fd, hat_G_KBM_fd,
         alpha_crit_c, gate_eps_c,
-        boundary=False, hat_dne_dx_inner_c=None,
+        boundary=False, hat_dne_dx_inner_c=None, average_alpha_pedestal=True,
     ):
         """Build the inline (trial-dependent) UFL expressions for the
         Connor-Hastie ``alpha``, the smoothed KBM gate, and the
@@ -414,6 +414,11 @@ class saarelma_connor_nondim(saarelma_connor):
             is needed in the Neumann-flux ds(1) contribution to F1).
             Otherwise use the volume trial derivative ``hat_ne.dx(0)``.
         """
+
+        # currently not including average alpha pedestal to keep fully consistent
+        if average_alpha_pedestal:
+            print("Currently not supporting average alpha pedestal in inline KBM treatment")
+        
         if boundary:
             ne_dx_here = hat_dne_dx_inner_c
         else:
@@ -421,9 +426,7 @@ class saarelma_connor_nondim(saarelma_connor):
         alpha_ufl = hat_alpha_nodp_fd * (
             hat_T_fd * ne_dx_here + hat_ne * hat_dT_dx_fd
         )
-        gate_ufl = 0.5 * (
-            1.0 + fd_tanh((alpha_ufl - alpha_crit_c) / gate_eps_c)
-        )
+        gate_ufl = 0.5 * (1.0 + fd_tanh((alpha_ufl - alpha_crit_c) / gate_eps_c)) # smoothed Heaviside gate
         hat_A_KBM_ufl = -gate_ufl * alpha_crit_c * hat_G_KBM_fd
         hat_B_KBM_ufl =  gate_ufl * hat_alpha_nodp_fd * hat_G_KBM_fd
         return alpha_ufl, gate_ufl, hat_A_KBM_ufl, hat_B_KBM_ufl
@@ -526,6 +529,7 @@ class saarelma_connor_nondim(saarelma_connor):
                       nCX_ic="solve",
                       kbm_treatment="inline",
                       kbm_gate_eps=None,
+                      average_alpha_pedestal=True,
                       verbose=None):
         """Non-dimensional Firedrake solver for the coupled three-equation
         Saarelma--Connor neutral-transport pedestal model.
@@ -711,7 +715,7 @@ class saarelma_connor_nondim(saarelma_connor):
         # ------------------------------------------------------------------
         self.calc_pressure_quantities_nondim(
             ne_init / self._n0_nd,
-            average_alpha_pedestal=True,
+            average_alpha_pedestal=average_alpha_pedestal,
         )
 
         # use the initial guess for ne to get the initial guess for nFC from Eq. (14) in Saarelma et al. (2023)
@@ -946,6 +950,7 @@ class saarelma_connor_nondim(saarelma_connor):
                 self._fd_cache["hat_G_KBM_fd"],
                 alpha_crit_c, gate_eps_c,
                 boundary=False,
+                average_alpha_pedestal=average_alpha_pedestal,
             )
             # Boundary terms (Neumann ds(1)): the prescribed slope is
             # substituted for hat_n_e' inside alpha so the gate at the
@@ -960,6 +965,7 @@ class saarelma_connor_nondim(saarelma_connor):
                 alpha_crit_c, gate_eps_c,
                 boundary=True,
                 hat_dne_dx_inner_c=hat_dne_dx_inner_c,
+                average_alpha_pedestal=average_alpha_pedestal,
             )
 
         F1 = self._build_f1_weak_form_nondim(

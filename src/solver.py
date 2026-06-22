@@ -179,7 +179,7 @@ class saarelma_connor:
         self.V_FC = np.sqrt(8*E_FC/((np.pi**2) * M_i*self.M_eff)) # m/s
         self.V_cx = np.sqrt(2*k_B*self.T_i_K/(np.pi * M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
 
-        # Load in cross-sections, which are only a function of temperature
+        # Load in cross-section rates, which are only a function of temperature if we use an average density (predictive models could provide a guess density)
         self.cross_section_rates(species) # load in cross-sections
         # self.S_i = self.sigma_i # m^3/s, ionization <sigma v> profile on psi_Te_eval (scd_adas already returns the rate coefficient)
         # self.S_cx = self.sigma_cx * self.V_th_i # m^3/s, CX rate coefficient profile on psi_Te_eval
@@ -2561,12 +2561,15 @@ class saarelma_connor:
         self.bt = np.array(self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2])
 
 
-    def feed_epednn(self):
+    def feed_epednn(self, ne=None):
         """Feed the pedestal pressure and width to the EPEDNN model"""
         
         # Define inputs in Python
         # These map exactly to the InputEPED struct we saw in the Julia code
-        self.neped = interp1d(self.x_sol, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
+        if ne==None:
+            self.neped = interp1d(self.x_sol, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
+        else:
+            self.neped = ne
         self.calc_betan()
         inputs = {
             "a": float(self.a),           # Minor radius (m)
