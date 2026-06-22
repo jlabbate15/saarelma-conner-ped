@@ -10,9 +10,6 @@ from src.solver_nondim import saarelma_connor_nondim
 
 # Global parameters
 equil_num = 100
-err_frac = 0.15
-perc_success = 0.95
-bc_type = "neumann"
 
 # Scan parameters
 N = 5 # size of each free parameter array
@@ -39,7 +36,7 @@ SOLVE_KW = dict(
     x_res=x_res,
     fe_degree=2,
     initial_guess="tanh",
-    ne_inner_bc=bc_type,   # Saarelma A7 default; see dirichlet comparison below
+    ne_inner_bc="neumann",   # Saarelma A7 default; see dirichlet comparison below
     linear_solver="lu",      # or "gamg" for GMRES + algebraic multigrid on J
     nCX_ic="solve",
     kbm_treatment="inline",
