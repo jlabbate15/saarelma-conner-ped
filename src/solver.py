@@ -2606,4 +2606,4 @@ class saarelma_connor:
         self.pedestal_pressure = solution.pressure.GH.H  # in MPa
         self.pedestal_width = solution.width.GH.H        # in normalized poloidal flux
 
-        return {"pedestal_pressure": self.pedestal_pressure, "pedestal_width": self.pedestal_width}
+        return self.pedestal_pressure, self.pedestal_width

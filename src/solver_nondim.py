@@ -299,7 +299,7 @@ class saarelma_connor_nondim(saarelma_connor):
     # Pressure / KBM coefficients in non-dim units
     # ------------------------------------------------------------------
 
-    def calc_pressure_quantities_nondim(self, hat_n_e, average_alpha_pedestal=True):
+    def calc_pressure_quantities_nondim(self, hat_n_e, average_alpha_pedestal=False):
         """Non-dim version of :meth:`saarelma_connor.calc_pressure_quantities`.
 
         Computes the pedestal-averaged Connor-Hastie alpha in physical
@@ -354,6 +354,7 @@ class saarelma_connor_nondim(saarelma_connor):
             A_KBM_si = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
             B_KBM_si = np.where(gate, G_KBM * alpha_nodp, 0.0)
         else:
+            self.alpha_bar_ped = np.nan
             gate = _alpha > self.alpha_crit
             D_KBM_si = np.where(gate, (_alpha - self.alpha_crit) * G_KBM, 0.0)
             A_KBM_si = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
@@ -385,7 +386,7 @@ class saarelma_connor_nondim(saarelma_connor):
         self, hat_ne, hat_T_fd, hat_dT_dx_fd,
         hat_alpha_nodp_fd, hat_G_KBM_fd,
         alpha_crit_c, gate_eps_c,
-        boundary=False, hat_dne_dx_inner_c=None, average_alpha_pedestal=True,
+        boundary=False, hat_dne_dx_inner_c=None, average_alpha_pedestal=False,
     ):
         """Build the inline (trial-dependent) UFL expressions for the
         Connor-Hastie ``alpha``, the smoothed KBM gate, and the
@@ -529,7 +530,7 @@ class saarelma_connor_nondim(saarelma_connor):
                       nCX_ic="solve",
                       kbm_treatment="inline",
                       kbm_gate_eps=None,
-                      average_alpha_pedestal=True,
+                      average_alpha_pedestal=False,
                       verbose=None):
         """Non-dimensional Firedrake solver for the coupled three-equation
         Saarelma--Connor neutral-transport pedestal model.

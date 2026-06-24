@@ -25,10 +25,9 @@ x_res = 40
 P_tot_e = 5e6 # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
 
 # Output data and files
-ROOT = Path.cwd().parent.parent # /Users/nelsonlab/codes/saarelma-conner-ped
-GEQDSK_DIR = Path("/Users/nelsonlab/codes/sc_inputs/saarelma-connor-inputs/CAKEgeqdsks")
-PFILE_DIR = Path("/Users/nelsonlab/codes/sc_inputs/saarelma-connor-inputs/CAKEpfiles")
-scan_success_dir = Path('scan_results_eqdbOak_100/')
+GEQDSK_DIR = Path("/mnt/homes_global/jal2351/software/sc_inputs/CAKEgeqdsks")
+PFILE_DIR = Path("/mnt/homes_global/jal2351/software/sc_inputs/CAKEpfiles")
+scan_success_dir = Path('scan_results_eqdbOak_100_5/')
 verbose = False
 
 # Solver parameters
@@ -120,6 +119,7 @@ equilibria = initialize_inputs(equil_num)
 # sample n_psi_inner_pts boundaries within that range.
 n_iter = 0
 for eq_idx, (mhd_fp, kprof_fp) in enumerate(equilibria):
+    print(f"Equilibrium {eq_idx + 1}/{len(equilibria)}: {mhd_fp}, {kprof_fp}")
 
     eq_tag = Path(mhd_fp).name[1:]  # e.g. "150840.03000"
     eq_dir = scan_success_dir / eq_tag
