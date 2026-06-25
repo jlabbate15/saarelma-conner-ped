@@ -633,6 +633,7 @@ class saarelma_connor_nondim(saarelma_connor):
             dne_dx_inner_val = float(np.interp(self.x_inner, self.x_init, dne_dx_pres))
         elif bc_origin == "user":
             ne_inner_val = float(ne_inner)
+            self.ne_inner = ne_inner_val
             dne_dx_inner_val = float(dne_dx_inner)
         elif bc_origin == "p-file user combo":
             if ne_inner_bc == "neumann": # user specifies n_e(x_inner)

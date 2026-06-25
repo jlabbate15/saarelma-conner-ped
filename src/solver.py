@@ -257,6 +257,7 @@ class saarelma_connor:
                            nFC_threshold=None, nCX_threshold=None,
                            psi_N_inner_boundary=None,
                            ncx_x0_ratio=None,
+                           ne_inner=None, dne_dx_inner=None, ne_x0=None,
                            clear_solution=False):
         """Update free parameters.
 
@@ -281,6 +282,15 @@ class saarelma_connor:
             forced to None for this run).
         ncx_x0_ratio : float, optional
             Override the ratio of nCX at the separatrix to nFC at the separatrix (used in coupled solver).
+            If omitted, keeps the value from construction.
+        ne_inner : float, optional
+            Override the electron density at the inner boundary.
+            If omitted, keeps the value from construction.
+        dne_dx_inner : float, optional
+            Override the derivative of the electron density at the inner boundary.
+            If omitted, keeps the value from construction.
+        ne_x0 : float, optional
+            Override the electron density at the outer boundary.
             If omitted, keeps the value from construction.
         clear_solution : bool, default True
             If True, drop cached BVP solution attributes from a previous
@@ -310,6 +320,13 @@ class saarelma_connor:
                           'exp_term_arr', 'nFC_sol', 'integral_from_0'):
                 if hasattr(self, _attr):
                     delattr(self, _attr)
+
+        if ne_inner is not None:
+            self.ne_inner = ne_inner
+        if dne_dx_inner is not None:
+            self.dne_dx_inner = dne_dx_inner
+        if ne_x0 is not None:
+            self.ne_x0 = ne_x0
 
         if self.equations_to_solve == 'coupled':
             self.invalidate_firedrake_cache()

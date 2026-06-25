@@ -40,7 +40,7 @@ SOLVE_KW = dict(
     nCX_ic="solve",
     kbm_treatment="inline",
     kbm_gate_eps=0.1, # 1e-3 minimum
-    verbose=False,
+    verbose=verbose,
 )
 
 sys.path.insert(0, str(ROOT))
