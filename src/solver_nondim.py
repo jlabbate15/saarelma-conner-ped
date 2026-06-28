@@ -671,6 +671,7 @@ class saarelma_connor_nondim(saarelma_connor):
             )
         )
         x_dofs_si = self._from_hat_x(hat_x_dofs)  # m
+        self.x_dofs_si = x_dofs_si
         x_left_si = -self._L_nd
         x_right_si = 0.0
 

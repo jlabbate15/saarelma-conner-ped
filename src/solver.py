@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.integrate import simpson, solve_bvp, cumulative_trapezoid
@@ -315,18 +316,18 @@ class saarelma_connor:
             self.ncx_x0_ratio = ncx_x0_ratio
             self.nCX_x0 = self.ncx_x0_ratio * self.nFC_x0
 
-        if clear_solution:
-            for _attr in ('sol', 'sol_first', 'x_sol', 'ne_sol', 'dne_dx_sol',
-                          'exp_term_arr', 'nFC_sol', 'integral_from_0'):
-                if hasattr(self, _attr):
-                    delattr(self, _attr)
-
         if ne_inner is not None:
             self.ne_inner = ne_inner
         if dne_dx_inner is not None:
             self.dne_dx_inner = dne_dx_inner
         if ne_x0 is not None:
             self.ne_x0 = ne_x0
+
+        if clear_solution:
+            for _attr in ('sol', 'sol_first', 'x_sol', 'ne_sol', 'dne_dx_sol',
+                          'exp_term_arr', 'nFC_sol', 'integral_from_0'):
+                if hasattr(self, _attr):
+                    delattr(self, _attr)
 
         if self.equations_to_solve == 'coupled':
             self.invalidate_firedrake_cache()
@@ -708,73 +709,6 @@ class saarelma_connor:
         else:
             assert False, 'species not supported'
 
-    def calc_volavgP(self):
-        """Calculate the volume-averaged pressure
-
-        Parameters
-        ----------
-        self : object
-            instance of saarelma_connor class
-
-        Sets
-        ----
-        self.volavgP : float
-            Volume-averaged pressure (same units as self.pres).
-        """
-
-        dV_dpsi = np.gradient(self.V_plasma, self.psi_N_pres)
-
-        if self.EPEDNN_betan == 'pfile':
-            pressure = (self.n_e_pres * (self.T_e_pres + self.T_i_pres)) * 1.60218e-19 # Pa
-            self.volavgP = (simpson(pressure * dV_dpsi, self.psi_N_pres)
-                            / simpson(dV_dpsi, self.psi_N_pres))
-        else:
-            assert False, 'EPEDNN_betan method not supported'
-
-            # In the future, the code below will be stitched with a core simulation
-            """
-            T_tot_xdofs = self.T_e_xdofs
-            if self.T_rat_flag: # use both electron and ion temperatures, neglect neutrals
-                T_i_xdofs = np.interp(self.x_sol, self.x_init, self.T_i_pres)
-                T_tot_xdofs = T_tot_xdofs + T_i_xdofs
-            ne = self.ne_sol + core_n_e
-            pressure = self.ne_sol * T_tot_xdofs * 1.60218e-19  # Pa, assuming quasi-neutrality
-
-            psi_N_xdofs = np.interp(self.x_sol, self.x_init, self.psi_N_pres) # convert x_dofs to psi_N
-            pressure = np.interp(self.psi_N_pres, psi_N_xdofs, pressure) # Pa on psi_N_pres grid
-
-            self.volavgP = (simpson(pressure * dV_dpsi, self.psi_N_pres)
-                            / simpson(dV_dpsi, self.psi_N_pres))
-            """
-
-
-    def calc_betan(self):
-        """Calculate the normalized beta
-
-        Parameters
-        ----------
-        self : object
-            instance of saarelma_connor class
-
-        Sets
-        -------
-        self.Betan : float
-            Normalized beta, dimensionless
-        """
-
-        self.calc_volavgP()
-
-        _, [B_R, B_Z, _] = self.calc_B(self.eq['rzout'][:, 0], self.eq['rzout'][:, 1])
-        bp_lcfs = np.sqrt(B_R**2 + B_Z**2)
-        bp_avg = np.mean(bp_lcfs)
-
-        betat = self.volavgP / (self.bt**2 / (2 * self.mu0))
-        self.betat = betat
-        # betap = self.volavgP / (bp_avg**2 / (2 * self.mu0))
-        # beta = ((1/betat) + (1/betap))**(-1)
-
-        # EPED / Troyon: β_N = β_t[%] * a * abs(B_t) [T] / I_p[MA] -> this is what OpenFUSIONToolkit uses for β_N
-        self.betan = 100 * betat * (self.a * abs(self.bt) / self.Ip)
 
     def form_factor(self,x,type = 'ex'):
         """Calculate the form factor for FC or charge-exchange cases
@@ -2497,8 +2431,104 @@ class saarelma_connor:
         return A_interp(self.psi_RZ_N)
 
 
+
+    def calc_volavgP(self,x_epednn,ne_pedestal,EPEDNN_core='pfile'):
+        """Calculate the volume-averaged pressure
+
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+        x_epednn : array
+            x values at which the EPEDNN model is evaluated
+        ne_pedestal : array
+            pedestal density profile
+        EPEDNN_core : string
+            'pfile' 
+
+        Sets
+        ----
+        self.volavgP : float
+            Volume-averaged pressure (same units as self.pres).
+        """
+
+        if EPEDNN_core == 'pfile':
+            # Calculate core n_e
+            psi_N_core = np.linspace(0, self.psi_N_inner_boundary, 75)
+            n_e_core = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_core)
+            
+            # Calculate total n_e and T_e
+            psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_dofs_si)
+            psi_N_plasma = np.concatenate([psi_N_core, psi_N_ped])
+            n_e_plasma = np.concatenate([n_e_core, ne_pedestal])
+
+            # x_dofs_si is in Firedrake DOF order (not spatial); sort to psi_N
+            # before np.gradient (same issue as dpdx in update_alpha).
+            sort_idx = np.argsort(psi_N_plasma)
+            psi_N_plasma = psi_N_plasma[sort_idx]
+            n_e_plasma = n_e_plasma[sort_idx]
+            _, uniq_idx = np.unique(psi_N_plasma, return_index=True)
+            psi_N_plasma = psi_N_plasma[uniq_idx]
+            n_e_plasma = n_e_plasma[uniq_idx]
+
+            T_tot_plasma = interp1d(self.psi_N_pres, self.T_e_pres + self.T_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
+
+            # Calculate pressure and volavgP
+            V_full_plasma = interp1d(self.psi_N_pres, self.V_plasma, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
+            dV_dpsi = np.gradient(V_full_plasma, psi_N_plasma)
+            pressure = (n_e_plasma * (2 * T_tot_plasma)) * 1.60218e-19 # Pa
+            self.volavgP = (simpson(pressure * dV_dpsi, psi_N_plasma)
+                            / simpson(dV_dpsi, psi_N_plasma))
+        else:
+            assert False, 'EPEDNN_betan method not supported'
+
+            # In the future, the code below will be stitched with a core simulation
+            """
+            T_tot_xdofs = self.T_e_xdofs
+            if self.T_rat_flag: # use both electron and ion temperatures, neglect neutrals
+                T_i_xdofs = np.interp(self.x_sol, self.x_init, self.T_i_pres)
+                T_tot_xdofs = T_tot_xdofs + T_i_xdofs
+            ne = self.ne_sol + core_n_e
+            pressure = self.ne_sol * T_tot_xdofs * 1.60218e-19  # Pa, assuming quasi-neutrality
+
+            psi_N_xdofs = np.interp(self.x_sol, self.x_init, self.psi_N_pres) # convert x_dofs to psi_N
+            pressure = np.interp(self.psi_N_pres, psi_N_xdofs, pressure) # Pa on psi_N_pres grid
+
+            self.volavgP = (simpson(pressure * dV_dpsi, self.psi_N_pres)
+                            / simpson(dV_dpsi, self.psi_N_pres))
+            """
+
+
+    def calc_betan(self,x_epednn,ne_pedestal,EPEDNN_core='pfile'):
+        """Calculate the normalized beta
+
+        Parameters
+        ----------
+        self : object
+            instance of saarelma_connor class
+
+        Sets
+        -------
+        self.Betan : float
+            Normalized beta, dimensionless
+        """
+
+        self.calc_volavgP(x_epednn,ne_pedestal,EPEDNN_core)
+
+        _, [B_R, B_Z, _] = self.calc_B(self.eq['rzout'][:, 0], self.eq['rzout'][:, 1])
+        bp_lcfs = np.sqrt(B_R**2 + B_Z**2)
+        bp_avg = np.mean(bp_lcfs)
+
+        betat = self.volavgP / (self.bt**2 / (2 * self.mu0))
+        self.betat = betat
+        # betap = self.volavgP / (bp_avg**2 / (2 * self.mu0))
+        # beta = ((1/betat) + (1/betap))**(-1)
+
+        # EPED / Troyon: β_N = β_t[%] * a * abs(B_t) [T] / I_p[MA] -> this is what OpenFUSIONToolkit uses for β_N
+        self.betan = 100 * betat * (self.a * abs(self.bt) / self.Ip)
+
     def setup_epednn(self):
-        """Once a pedestal density profile is calculated, feed this profile to EPED and run EPED or EPEDNN to determine pedestal pressure height and width
+        """Setup the EPEDNN model with quantities from the Saarelma-Connor setup
 
         Parameters
         ----------
@@ -2522,12 +2552,21 @@ class saarelma_connor:
 
         # 1. Tell juliapkg to add your local EPEDNN package in development mode.
         # This registers it with the isolated Julia environment PythonCall uses.
-        # Pass the UUID explicitly here:
+        epednn_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "dependencies",
+            "EPEDNN.jl",
+        )
+        if not os.path.isdir(epednn_path):
+            raise FileNotFoundError(
+                f"EPEDNN.jl not found at {epednn_path}. "
+                "Initialize it with: git submodule update --init dependencies/EPEDNN.jl"
+            )
         juliapkg.add(
-            "EPEDNN", 
-            uuid="e64856f0-3bb8-4376-b4b7-c03396503991", 
-            path="/Users/nelsonlab/codes/saarelma-conner-ped/dependencies/EPEDNN.jl", 
-            dev=True
+            "EPEDNN",
+            uuid="e64856f0-3bb8-4376-b4b7-c03396503991",
+            path=epednn_path,
+            dev=True,
         )
 
         # 2. Resolve and instantiate. THIS is what fixes your missing dependency error!
@@ -2563,6 +2602,17 @@ class saarelma_connor:
 
             #Then in Julia: 
             using EPEDNN
+
+
+            Make sure that EPEDNN submodule is installed, the General Julia package registry is installed, and juliacall and juliapkg are installed.
+            The following commands may help:
+
+            pip install juliapkg
+            git submodule update --init dependencies/EPEDNN.jl
+            # Only needed if juliapkg fails on registry download:
+            git clone --depth 1 https://github.com/JuliaRegistries/General.git \
+            ~/.julia/registries/General
+            pip install juliacall
         '''
         # you can run Julia commands in Python using jl.seval('command')
         # jl.seval('using Pkg')
@@ -2578,16 +2628,22 @@ class saarelma_connor:
         self.bt = np.array(self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2])
 
 
-    def feed_epednn(self, ne=None):
-        """Feed the pedestal pressure and width to the EPEDNN model"""
+    def feed_epednn(self, ne_ped=None, x_epednn=None, EPEDNN_core='pfile'):
+        """Feed the Saarelma-Connor solution to the EPEDNN model"""
         
         # Define inputs in Python
         # These map exactly to the InputEPED struct we saw in the Julia code
-        if ne==None:
+        if ne_ped==None:
+            ne_pedestal = self.ne_sol # full pedestal density profile
             self.neped = interp1d(self.x_sol, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
+            x_epednn = self.x_sol
         else:
-            self.neped = ne
-        self.calc_betan()
+            self.neped = ne_ped
+            if x_epednn==None:
+                assert False, 'x_epednn must be provided if ne_ped is provided'
+            self.x_epednn = x_epednn
+        self.calc_betan(x_epednn,ne_pedestal,EPEDNN_core)
+
         inputs = {
             "a": float(self.a),           # Minor radius (m)
             "betan": float(self.betan[0]),       # Normalized beta
