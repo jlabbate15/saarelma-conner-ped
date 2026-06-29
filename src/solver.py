@@ -116,6 +116,9 @@ class saarelma_connor:
         kprof_loc = 'p', # location of kinetic parameters, currently supporting: p-file
         mhd_fp = None, # filepath to MHD paramter file
         kprof_fp = None, # filepath to kinetic paramter file
+        T_e_source = 'pfile', # source of the electron temperature profile, currently supporting: 'pfile', 'epednn'
+        T_prof = None, # temperature profile, currently supporting: 'pfile', 'epednn'
+        T_prof_psi_N = None, # psi_N values at which T_e is evaluated if using the EPEDNN model
         T_rat_flag = True, # True if using a temperature ratio between ions and electrons, False if doing something else
         T_rat = 1,
         pol_norm = False, # True for when the poloidal flux is not normalized by 2pi. COCOS 7 convention is pol_norm=False, so poloidal flux is normalized by 2pi
@@ -128,6 +131,7 @@ class saarelma_connor:
     ):
 
         # User-specified flags
+        self.T_e_source = T_e_source
         self.equations_to_solve = equations_to_solve
         self.error_check = error_check
         self.T_rat_flag = T_rat_flag
@@ -160,7 +164,7 @@ class saarelma_connor:
 
         # Load in quantities
         self.mhd_load(mhd_loc,mhd_fp) # load in MHD quantities
-        self.kprof_load(kprof_loc,kprof_fp) # load in kinetic quantities
+        self.kprof_load(kprof_loc,kprof_fp,T_prof=T_prof,T_prof_psi_N=T_prof_psi_N) # load in kinetic quantities
 
         # TEMPERATURE IS GIVEN AS AN INPUT TO THIS MODEL
         
@@ -617,7 +621,7 @@ class saarelma_connor:
 
             self.plasma_surface_area_and_volume()
 
-    def kprof_load(self,kprof_loc='p',kprof_fp=None):
+    def kprof_load(self,kprof_loc='p',kprof_fp=None,T_prof=None,T_prof_psi_N=None):
         """Load kinetic equilibrium parameters using method specified by kprof_loc flag. 
         Parameters that will be loaded include: T_e, n_e
         Calculates: dn_e/dx|x=-inf, T_i
@@ -630,7 +634,10 @@ class saarelma_connor:
             which method to use to load kinetic parameters.
         kprof_fp : string
             filepath to kprof_loc-type file with kinetic parameters.
-             
+        T_prof : string
+            temperature profile if using the EPEDNN model
+        T_prof_psi_N : array
+            psi_N values at which T_e is evaluated if using the EPEDNN model
         """
 
         if kprof_loc == 'p':
@@ -657,10 +664,15 @@ class saarelma_connor:
             # Extract profiles
             pf = read_pfile(kprof_fp)
             self.n_e_pfile = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
-            self.T_e = pf['te(KeV)'] # T_e values (keV) evaluated at psi_Te_eval
-            self.T_e_K = self.T_e * 1e3 * 11604.52 # T_e values (K) evaluated at psi_Te_eval
             self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated]
-            self.psi_Te_eval = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
+            if self.T_e_source == 'pfile':
+                self.T_e = pf['te(KeV)'] # T_e values (keV) evaluated at psi_Te_eval
+                self.psi_Te_eval = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
+            elif self.T_e_source == 'epednn':
+                assert T_prof is not None, 'T_prof must be provided if T_e_source is epednn'
+                self.T_e = T_prof # keV
+                self.psi_Te_eval = T_prof_psi_N # psi_N values at which T_e is evaluated
+            self.T_e_K = self.T_e * 1e3 * 11604.52 # T_e values (K) evaluated at psi_Te_eval
 
         else:
             assert False, 'kprof_loc method not supported'
@@ -2458,7 +2470,8 @@ class saarelma_connor:
             n_e_core = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_core)
             
             # Calculate total n_e and T_e
-            psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_dofs_si)
+            # psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_dofs_si)
+            psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_epednn)
             psi_N_plasma = np.concatenate([psi_N_core, psi_N_ped])
             n_e_plasma = np.concatenate([n_e_core, ne_pedestal])
 
@@ -2633,16 +2646,17 @@ class saarelma_connor:
         
         # Define inputs in Python
         # These map exactly to the InputEPED struct we saw in the Julia code
-        if ne_ped==None:
-            ne_pedestal = self.ne_sol # full pedestal density profile
-            self.neped = interp1d(self.x_sol, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
-            x_epednn = self.x_sol
+        if ne_ped is None:
+            self._neped = interp1d(self.x_sol, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
+            self._x_epednn = self.x_sol
         else:
-            self.neped = ne_ped
-            if x_epednn==None:
+            self._neped = ne_ped
+            if x_epednn is None:
                 assert False, 'x_epednn must be provided if ne_ped is provided'
-            self.x_epednn = x_epednn
-        self.calc_betan(x_epednn,ne_pedestal,EPEDNN_core)
+            self._x_epednn = x_epednn
+        self.calc_betan(self._x_epednn,self._neped,EPEDNN_core)
+
+        ne_ped_h = interp1d(self._x_epednn, self._neped, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
 
         inputs = {
             "a": float(self.a),           # Minor radius (m)
@@ -2652,7 +2666,7 @@ class saarelma_connor:
             "ip": float(self.Ip),          # Plasma current (MA)
             "kappa": float(self.kappa),       # Elongation
             "m": float(self.M_eff),           # Effective mass (must be 2.0 for D or 2.5 for D-T)
-            "neped": float(self.neped),       # Pedestal density (in 10^19 m^-3)
+            "neped": float(ne_ped_h),       # Pedestal density (in 10^19 m^-3)
             "r": float(self.Rmajor),           # Major radius (m)
             "zeffped": float(self.Z_i)      # Effective charge
         }

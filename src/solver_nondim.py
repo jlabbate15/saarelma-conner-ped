@@ -834,7 +834,7 @@ class saarelma_connor_nondim(saarelma_connor):
             self._interp_si_to_hat(hat_x_dofs, T_e_J + T_i_J) / self._T0_nd
         )
         # d hat_T / d hat_x = (L / T0) * d (T_e + T_i) / dx
-        dT_dx_J_arr = np.gradient(T_e_J + T_i_J, self.x_init)
+        dT_dx_J_arr = np.gradient(T_e_J + T_i_J, self.x_init) # gradient just on pedestal grid
         hat_dT_dx_arr = (
             self._interp_si_to_hat(hat_x_dofs, dT_dx_J_arr)
             * self._L_nd / self._T0_nd

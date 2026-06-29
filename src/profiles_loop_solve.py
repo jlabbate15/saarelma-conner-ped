@@ -21,14 +21,14 @@ def profiles_loop_solve(
     error_messages_fp = 'error_messages_PTHmode.txt',
     initial_guess = "tanh",
     ne_inner_bc = "neumann",
-    x_res = 20,
+    x_res = 40,
     N = 3, # Saarelma-Connor free param scan size
     P_tot_e = 5e6, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
     psi_N_inner = 0.85,
     alpha_crits_minmax = [-1,1],
     C_KBMs_minmax = [-1,1],
     De_chie_etgs_minmax = [-1,1],
-    nFC_x0s_minmax = [14,17],
+    nFC_x0s_minmax = [14,18],
     ncx_x0_ratios_minmax = [0.1,1.25],
     eped_tol_max = 1e-3,
     eped_iter_max = 50,
@@ -69,6 +69,7 @@ def profiles_loop_solve(
             De_chie_etg  = round(float(De_chie_etgs[0]), 3),
             nFC_x0       = round(float(nFC_x0s[0]), 3),
             ncx_x0_ratio = round(float(ncx_x0_ratios[0]), 3),
+            psi_N_inner_boundary = psi_N_inner,
             mhd_fp       = MHD_FP,
             kprof_fp     = KPROF_FP,
             verbose      = verbose,
@@ -104,22 +105,13 @@ def profiles_loop_solve(
                                                 de = round(float(De_chie_etg), 3)
                                                 nf = round(float(nFC_x0), 3)
                                                 nc = round(float(ncx_x0_ratio),3)
-
-                                                base_model.update_free_params(
-                                                        alpha_crit    = ac,
-                                                        C_KBM         = ck,
-                                                        De_chie_etg   = de,
-                                                        nFC_x0        = nf,
-                                                        ncx_x0_ratio  = nc,
-                                                )
                                                 try:
                                                         base_model.update_free_params(
                                                                 alpha_crit            = ac,
                                                                 C_KBM                 = ck,
                                                                 De_chie_etg           = de,
                                                                 nFC_x0                = nf,
-                                                                psi_N_inner_boundary  = psi_N_inner,
-                                                                ncx_x0_ratio  = nc,
+                                                                ncx_x0_ratio          = nc,
                                                         )
                                                         x_sol, ne_sol, nFC_sol, nCX_sol = base_model.solve_coupled_nondim(**SOLVE_KW)
                                                         sol = {'x': x_sol, 'y': ne_sol, 'nFC': nFC_sol, 'nCX': nCX_sol}
@@ -175,7 +167,8 @@ def profiles_loop_solve(
 
             # Sweep .npy successes, keep minimum-L2 profile
             best_l2 = np.inf
-            best_x = best_ne = None
+            best_x = None
+            best_ne = None
             for npy_path in Path(ne_success_fp).glob("ne_*.npy"):
                 sol_i = np.load(npy_path, allow_pickle=True).item()
                 x_i = np.asarray(sol_i['x'], dtype=float)
@@ -191,10 +184,11 @@ def profiles_loop_solve(
 
         # --- Feed best profile into EPEDNN --------------------------------
         if eped_iter == 0:
-            pedestal_height_prev = pedestal_width_prev = 0.0
+            pedestal_height_prev = 0.0
+            pedestal_width_prev = 0.0
         else:
             pedestal_height_prev, pedestal_width_prev = pedestal_height, pedestal_width
-        pedestal_height, pedestal_width = base_model.feed_epednn(ne=best_ne)
+        pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_epednn=best_x)
         print(f"Pedestal height: {pedestal_height} MPa, Pedestal width: {pedestal_width} (psi_N)")
 
         if eped_iter > 0:
@@ -207,9 +201,9 @@ def profiles_loop_solve(
         # --- New T_e profile (EPED1 tanh form, Eq. 1b without core H term) ---
         #   T(psi) = T_sep + aT0 * { tanh[2(1 - psi_mid)/Delta]
         #                          - tanh[2(psi - psi_mid)/Delta] }
-        # psi_mid = 1 - Delta/2; aT0 fixed so T(psi_ped) = Te_ped derived from
-        # the EPED pedestal-top total pressure assuming Ti = Te, Zeff ~ 1
-        # (p_ped = 2 * ne_ped * Te_ped).
+        # On [psi_ped, 1] the tanh shape peaks at psi_ped; aT0 is fixed so
+        # T(psi_ped) = Te_ped derived from EPED pedestal pressure (p_ped =
+        # 2 * ne_ped * Te_ped, Ti = Te, Zeff ~ 1).
         Delta = float(pedestal_width)
         psi_mid = 1.0 - 0.5 * Delta
         psi_ped = 1.0 - Delta
@@ -218,22 +212,69 @@ def profiles_loop_solve(
                                         psi_to_x(psi_ped)))
         T_sep_eV = float(np.asarray(base_model.T_e)[-1] * 1e3)  # keV -> eV
         eV_to_J = 1.602176634e-19
-        Te_ped_eV = float(pedestal_height) * 1.0e6 / (2.0 * ne_ped_val) / eV_to_J
-        aT0 = (Te_ped_eV - T_sep_eV) / (2.0 * np.tanh(1.0))
-        Te_psi_grid = T_sep_eV + aT0 * (
-            np.tanh(2.0 * (1.0 - psi_mid) / Delta)
-            - np.tanh(2.0 * (psi_ped_grid - psi_mid) / Delta)
-        )
+        Te_ped_eV = (float(pedestal_height) * 1.0e6 / (2.0 * ne_ped_val)) / eV_to_J
+        tanh_peak = 2.0 * np.tanh(1.0)  # shape-function maximum on [psi_ped, 1]
+        aT0 = (Te_ped_eV - T_sep_eV) / tanh_peak
 
-        if verbose:
+        def _eped1_tanh_Te(psi_N):
+            return T_sep_eV + aT0 * (
+                np.tanh(2.0 * (1.0 - psi_mid) / Delta)
+                - np.tanh(2.0 * (psi_N - psi_mid) / Delta)
+            )
+
+        # EPED tanh only on the pedestal strip [psi_ped, 1]; splice onto p-file core.
+        psi_tanh = np.linspace(psi_ped, 1.0, x_res)
+        Te_tanh_eV = _eped1_tanh_Te(psi_tanh)
+
+        psi_prev = np.asarray(base_model.psi_Te_eval, dtype=float)
+        Te_prev_keV = np.asarray(base_model.T_e, dtype=float)
+
+        # Add offset to T_e core profile
+        Te_prev_keV_ped = interp1d(psi_prev, Te_prev_keV, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_ped)
+        Te_tanh_eV_ped = interp1d(psi_tanh, Te_tanh_eV / 1e3, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_ped)
+        T_e_offset = Te_tanh_eV_ped - Te_prev_keV_ped # ped - core at psi_ped
+
+        keep = psi_prev < psi_ped
+        psi_N_Te_new = np.concatenate([psi_prev[keep], psi_tanh])
+        T_prof_keV = np.concatenate([Te_prev_keV[keep] + T_e_offset, Te_tanh_eV / 1e3])
+
+        psi_N_inner_boundary_new = psi_ped
+
+        if True:
+            Te_spliced_eV = T_prof_keV * 1e3
             print(f"  Te_ped = {Te_ped_eV:.1f} eV, T_sep = {T_sep_eV:.1f} eV "
                   f"(ne_ped = {ne_ped_val:.3e} m^-3, psi_ped = {psi_ped:.4f}, "
                   f"Delta = {Delta:.4f})")
+            print(f"  psi_N_inner_boundary_new = {psi_N_inner_boundary_new:.4f}")
+            og_Te_peak = float(interp1d(psi_prev, Te_prev_keV * 1e3, kind='linear',
+                                        bounds_error=False, fill_value='extrapolate')(psi_ped))
+            print(f"Percent change from previous T_e at psi_ped = "
+                  f"{((Te_ped_eV - og_Te_peak) / og_Te_peak):.4f}")
             fig, ax = plt.subplots(figsize=(6, 4))
-            ax.plot(psi_ped_grid, Te_psi_grid, lw=2)
+            ax.plot(psi_N_Te_new, Te_spliced_eV, lw=2, label='New T_e profile')
+            ax.plot(psi_prev, Te_prev_keV * 1e3, lw=2, ls='--', label='Previous T_e profile')
             ax.axvline(psi_ped, color='k', ls='--', lw=0.8, label=fr'$\psi_{{ped}}={psi_ped:.3f}$')
             ax.axhline(Te_ped_eV, color='r', ls=':', lw=0.8, label=fr'$T_{{e,ped}}={Te_ped_eV:.0f}$ eV')
             ax.set_xlabel(r'$\psi_N$'); ax.set_ylabel(r'$T_e$ [eV]')
             ax.set_title(f'EPED1 tanh T_e profile (iter {eped_iter})')
             ax.legend(); ax.grid(alpha=0.3)
+            ax.set_xlim(0.8, 1.0)
             fig.tight_layout(); plt.show()
+
+        # MAKE THIS PART FASTER
+        base_model = saarelma_connor_nondim( # reset base_model to the new T_e profile and related quantities
+            P_tot_e      = P_tot_e,
+            alpha_crit   = round(float(alpha_crits[0]), 3),
+            C_KBM        = round(float(C_KBMs[0]), 3),
+            De_chie_etg  = round(float(De_chie_etgs[0]), 3),
+            nFC_x0       = round(float(nFC_x0s[0]), 3),
+            ncx_x0_ratio = round(float(ncx_x0_ratios[0]), 3),
+            mhd_fp       = MHD_FP,
+            kprof_fp     = KPROF_FP,
+            verbose      = verbose,
+            psi_N_inner_boundary = psi_N_inner_boundary_new,
+            T_e_source = 'epednn',
+            T_prof = T_prof_keV,
+            T_prof_psi_N = psi_N_Te_new,
+        )
+        base_model.setup_epednn()
