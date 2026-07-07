@@ -1,23 +1,20 @@
 alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner, message
-0.1, 0.1, 0.1, 1e+16, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+0.1, 0.1, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 0.1, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 23 nonlinear iterations.
+0.1, 0.1, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
-   DIVERGED_LINE_SEARCH
+   DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 0.1, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -26,7 +23,7 @@ Reason:
 0.1, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.1, 0.1, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -44,19 +41,19 @@ Reason:
 0.1, 0.1, 0.316, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.1, 0.1, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 11 nonlinear iterations.
+0.1, 0.1, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 0.1, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 0.1, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -86,7 +83,7 @@ Reason:
 0.1, 0.1, 1.0, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.1, 0.1, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
@@ -125,16 +122,16 @@ Reason:
 0.1, 0.1, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+0.1, 0.1, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 0.1, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.1, 0.1, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -158,10 +155,10 @@ Reason:
 0.1, 0.1, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 0.1, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.1, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 0.1, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.1, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -173,31 +170,31 @@ Reason:
 0.1, 0.1, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+0.1, 0.316, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 0.316, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 0.316, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 0.316, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 0.316, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.316, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.1, 0.316, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 0.316, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.1, 0.316, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.316, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -212,19 +209,19 @@ Reason:
 0.1, 0.316, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 11 nonlinear iterations.
+0.1, 0.316, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.316, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+0.1, 0.316, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.316, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 0.316, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.316, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -242,21 +239,24 @@ Reason:
 0.1, 0.316, 1.0, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 0.316, 1.0, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.1, 0.316, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 0.316, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.1, 0.316, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 44 nonlinear iterations.
+0.1, 0.316, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
-   DIVERGED_LINE_SEARCH
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.316, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
 0.1, 0.316, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
@@ -275,16 +275,16 @@ Reason:
 0.1, 0.316, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+0.1, 0.316, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 0.316, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.316, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 0.316, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.316, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -308,7 +308,7 @@ Reason:
 0.1, 0.316, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 0.316, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.1, 0.316, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 0.316, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -320,7 +320,7 @@ Reason:
 0.1, 0.316, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.1, 1.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 1.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
@@ -338,37 +338,34 @@ Reason:
 0.1, 1.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 1.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 1.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.1, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 1.0, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 1.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 1.0, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 1.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+0.1, 1.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 1.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 1.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -380,25 +377,25 @@ Reason:
 0.1, 1.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 1.0, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 1.0, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 1.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+0.1, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.1, 1.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.1, 1.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.1, 1.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 1.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -407,19 +404,19 @@ Reason:
 0.1, 1.0, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.1, 1.0, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 1.0, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.1, 1.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 1.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 1.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 1.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -434,34 +431,34 @@ Reason:
 0.1, 1.0, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 1.0, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.1, 1.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 1.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 1.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 1.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 1.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.1, 3.162, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 3.162, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 3.162, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+0.1, 3.162, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.1, 3.162, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 3.162, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
@@ -470,22 +467,22 @@ Reason:
 0.1, 3.162, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 3.162, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 3.162, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 3.162, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
-   DIVERGED_FUNCTION_NANORINF
+   DIVERGED_LINE_SEARCH
 0.1, 3.162, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.1, 3.162, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 3.162, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 3.162, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
@@ -494,7 +491,7 @@ Reason:
 0.1, 3.162, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 3.162, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 3.162, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
@@ -503,16 +500,16 @@ Reason:
 0.1, 3.162, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 18 nonlinear iterations.
+0.1, 3.162, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+0.1, 3.162, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 13 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 3.162, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.1, 3.162, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 3.162, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -521,7 +518,7 @@ Reason:
 0.1, 3.162, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 3.162, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 3.162, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -536,109 +533,109 @@ Reason:
 0.1, 3.162, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 3.162, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 3.162, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 3.162, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.1, 3.162, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 3.162, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 3.162, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+0.1, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+0.1, 10.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 10.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 10.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.1, 10.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+0.1, 10.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 10.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 10.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.1, 10.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 10.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.1, 10.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.1, 10.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 47 nonlinear iterations.
 Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
+   DIVERGED_LINE_SEARCH
 0.1, 10.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 10.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.1, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 10.0, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.1, 10.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.1, 10.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.1, 10.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 10.0, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 10.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
 Reason:
    DIVERGED_LINE_SEARCH
-0.1, 10.0, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+0.1, 10.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.1, 10.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.1, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 16 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.1, 10.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.1, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
+0.316, 0.1, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 28 nonlinear iterations.
+0.316, 0.1, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
 Reason:
    DIVERGED_LINE_SEARCH
-0.316, 0.1, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 0.1, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -647,13 +644,13 @@ Reason:
 0.316, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.316, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 0.1, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -665,22 +662,22 @@ Reason:
 0.316, 0.1, 0.316, 1e+16, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.316, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.1, 0.316, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.316, 0.1, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+0.316, 0.1, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 0.1, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.1, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.1, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -707,16 +704,16 @@ Reason:
 0.316, 0.1, 1.0, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 1.0, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.1, 1.0, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.316, 0.1, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.1, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -731,7 +728,7 @@ Reason:
 0.316, 0.1, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 0.1, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -749,16 +746,16 @@ Reason:
 0.316, 0.1, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 11 nonlinear iterations.
+0.316, 0.1, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.1, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.316, 0.1, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -785,7 +782,7 @@ Reason:
 0.316, 0.1, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.1, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.1, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.1, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -803,25 +800,28 @@ Reason:
 0.316, 0.316, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-0.316, 0.316, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+0.316, 0.316, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.316, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.316, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 11 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.316, 0.316, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.316, 0.316, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.316, 0.316, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.316, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 0.316, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.316, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -836,22 +836,19 @@ Reason:
 0.316, 0.316, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-0.316, 0.316, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+0.316, 0.316, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.316, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.316, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.316, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.316, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.316, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -860,37 +857,37 @@ Reason:
 0.316, 0.316, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.316, 0.316, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 0.316, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.316, 1.0, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.316, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.316, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.316, 0.316, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.316, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 0.316, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 0.316, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.316, 0.316, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 0.316, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.316, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -899,16 +896,16 @@ Reason:
 0.316, 0.316, 3.162, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.316, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 0.316, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.316, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 0.316, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 0.316, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 0.316, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
@@ -947,58 +944,64 @@ Reason:
 0.316, 0.316, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 13 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-0.316, 1.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 15 nonlinear iterations.
+0.316, 1.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+0.316, 1.0, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.316, 1.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 1.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 1.0, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.316, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.316, 1.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.316, 1.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.316, 1.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 1.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.316, 1.0, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 14 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 1.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+0.316, 1.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 1.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 1.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 1.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.316, 1.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -1007,19 +1010,19 @@ Reason:
 0.316, 1.0, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+0.316, 1.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+0.316, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 1.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.316, 1.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -1028,40 +1031,40 @@ Reason:
 0.316, 1.0, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 1.0, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.316, 1.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 1.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 1.0, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 10.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 1.0, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 1.0, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+0.316, 1.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 1.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 1.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 1.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -1070,73 +1073,70 @@ Reason:
 0.316, 1.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+0.316, 3.162, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 3.162, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 3.162, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 3.162, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 3.162, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 3.162, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 3.162, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 3.162, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 3.162, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 3.162, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 18 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
-Reason:
-   DIVERGED_MAX_IT
-0.316, 3.162, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 3.162, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 3.162, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 3.162, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 3.162, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
+0.316, 3.162, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
 0.316, 3.162, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+0.316, 3.162, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+0.316, 3.162, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 3.162, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 3.162, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 3.162, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 3.162, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 3.162, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
@@ -1145,7 +1145,7 @@ Reason:
 0.316, 3.162, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 3.162, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 3.162, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -1154,64 +1154,55 @@ Reason:
 0.316, 3.162, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 3.162, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+0.316, 3.162, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 3.162, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 3.162, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
-   DIVERGED_FUNCTION_NANORINF
+   DIVERGED_LINE_SEARCH
 0.316, 3.162, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+0.316, 10.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 10.0, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 10.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 10.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.316, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.316, 10.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+0.316, 10.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 10.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+0.316, 10.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 10.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 10.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 10.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -1220,13 +1211,10 @@ Reason:
 0.316, 10.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+0.316, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+0.316, 10.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 0.316, 10.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -1241,7 +1229,7 @@ Reason:
 0.316, 10.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-0.316, 10.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+0.316, 10.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.1, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
@@ -1253,19 +1241,19 @@ Reason:
 1.0, 0.1, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 18 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-1.0, 0.1, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 0.1, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.1, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 0.1, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+1.0, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.1, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -1283,22 +1271,22 @@ Reason:
 1.0, 0.1, 0.316, 1e+16, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 0.316, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+1.0, 0.1, 0.316, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 11 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 0.1, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.1, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.1, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+1.0, 0.1, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.1, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.1, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -1325,13 +1313,13 @@ Reason:
 1.0, 0.1, 1.0, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 1.0, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 0.1, 1.0, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+1.0, 0.1, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.1, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.1, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -1358,10 +1346,7 @@ Reason:
 1.0, 0.1, 3.162, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 3.162, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 3.162, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 0.1, 3.162, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.1, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -1376,7 +1361,7 @@ Reason:
 1.0, 0.1, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 0.1, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.1, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -1391,7 +1376,7 @@ Reason:
 1.0, 0.1, 10.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 10.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 0.1, 10.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.1, 10.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -1403,7 +1388,7 @@ Reason:
 1.0, 0.1, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.1, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 0.1, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.1, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -1418,15 +1403,15 @@ Reason:
 1.0, 0.316, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.316, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+1.0, 0.316, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 0.316, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
 Reason:
-   DIVERGED_FUNCTION_NANORINF
+   DIVERGED_LINE_SEARCH
 1.0, 0.316, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
@@ -1445,22 +1430,22 @@ Reason:
 1.0, 0.316, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.316, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.316, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+1.0, 0.316, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
-   DIVERGED_LINE_SEARCH
+   DIVERGED_FUNCTION_NANORINF
 1.0, 0.316, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 0.316, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 0.316, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.316, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -1469,16 +1454,16 @@ Reason:
 1.0, 0.316, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 0.316, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.316, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 0.316, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 0.316, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.316, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -1487,10 +1472,10 @@ Reason:
 1.0, 0.316, 1.0, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.316, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 15 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 0.316, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.316, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -1499,37 +1484,34 @@ Reason:
 1.0, 0.316, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 0.316, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.316, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 0.316, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.316, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 0.316, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 3.162, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 0.316, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 0.316, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+1.0, 0.316, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 0.316, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 0.316, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.316, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -1553,7 +1535,7 @@ Reason:
 1.0, 0.316, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 0.316, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
+1.0, 0.316, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 0.316, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -1565,25 +1547,22 @@ Reason:
 1.0, 0.316, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 19 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
 1.0, 1.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 1.0, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 1.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 1.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 1.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -1592,31 +1571,28 @@ Reason:
 1.0, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 1.0, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+1.0, 1.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 1.0, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+1.0, 1.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 1.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+1.0, 1.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 1.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 1.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 1.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -1625,46 +1601,46 @@ Reason:
 1.0, 1.0, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 1.0, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+1.0, 1.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
+1.0, 1.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 1.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 1.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 1.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 1.0, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 1.0, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 1.0, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 1.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 1.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+1.0, 1.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 1.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 1.0, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -1676,31 +1652,28 @@ Reason:
 1.0, 1.0, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+1.0, 1.0, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+1.0, 1.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 1.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 1.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 1.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 1.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+1.0, 3.162, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 3.162, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+1.0, 3.162, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 3.162, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
@@ -1715,130 +1688,112 @@ Reason:
 1.0, 3.162, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 3.162, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+1.0, 3.162, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+1.0, 3.162, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+1.0, 3.162, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+1.0, 3.162, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 3.162, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 3.162, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 3.162, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 3.162, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 3.162, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+1.0, 3.162, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 14 nonlinear iterations.
+1.0, 3.162, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+1.0, 3.162, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 3.162, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+1.0, 3.162, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 3.162, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 3.162, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 3.162, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 3.162, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 3.162, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 3.162, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+1.0, 3.162, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 3.162, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 3.162, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 3.162, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 15 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 3.162, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 3.162, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 3.162, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 3.162, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.1, 1000000000000000.0, 4.732, 0.8500, Nonlinear solve failed to converge after 15 nonlinear iterations.
+1.0, 10.0, 0.1, 1000000000000000.0, 17.783, 0.8500, Nonlinear solve failed to converge after 14 nonlinear iterations.
 Reason:
    DIVERGED_LINE_SEARCH
-1.0, 10.0, 0.1, 1000000000000000.0, 9.173, 0.8500, Nonlinear solve failed to converge after 22 nonlinear iterations.
+1.0, 10.0, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 19 nonlinear iterations.
 Reason:
    DIVERGED_LINE_SEARCH
-1.0, 10.0, 0.1, 1000000000000000.0, 17.783, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-1.0, 10.0, 0.1, 1e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
-Reason:
-   DIVERGED_MAX_IT
-1.0, 10.0, 0.1, 1e+16, 2.441, 0.8500, Nonlinear solve failed to converge after 24 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-1.0, 10.0, 0.1, 1e+16, 4.732, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-1.0, 10.0, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 47 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-1.0, 10.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 10.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 10.0, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 10.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+1.0, 10.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 10.0, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
@@ -1847,91 +1802,82 @@ Reason:
 1.0, 10.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+1.0, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 10.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 10.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.316, 1000000000000000.0, 4.732, 0.8500, Nonlinear solve failed to converge after 12 nonlinear iterations.
+1.0, 10.0, 0.316, 1e+16, 4.732, 0.8500, Nonlinear solve failed to converge after 16 nonlinear iterations.
 Reason:
    DIVERGED_LINE_SEARCH
-1.0, 10.0, 0.316, 1e+16, 4.732, 0.8500, Nonlinear solve failed to converge after 19 nonlinear iterations.
+1.0, 10.0, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 25 nonlinear iterations.
 Reason:
    DIVERGED_LINE_SEARCH
-1.0, 10.0, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 28 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-1.0, 10.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 10.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+1.0, 10.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 10.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 10.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+1.0, 10.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 10.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 18 nonlinear iterations.
+1.0, 10.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+1.0, 10.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+1.0, 10.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+1.0, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-1.0, 10.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+1.0, 10.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+1.0, 10.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 10.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+1.0, 10.0, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 10.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-1.0, 10.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+1.0, 10.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 1.0, 10.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 0.1, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+3.162, 0.1, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+3.162, 0.1, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 0.1, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -1958,16 +1904,13 @@ Reason:
 3.162, 0.1, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 0.316, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 0.1, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 0.1, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -1994,31 +1937,28 @@ Reason:
 3.162, 0.1, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 1.0, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+3.162, 0.1, 1.0, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 1.0, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 14 nonlinear iterations.
+3.162, 0.1, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
+3.162, 0.1, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 0.1, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 0.1, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 0.1, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -2027,19 +1967,13 @@ Reason:
 3.162, 0.1, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 3.162, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 3.162, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 3.162, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 0.1, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 0.1, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -2048,7 +1982,7 @@ Reason:
 3.162, 0.1, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 0.1, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -2066,13 +2000,13 @@ Reason:
 3.162, 0.1, 10.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+3.162, 0.1, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.1, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 0.1, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.1, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -2084,34 +2018,34 @@ Reason:
 3.162, 0.1, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+3.162, 0.316, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+3.162, 0.316, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 0.316, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 0.316, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 0.316, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 0.316, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 0.316, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 0.316, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 0.316, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -2123,19 +2057,19 @@ Reason:
 3.162, 0.316, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 0.316, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+3.162, 0.316, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 0.316, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 0.316, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -2150,10 +2084,10 @@ Reason:
 3.162, 0.316, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 0.316, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+3.162, 0.316, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -2162,10 +2096,10 @@ Reason:
 3.162, 0.316, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+3.162, 0.316, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 0.316, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -2174,31 +2108,31 @@ Reason:
 3.162, 0.316, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 0.316, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 13 nonlinear iterations.
+3.162, 0.316, 3.162, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 15 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+3.162, 0.316, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 0.316, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 0.316, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 0.316, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -2207,13 +2141,13 @@ Reason:
 3.162, 0.316, 10.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 0.316, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 0.316, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 0.316, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 0.316, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 0.316, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -2225,19 +2159,22 @@ Reason:
 3.162, 0.316, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+3.162, 1.0, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+3.162, 1.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 1.0, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 1.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 1.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+3.162, 1.0, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -2249,70 +2186,64 @@ Reason:
 3.162, 1.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 1.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 1.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 1.0, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 1.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 1.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 1.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 1.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 1.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 1.0, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 1.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 1.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 1.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -2321,82 +2252,85 @@ Reason:
 3.162, 1.0, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 1.0, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 1.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 1.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 1.0, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 10.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 1.0, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 16 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+3.162, 1.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 1.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 1.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 1.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+3.162, 3.162, 0.1, 1000000000000000.0, 9.173, 0.8500, Nonlinear solve failed to converge after 19 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+3.162, 3.162, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 40 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+3.162, 3.162, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+3.162, 3.162, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 3.162, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+3.162, 3.162, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 3.162, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+3.162, 3.162, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 3.162, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 3.162, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 3.162, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 3.162, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
@@ -2405,13 +2339,13 @@ Reason:
 3.162, 3.162, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 3.162, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 3.162, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -2423,7 +2357,7 @@ Reason:
 3.162, 3.162, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+3.162, 3.162, 1.0, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
@@ -2432,34 +2366,34 @@ Reason:
 3.162, 3.162, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 3.162, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 3.162, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 3.162, 3.162, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 3.162, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 3.162, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 3.162, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+3.162, 3.162, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 3.162, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -2468,67 +2402,67 @@ Reason:
 3.162, 3.162, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 3.162, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 3.162, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 3.162, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 3.162, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.1, 100000000000000.0, 2.441, 0.8500, Nonlinear solve failed to converge after 13 nonlinear iterations.
+3.162, 10.0, 0.1, 1000000000000000.0, 4.732, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
 Reason:
    DIVERGED_LINE_SEARCH
-3.162, 10.0, 0.1, 1000000000000000.0, 2.441, 0.8500, Nonlinear solve failed to converge after 15 nonlinear iterations.
+3.162, 10.0, 0.1, 1000000000000000.0, 17.783, 0.8500, Nonlinear solve failed to converge after 17 nonlinear iterations.
 Reason:
    DIVERGED_LINE_SEARCH
-3.162, 10.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 10.0, 0.1, 1e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 11 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+3.162, 10.0, 0.1, 1e+16, 9.173, 0.8500, Nonlinear solve failed to converge after 38 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+3.162, 10.0, 0.1, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+3.162, 10.0, 0.1, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 10.0, 0.1, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 10.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 10.0, 0.1, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+3.162, 10.0, 0.1, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 10.0, 0.1, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 10.0, 0.1, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 10.0, 0.1, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.316, 1e+16, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 10.0, 0.316, 1e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 10 nonlinear iterations.
 Reason:
-   DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.316, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.316, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
+   DIVERGED_LINE_SEARCH
 3.162, 10.0, 0.316, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 10.0, 0.316, 1e+17, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 10.0, 0.316, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
@@ -2537,22 +2471,16 @@ Reason:
 3.162, 10.0, 0.316, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 10.0, 0.316, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 10.0, 0.316, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 10.0, 0.316, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 10.0, 0.316, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
-Reason:
-   DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 1.0, 1e+17, 1.259, 0.8500, Nonlinear solve failed to converge after 22 nonlinear iterations.
-Reason:
-   DIVERGED_LINE_SEARCH
-3.162, 10.0, 1.0, 1e+17, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 10.0, 1.0, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
@@ -2564,31 +2492,31 @@ Reason:
 3.162, 10.0, 1.0, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 10.0, 1.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+3.162, 10.0, 1.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 10.0, 1.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 10.0, 1.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 10.0, 1.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 10.0, 3.162, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 10.0, 3.162, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 10.0, 3.162, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+3.162, 10.0, 3.162, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 10.0, 3.162, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
@@ -2600,13 +2528,13 @@ Reason:
 3.162, 10.0, 10.0, 1e+18, 2.441, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+3.162, 10.0, 10.0, 1e+18, 4.732, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 3.162, 10.0, 10.0, 1e+18, 9.173, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
-3.162, 10.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+3.162, 10.0, 10.0, 1e+18, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
 Reason:
    DIVERGED_FUNCTION_NANORINF
 10.0, 0.1, 0.1, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.

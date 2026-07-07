@@ -5,6 +5,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from matplotlib.colors import LinearSegmentedColormap
 from scipy.interpolate import interp1d
 
 ROOT = Path.cwd().parent.parent
@@ -16,32 +17,30 @@ def profiles_loop_solve(
     MHD_FP = None,
     KPROF_FP = None,
     ne_success_fp = 'compare_nondim',
-    success_fp = 'success_PTHmode.txt',
-    failure_fp = 'failure_PTHmode.txt',
-    error_messages_fp = 'error_messages_PTHmode.txt',
     initial_guess = "tanh",
     ne_inner_bc = "neumann",
     x_res = 40,
-    N = 3, # Saarelma-Connor free param scan size
     P_tot_e = 5e6, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
     psi_N_inner = 0.85,
-    alpha_crits_minmax = [-1,1],
-    C_KBMs_minmax = [-1,1],
-    De_chie_etgs_minmax = [-1,1],
-    nFC_x0s_minmax = [14,18],
-    ncx_x0_ratios_minmax = [0.1,1.25],
+    free_params = None,
     eped_tol_max = 1e-3,
     eped_iter_max = 50,
     verbose = False,
 ):
 
-    # Free parameters
-    alpha_crits = np.logspace(alpha_crits_minmax[0], alpha_crits_minmax[1], N)
-    C_KBMs = np.logspace(C_KBMs_minmax[0], C_KBMs_minmax[1], N)
-    De_chie_etgs = np.logspace(De_chie_etgs_minmax[0], De_chie_etgs_minmax[1], N)
-    nFC_x0s = np.logspace(nFC_x0s_minmax[0], nFC_x0s_minmax[1], N)
-    ncx_x0_ratios = np.logspace(ncx_x0_ratios_minmax[0],ncx_x0_ratios_minmax[1],N)
+    te_plot_profiles = []
+    ne_plot_profiles = []
 
+    # Load in free parameters
+    if free_params is None:
+        raise ValueError("Must specify free_params")
+    alpha_crit = free_params['alpha_crit']
+    C_KBM = free_params['C_KBM']
+    De_chie_etg = free_params['De_chie_etg']
+    nFC_x0 = free_params['nFC_x0']
+    ncx_x0_ratio = free_params['ncx_x0_ratio']
+
+    # Setup solver parameters
     SOLVE_KW = dict(
         x_res=x_res,
         fe_degree=2,
@@ -54,83 +53,44 @@ def profiles_loop_solve(
         verbose=False,
     )
 
-    # Output data and files
-    with open(success_fp, 'w') as f:
-            f.write(f"alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner\n")
-    with open(failure_fp, 'w') as f:
-            f.write(f"alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner\n")
-    with open(error_messages_fp, 'w') as f:
-            f.write(f"alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner, message\n")
-
     base_model = saarelma_connor_nondim(
             P_tot_e      = P_tot_e,
-            alpha_crit   = round(float(alpha_crits[0]), 3),
-            C_KBM        = round(float(C_KBMs[0]), 3),
-            De_chie_etg  = round(float(De_chie_etgs[0]), 3),
-            nFC_x0       = round(float(nFC_x0s[0]), 3),
-            ncx_x0_ratio = round(float(ncx_x0_ratios[0]), 3),
+            alpha_crit   = alpha_crit,
+            C_KBM        = C_KBM,
+            De_chie_etg  = De_chie_etg,
+            nFC_x0       = nFC_x0,
+            ncx_x0_ratio = ncx_x0_ratio,
             psi_N_inner_boundary = psi_N_inner,
             mhd_fp       = MHD_FP,
             kprof_fp     = KPROF_FP,
             verbose      = verbose,
             # psi_N_inner_boundary = 0.85, # set to None to use adaptive inner boundary method
     )
+    psi_N_inner_boundary_new = psi_N_inner
     base_model.setup_epednn()
     print("Base model built.")
+
+    # Parameters to be used in the loop
+    prev_best_x = None
+    prev_best_ne = None
+    tanh_width_new = None
+    psi_N_Te_new = None
+    T_prof_keV = None
 
     for eped_iter in range(eped_iter_max):
 
         # Clear outputs from any previous scan (including appended failure logs) and setup logging files
         for file in os.listdir(ne_success_fp):
             os.remove(os.path.join(ne_success_fp, file))
-        os.remove(success_fp)
-        os.remove(failure_fp)
-        os.remove(error_messages_fp)
-        with open(success_fp, "w") as f:
-            f.write("alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner\n")
-        with open(failure_fp, "w") as f:
-            f.write("alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner\n")
-        with open(error_messages_fp, "w") as f:
-            f.write("alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner, message\n")
 
-        # Scan free parameters for SC model
-        i=0
-        for alpha_crit in alpha_crits:
-                for C_KBM in C_KBMs:
-                        for De_chie_etg in De_chie_etgs:
-                                for nFC_x0 in nFC_x0s:
-                                        for ncx_x0_ratio in ncx_x0_ratios:
-                                                ac = round(float(alpha_crit), 3)
-                                                ck = round(float(C_KBM), 3)
-                                                de = round(float(De_chie_etg), 3)
-                                                nf = round(float(nFC_x0), 3)
-                                                nc = round(float(ncx_x0_ratio),3)
-                                                try:
-                                                        base_model.update_free_params(
-                                                                alpha_crit            = ac,
-                                                                C_KBM                 = ck,
-                                                                De_chie_etg           = de,
-                                                                nFC_x0                = nf,
-                                                                ncx_x0_ratio          = nc,
-                                                        )
-                                                        x_sol, ne_sol, nFC_sol, nCX_sol = base_model.solve_coupled_nondim(**SOLVE_KW)
-                                                        sol = {'x': x_sol, 'y': ne_sol, 'nFC': nFC_sol, 'nCX': nCX_sol}
-                                                except Exception as e: # run fails
-                                                        with open(failure_fp, 'a') as f:
-                                                                f.write(f"{ac}, {ck}, {de}, {nf}, {nc}, {psi_N_inner:.4f}\n")
-                                                        with open(error_messages_fp, 'a') as f:
-                                                                f.write(f"{ac}, {ck}, {de}, {nf}, {nc}, {psi_N_inner:.4f}, {e}\n")
-                                                else: # run works
-                                                        with open(success_fp, 'a') as f:
-                                                                f.write(f"{ac}, {ck}, {de}, {nf}, {nc}, {psi_N_inner:.4f}\n")
-                                                        np.save(f'{ne_success_fp}/ne_a{ac}_C{ck}_D{de}_n{nf}_nc{nc}_b{psi_N_inner:.4f}', sol, allow_pickle=True)
-                # print(f"Completed {i} of {len(alpha_crits)} alpha_crits") # progress logging
+        # Run solver and save outputs
+        x_sol, ne_sol, nFC_sol, nCX_sol = base_model.solve_coupled_nondim(tanh_width=tanh_width_new, **SOLVE_KW)
+        sol = {'x': x_sol, 'y': ne_sol, 'nFC': nFC_sol, 'nCX': nCX_sol, 'alpha_crit': alpha_crit, 'C_KBM': C_KBM, 'De_chie_etg': De_chie_etg, 'nFC_x0': nFC_x0, 'ncx_x0_ratio': ncx_x0_ratio}
+        np.save(f'{ne_success_fp}/ne_iter_{eped_iter}.npy', sol, allow_pickle=True)
+        best_x = np.asarray(sol['x'], dtype=float)
+        best_ne = np.asarray(sol['y'], dtype=float)
 
-        # --- Pick best ne profile -----------------------------------------
-        n_combos = (len(alpha_crits) * len(C_KBMs) * len(De_chie_etgs)
-                    * len(nFC_x0s) * len(ncx_x0_ratios))
-
-        # psi_N <-> x map (reuse base_model; no extra solver instantiation)
+        # psi_N <-> x map (reuse base_model)
         psi_N_pres = np.asarray(base_model.psi_N_pres, dtype=float)
         x_grid_full = np.asarray(base_model.r_psi, dtype=float) - float(base_model.r_psi[-1])
         psi_to_x = interp1d(psi_N_pres, x_grid_full, kind='linear',
@@ -138,57 +98,15 @@ def profiles_loop_solve(
         psi_ped_grid = np.linspace(psi_N_inner, 1.0, x_res)
         x_ped_grid = psi_to_x(psi_ped_grid)
 
-        if n_combos <= 1:
-            # Single-combination run: the only sol from the inner loop IS the best.
-            best_x = np.asarray(sol['x'], dtype=float)
-            best_ne = np.asarray(sol['y'], dtype=float)
-        else:
-            if KPROF_FP is None:
-                raise ValueError("Must specify pfile for a parameter scan implementation "
-                                 "of SC model in EPEDNN loop")
-
-            # Read p-file ne once
-            psi_pfile, ne_pfile = [], []
-            in_ne = False
-            with open(KPROF_FP) as f:
-                for line in f:
-                    if '3 N Z A' in line:
-                        break
-                    if line.startswith('201'):
-                        in_ne = 'ne(10^20/m^3)' in line
-                        continue
-                    if in_ne:
-                        p, v, _ = line.split()
-                        psi_pfile.append(float(p)); ne_pfile.append(float(v))
-            psi_pfile = np.asarray(psi_pfile); ne_pfile = np.asarray(ne_pfile) * 1e20
-            ne_pfile_on_ped = interp1d(psi_pfile, ne_pfile, kind='linear',
-                                       bounds_error=False, fill_value='extrapolate')(psi_ped_grid)
-            mean_ne_pfile = float(np.mean(ne_pfile_on_ped))
-
-            # Sweep .npy successes, keep minimum-L2 profile
-            best_l2 = np.inf
-            best_x = None
-            best_ne = None
-            for npy_path in Path(ne_success_fp).glob("ne_*.npy"):
-                sol_i = np.load(npy_path, allow_pickle=True).item()
-                x_i = np.asarray(sol_i['x'], dtype=float)
-                ne_i = np.asarray(sol_i['y'], dtype=float)
-                ne_on_ped = interp1d(x_i, ne_i, kind='linear',
-                                     bounds_error=False, fill_value='extrapolate')(x_ped_grid)
-                l2 = float(np.sqrt(np.mean((ne_on_ped - ne_pfile_on_ped) ** 2)) / mean_ne_pfile)
-                if l2 < best_l2:
-                    best_l2, best_x, best_ne = l2, x_i, ne_i
-            if best_ne is None:
-                raise RuntimeError(f"No successful runs found in {ne_success_fp}")
-            print(f"Best normalized L2 = {best_l2:.4f}")
-
         # --- Feed best profile into EPEDNN --------------------------------
         if eped_iter == 0:
             pedestal_height_prev = 0.0
             pedestal_width_prev = 0.0
+            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile')    
         else:
             pedestal_height_prev, pedestal_width_prev = pedestal_height, pedestal_width
-        pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_epednn=best_x)
+            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core='pfile')
+        tanh_width_new = psi_to_x(1-pedestal_width) * -1 # will error if result if negative which should not happen
         print(f"Pedestal height: {pedestal_height} MPa, Pedestal width: {pedestal_width} (psi_N)")
 
         if eped_iter > 0:
@@ -240,7 +158,7 @@ def profiles_loop_solve(
 
         psi_N_inner_boundary_new = psi_ped
 
-        if True:
+        if verbose:  # collect profile data for post-loop plotting
             Te_spliced_eV = T_prof_keV * 1e3
             print(f"  Te_ped = {Te_ped_eV:.1f} eV, T_sep = {T_sep_eV:.1f} eV "
                   f"(ne_ped = {ne_ped_val:.3e} m^-3, psi_ped = {psi_ped:.4f}, "
@@ -249,32 +167,86 @@ def profiles_loop_solve(
             og_Te_peak = float(interp1d(psi_prev, Te_prev_keV * 1e3, kind='linear',
                                         bounds_error=False, fill_value='extrapolate')(psi_ped))
             print(f"Percent change from previous T_e at psi_ped = "
-                  f"{((Te_ped_eV - og_Te_peak) / og_Te_peak):.4f}")
-            fig, ax = plt.subplots(figsize=(6, 4))
-            ax.plot(psi_N_Te_new, Te_spliced_eV, lw=2, label='New T_e profile')
-            ax.plot(psi_prev, Te_prev_keV * 1e3, lw=2, ls='--', label='Previous T_e profile')
-            ax.axvline(psi_ped, color='k', ls='--', lw=0.8, label=fr'$\psi_{{ped}}={psi_ped:.3f}$')
-            ax.axhline(Te_ped_eV, color='r', ls=':', lw=0.8, label=fr'$T_{{e,ped}}={Te_ped_eV:.0f}$ eV')
-            ax.set_xlabel(r'$\psi_N$'); ax.set_ylabel(r'$T_e$ [eV]')
-            ax.set_title(f'EPED1 tanh T_e profile (iter {eped_iter})')
-            ax.legend(); ax.grid(alpha=0.3)
-            ax.set_xlim(0.8, 1.0)
-            fig.tight_layout(); plt.show()
+                  f"{(100*(Te_ped_eV - og_Te_peak) / og_Te_peak):.4f}")
+
+            if eped_iter == 0:
+                te_plot_profiles.append({
+                    'psi_N': np.asarray(psi_prev, dtype=float),
+                    'y': np.asarray(Te_prev_keV * 1e3, dtype=float),
+                    'label': 'p-file $T_e$',
+                    'ls': '--',
+                })
+                ne_plot_profiles.append({
+                    'psi_N': np.asarray(base_model.psi_N_pres, dtype=float),
+                    'y': np.asarray(base_model.n_e_pres, dtype=float) / 1e19,
+                    'label': 'p-file $n_e$',
+                    'ls': '--',
+                })
+
+            te_plot_profiles.append({
+                'psi_N': np.asarray(psi_N_Te_new, dtype=float),
+                'y': np.asarray(Te_spliced_eV, dtype=float),
+                'label': f'Iter {eped_iter}',
+                'ls': '-',
+            })
+
+            x_to_psiN = interp1d(x_grid_full, psi_N_pres, kind='linear',
+                                 bounds_error=False, fill_value='extrapolate')
+            psi_N_ne = x_to_psiN(best_x)
+            sort_idx = np.argsort(psi_N_ne)
+            ne_plot_profiles.append({
+                'psi_N': psi_N_ne[sort_idx],
+                'y': (best_ne[sort_idx] / 1e19),
+                'label': f'Iter {eped_iter}',
+                'ls': '-',
+            })
 
         # MAKE THIS PART FASTER
         base_model = saarelma_connor_nondim( # reset base_model to the new T_e profile and related quantities
             P_tot_e      = P_tot_e,
-            alpha_crit   = round(float(alpha_crits[0]), 3),
-            C_KBM        = round(float(C_KBMs[0]), 3),
-            De_chie_etg  = round(float(De_chie_etgs[0]), 3),
-            nFC_x0       = round(float(nFC_x0s[0]), 3),
-            ncx_x0_ratio = round(float(ncx_x0_ratios[0]), 3),
+            alpha_crit   = alpha_crit,
+            C_KBM        = C_KBM,
+            De_chie_etg  = De_chie_etg,
+            nFC_x0       = nFC_x0,
+            ncx_x0_ratio = ncx_x0_ratio,
             mhd_fp       = MHD_FP,
             kprof_fp     = KPROF_FP,
             verbose      = verbose,
-            psi_N_inner_boundary = psi_N_inner_boundary_new,
+            psi_N_inner_boundary = psi_N_inner,
             T_e_source = 'epednn',
             T_prof = T_prof_keV,
             T_prof_psi_N = psi_N_Te_new,
         )
         base_model.setup_epednn()
+
+    if te_plot_profiles:
+        red_blue = LinearSegmentedColormap.from_list('red_blue', ['red', 'blue'])
+        te_colors = red_blue(np.linspace(0, 1, len(te_plot_profiles)))
+        ne_colors = red_blue(np.linspace(0, 1, len(ne_plot_profiles)))
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        for prof, color in zip(te_plot_profiles, te_colors):
+            ax.plot(prof['psi_N'], prof['y'], lw=2, ls=prof['ls'],
+                    color=color, label=prof['label'])
+        ax.set_xlabel(r'$\psi_N$')
+        ax.set_ylabel(r'$T_e$ [eV]')
+        ax.set_title('Solved $T_e$ profiles')
+        ax.legend()
+        ax.grid(alpha=0.3)
+        ax.set_xlim(0.8, 1.0)
+        fig.tight_layout()
+
+        fig1, ax1 = plt.subplots(figsize=(6, 4))
+        for prof, color in zip(ne_plot_profiles, ne_colors):
+            ax1.plot(prof['psi_N'], prof['y'], lw=2, ls=prof['ls'],
+                     color=color, label=prof['label'])
+        ax1.set_xlabel(r'$\psi_N$')
+        ax1.set_ylabel(r'$n_e$ ($10^{19}$ m$^{-3}$)')
+        ax1.set_title('Solved $n_e$ profiles')
+        ax1.legend()
+        ax1.grid(alpha=0.3)
+        ax1.set_xlim(0.8, 1.0)
+        fig1.tight_layout()
+        plt.show()
+
+    return psi_N_inner_boundary_new, T_prof_keV, best_x, best_ne

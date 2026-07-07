@@ -554,6 +554,8 @@ class saarelma_connor_nondim(saarelma_connor):
         See :meth:`saarelma_connor.solve_coupled`.  All physical inputs
         are in SI units.
 
+        tanh_width is in x units
+
         Sets
         ----
         SI-unit attributes (parent-class compatibility):
@@ -699,7 +701,7 @@ class saarelma_connor_nondim(saarelma_connor):
         elif initial_guess == "pfile":
             ne_init = np.interp(x_dofs_si, self.x_init, self.n_e_pres)
         elif initial_guess == "tanh":
-            width  = float(tanh_width)  if tanh_width  is not None else 0.1 * abs(x_left_si)
+            width  = float(tanh_width) if tanh_width is not None else 0.1 * abs(x_left_si)
             if width <= 0:
                 raise ValueError(f"tanh_width must be positive, got {width}.")
             center = float(tanh_center) if tanh_center is not None else -width

@@ -127,10 +127,12 @@ class saarelma_connor:
         equations_to_solve = 'coupled', # equations to solve, currently supporting: 'coupled', 'SC'
         initial_guess = 'pfile', # initial guess for the electron density profile, currently supporting: pfile, linear
         nCX_ic="solve",
+        regime_flag = 'PT H-mode', # regime of the plasma, currently supporting: 'PT H-mode', 'NT'
         verbose = False,
     ):
 
         # User-specified flags
+        self.regime_flag = regime_flag
         self.T_e_source = T_e_source
         self.equations_to_solve = equations_to_solve
         self.error_check = error_check
@@ -2444,19 +2446,25 @@ class saarelma_connor:
 
 
 
-    def calc_volavgP(self,x_epednn,ne_pedestal,EPEDNN_core='pfile'):
+    def calc_volavgP(self,x_ne,ne_pedestal,psiN_Te,Te_prev,EPEDNN_core='pfile'):
         """Calculate the volume-averaged pressure
 
         Parameters
         ----------
         self : object
             instance of saarelma_connor class
-        x_epednn : array
-            x values at which the EPEDNN model is evaluated
+        x_ne : array
+            x values at which the ne model is evaluated (ne is only in pedestal)
         ne_pedestal : array
-            pedestal density profile
+            pedestal density profile in m^-3
+        psiN_Te : array
+            psi_N values at which the Te model is evaluated (Te is for the full plasma)
+        Te_prev : array
+            previous temperature profile in eV
         EPEDNN_core : string
             'pfile' 
+            'pfile T, stiched ne'
+            'previous T, stiched ne'
 
         Sets
         ----
@@ -2464,14 +2472,19 @@ class saarelma_connor:
             Volume-averaged pressure (same units as self.pres).
         """
 
-        if EPEDNN_core == 'pfile':
+        if EPEDNN_core == 'pfile': # always fixed to p-file n_e and T_e
+            psi_N_plasma = self.psi_N_pres
+            n_e_plasma = interp1d(self.psi_N_pres, self.n_e_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
+            T_tot_plasma = interp1d(self.psi_N_pres, self.T_e_pres + self.T_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
+
+        elif EPEDNN_core == 'pfile T, stiched ne': # pfile T_e and stiched n_e
             # Calculate core n_e
             psi_N_core = np.linspace(0, self.psi_N_inner_boundary, 75)
             n_e_core = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_core)
             
             # Calculate total n_e and T_e
             # psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_dofs_si)
-            psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_epednn)
+            psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_ne)
             psi_N_plasma = np.concatenate([psi_N_core, psi_N_ped])
             n_e_plasma = np.concatenate([n_e_core, ne_pedestal])
 
@@ -2486,12 +2499,35 @@ class saarelma_connor:
 
             T_tot_plasma = interp1d(self.psi_N_pres, self.T_e_pres + self.T_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
 
-            # Calculate pressure and volavgP
-            V_full_plasma = interp1d(self.psi_N_pres, self.V_plasma, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
-            dV_dpsi = np.gradient(V_full_plasma, psi_N_plasma)
-            pressure = (n_e_plasma * (2 * T_tot_plasma)) * 1.60218e-19 # Pa
-            self.volavgP = (simpson(pressure * dV_dpsi, psi_N_plasma)
-                            / simpson(dV_dpsi, psi_N_plasma))
+        elif EPEDNN_core == 'previous T, stiched ne': # previous T_e and stiched n_e
+            # Calculate core n_e
+            psi_N_core = np.linspace(0, self.psi_N_inner_boundary, 75)
+            n_e_core = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_core)
+            
+            # Calculate total n_e and T_e
+            # psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_dofs_si)
+            psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_ne)
+            psi_N_plasma = np.concatenate([psi_N_core, psi_N_ped])
+            n_e_plasma = np.concatenate([n_e_core, ne_pedestal])
+
+            # x_dofs_si is in Firedrake DOF order (not spatial); sort to psi_N
+            # before np.gradient (same issue as dpdx in update_alpha).
+            sort_idx = np.argsort(psi_N_plasma)
+            psi_N_plasma = psi_N_plasma[sort_idx]
+            n_e_plasma = n_e_plasma[sort_idx]
+            _, uniq_idx = np.unique(psi_N_plasma, return_index=True)
+            psi_N_plasma = psi_N_plasma[uniq_idx]
+            n_e_plasma = n_e_plasma[uniq_idx]
+
+            if self.T_rat_flag:
+                Ti_prev = Te_prev * self.T_rat
+            else:
+                raise ValueError('T_rat_flag must be True if T_rat is provided')
+            T_tot_plasma = interp1d(psiN_Te, Te_prev + Ti_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
+
+        elif EPEDNN_core == 'previous T, varying ne': # stiched T_e and varyped outputted n_e
+            raise NotImplementedError('previous T, varying ne is not yet implemented')
+
         else:
             assert False, 'EPEDNN_betan method not supported'
 
@@ -2511,8 +2547,14 @@ class saarelma_connor:
                             / simpson(dV_dpsi, self.psi_N_pres))
             """
 
+        # Calculate pressure and volavgP
+        V_full_plasma = interp1d(self.psi_N_pres, self.V_plasma, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
+        dV_dpsi = np.gradient(V_full_plasma, psi_N_plasma)
+        pressure = (n_e_plasma * (2 * T_tot_plasma)) * 1.60218e-19 # Pa
+        self.volavgP = (simpson(pressure * dV_dpsi, psi_N_plasma)
+                        / simpson(dV_dpsi, psi_N_plasma))
 
-    def calc_betan(self,x_epednn,ne_pedestal,EPEDNN_core='pfile'):
+    def calc_betan(self,x_ne,ne_pedestal,psiN_Te,Te_prev,EPEDNN_core='pfile'):
         """Calculate the normalized beta
 
         Parameters
@@ -2526,7 +2568,7 @@ class saarelma_connor:
             Normalized beta, dimensionless
         """
 
-        self.calc_volavgP(x_epednn,ne_pedestal,EPEDNN_core)
+        self.calc_volavgP(x_ne,ne_pedestal,psiN_Te,Te_prev,EPEDNN_core)
 
         _, [B_R, B_Z, _] = self.calc_B(self.eq['rzout'][:, 0], self.eq['rzout'][:, 1])
         bp_lcfs = np.sqrt(B_R**2 + B_Z**2)
@@ -2641,22 +2683,22 @@ class saarelma_connor:
         self.bt = np.array(self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2])
 
 
-    def feed_epednn(self, ne_ped=None, x_epednn=None, EPEDNN_core='pfile'):
+    def feed_epednn(self, ne_ped=None, x_ne=None, psiN_Te=None, Te_prev=None, EPEDNN_core='pfile'):
         """Feed the Saarelma-Connor solution to the EPEDNN model"""
         
         # Define inputs in Python
         # These map exactly to the InputEPED struct we saw in the Julia code
         if ne_ped is None:
             self._neped = interp1d(self.x_sol, self.ne_sol, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
-            self._x_epednn = self.x_sol
+            self._x_ne = self.x_sol
         else:
             self._neped = ne_ped
-            if x_epednn is None:
-                assert False, 'x_epednn must be provided if ne_ped is provided'
-            self._x_epednn = x_epednn
-        self.calc_betan(self._x_epednn,self._neped,EPEDNN_core)
+            if x_ne is None:
+                assert False, 'x_ne must be provided if ne_ped is provided'
+            self._x_ne = x_ne
+        self.calc_betan(self._x_ne,self._neped,psiN_Te,Te_prev,EPEDNN_core)
 
-        ne_ped_h = interp1d(self._x_epednn, self._neped, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
+        ne_ped_h = interp1d(self._x_ne, self._neped, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
 
         inputs = {
             "a": float(self.a),           # Minor radius (m)
@@ -2692,5 +2734,14 @@ class saarelma_connor:
         # The solution structure has pressure and width for different modes (GH, G, H)
         self.pedestal_pressure = solution.pressure.GH.H  # in MPa
         self.pedestal_width = solution.width.GH.H        # in normalized poloidal flux
+
+        # Apply ELM-free regime scaling
+        if self.regime_flag == 'PT H-mode':
+            continue
+        elif self.regime_flag == 'NT':
+            self.pedestal_pressure = self.pedestal_pressure * self.NT_scaling
+            raise NotImplementedError('NT ELM-free regime scaling is not yet implemented')
+        else:
+            assert False, 'specified regime_flag not supported'
 
         return self.pedestal_pressure, self.pedestal_width
