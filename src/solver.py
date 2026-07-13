@@ -216,6 +216,14 @@ class saarelma_connor:
         self.rho_s = interp1d(self.psi_Te_eval, self.rho_s, kind='linear',
                          bounds_error=False, fill_value='extrapolate')(self.psi_N_pres)
 
+        # Also store pfile information for T_e and T_i
+        self.T_e_pres_pfile = interp1d(self.psi_Te_eval_pfile, self.T_e_pfile, kind='linear',
+                            bounds_error=False, fill_value='extrapolate')(self.psi_N_pres) * (1e3) # eV, on psi_N_pres grid
+        if self.T_rat_flag:
+            self.T_i_pres_pfile = self.T_e_pres_pfile * self.T_rat * (1e3) # eV, on psi_N_pres grid
+        else:
+            raise NotImplementedError("T_rat_flag must be True for now")
+
         grad_Te = np.gradient(self.T_e_pres * (1.60218e-19), self.r_psi) # gradient in J/m, T_e_pres is in eV
         self.D_ETG_x = P_tot_e / (self.S_plasma * abs(grad_Te)) # evaluated at each psi_N_pres, not including free parameter De_chie_etg and n_e
         self.D_NEO = 0.05 * (self.c_s * self.rho_s**2) / self.a
@@ -610,9 +618,10 @@ class saarelma_connor:
 
             # Plasma parameters (skip the magnetic axis to avoid degenerate zero-area/volume flux surface)
             self.Ip = self.eq['ip'] / 1e6 # MA, Plasma current
-            # self.pres = self.eq['pres'][1:] # pressure is NOT an input to this model
             self.psi_pres = np.linspace(self.eq['psimag'], self.eq['psibry'], len(self.eq['pres']))[1:]
             self.psi_N_pres = (self.psi_pres - self.eq['psimag']) / (self.eq['psibry'] - self.eq['psimag'])
+
+            self.pres_gfile = self.eq['pres'][1:] # pressure is NOT an input to this model but using this for plotting
 
             # Grids
             self.rgrid = np.linspace(self.eq['rleft'],self.eq['rleft']+self.eq['rdim'],self.eq['nr']) # m, 1D R grid
@@ -665,6 +674,11 @@ class saarelma_connor:
 
             # Extract profiles
             pf = read_pfile(kprof_fp)
+
+            # Store pfile information
+            self.T_e_pfile = pf['te(KeV)'] # T_e values (keV) evaluated at psi_Te_eval
+            self.psi_Te_eval_pfile = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
+
             self.n_e_pfile = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
             self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated]
             if self.T_e_source == 'pfile':
@@ -2475,7 +2489,7 @@ class saarelma_connor:
         if EPEDNN_core == 'pfile': # always fixed to p-file n_e and T_e
             psi_N_plasma = self.psi_N_pres
             n_e_plasma = interp1d(self.psi_N_pres, self.n_e_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
-            T_tot_plasma = interp1d(self.psi_N_pres, self.T_e_pres + self.T_i_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
+            T_tot_plasma = interp1d(self.psi_N_pres, self.T_e_pres_pfile + self.T_i_pres_pfile, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
 
         elif EPEDNN_core == 'pfile T, stiched ne': # pfile T_e and stiched n_e
             # Calculate core n_e
@@ -2737,7 +2751,7 @@ class saarelma_connor:
 
         # Apply ELM-free regime scaling
         if self.regime_flag == 'PT H-mode':
-            continue
+            pass
         elif self.regime_flag == 'NT':
             self.pedestal_pressure = self.pedestal_pressure * self.NT_scaling
             raise NotImplementedError('NT ELM-free regime scaling is not yet implemented')

@@ -1,0 +1,1261 @@
+alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner, message
+0.1, 0.1, 0.1, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.1, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.464, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.1, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.1, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 0.464, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 2.154, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 10.0, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 10.0, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 10.0, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 10.0, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 10.0, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 10.0, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.1, 10.0, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.1, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.1, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.1, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.1, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 0.464, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 2.154, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 10.0, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 10.0, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 10.0, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 10.0, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 10.0, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 10.0, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+0.464, 10.0, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.1, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.1, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 8 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 0.464, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 1 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 2.154, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 0.1, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 50 nonlinear iterations.
+Reason:
+   DIVERGED_MAX_IT
+2.154, 10.0, 0.1, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 26 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+2.154, 10.0, 0.1, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 34 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+2.154, 10.0, 0.1, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 16 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+2.154, 10.0, 0.1, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 20 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+2.154, 10.0, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 2 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+2.154, 10.0, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 9 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.1, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 0.464, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 2.154, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.1, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 0.464, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 2.154, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 100000000000000.0, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 100000000000000.0, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 100000000000000.0, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 100000000000000.0, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 2154434690031886.8, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 2154434690031886.8, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 2154434690031886.8, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 2154434690031886.8, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 4.641588833612791e+16, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 4.641588833612791e+16, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 4.641588833612791e+16, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 4.641588833612791e+16, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 1e+18, 1.259, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 1e+18, 3.162, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 1e+18, 7.943, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF
+10.0, 10.0, 10.0, 1e+18, 19.953, 0.8500, Nonlinear solve failed to converge after 0 nonlinear iterations.
+Reason:
+   DIVERGED_FUNCTION_NANORINF

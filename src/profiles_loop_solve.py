@@ -27,6 +27,49 @@ def profiles_loop_solve(
     eped_iter_max = 50,
     verbose = False,
 ):
+    """Solve the self-consistent pedestal problem using the EPEDNN model and the Saarelma-Connor model.
+
+    Parameters
+    ----------
+    MHD_FP : str
+        Path to MHD equilibrium file.
+    KPROF_FP : str
+        Path to KPROF profile file.
+    ne_success_fp : str
+        Path to directory to save successfull solutions.
+    initial_guess : str
+        Initial guess for the pedestal height and width.
+    ne_inner_bc : str
+        Boundary condition for the electron density at the inner boundary.
+    x_res : int
+        Number of grid points in the radial direction.
+    P_tot_e : float
+        Total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox.
+    psi_N_inner : float
+        Inner boundary of the pedestal in normalized poloidal flux.
+        Per-DOF x coordinates (m), unsorted (as stored in dat.data).
+    free_params : dict
+        Dictionary of free parameters for the EPEDNN model.
+    eped_tol_max : float
+        Maximum tolerance for the pedestal height and width.
+    eped_iter_max : int
+        Maximum number of iterations for the EPEDNN model.
+    verbose : bool
+        Whether to print verbose output.
+
+    Returns
+    -------
+    psi_N_inner_boundary_new : float
+        Inner boundary of the pedestal in normalized poloidal flux.
+    T_prof_keV : float
+        Temperature profile in keV.
+    best_x : ndarray
+        Best x coordinates.
+    best_ne : ndarray
+        Best electron density profile.
+    pedestal_height : float
+        Final pedestal pressure height in MPa.
+    """
 
     te_plot_profiles = []
     ne_plot_profiles = []
@@ -63,7 +106,7 @@ def profiles_loop_solve(
             psi_N_inner_boundary = psi_N_inner,
             mhd_fp       = MHD_FP,
             kprof_fp     = KPROF_FP,
-            verbose      = verbose,
+            verbose      = False,
             # psi_N_inner_boundary = 0.85, # set to None to use adaptive inner boundary method
     )
     psi_N_inner_boundary_new = psi_N_inner
@@ -76,6 +119,8 @@ def profiles_loop_solve(
     tanh_width_new = None
     psi_N_Te_new = None
     T_prof_keV = None
+    pedestal_height = None
+    pedestal_width = None
 
     for eped_iter in range(eped_iter_max):
 
@@ -166,8 +211,8 @@ def profiles_loop_solve(
             print(f"  psi_N_inner_boundary_new = {psi_N_inner_boundary_new:.4f}")
             og_Te_peak = float(interp1d(psi_prev, Te_prev_keV * 1e3, kind='linear',
                                         bounds_error=False, fill_value='extrapolate')(psi_ped))
-            print(f"Percent change from previous T_e at psi_ped = "
-                  f"{(100*(Te_ped_eV - og_Te_peak) / og_Te_peak):.4f}")
+            # print(f"Percent change from previous T_e at psi_ped = "
+            #       f"{(100*(Te_ped_eV - og_Te_peak) / og_Te_peak):.4f}")
 
             if eped_iter == 0:
                 te_plot_profiles.append({
@@ -211,13 +256,16 @@ def profiles_loop_solve(
             ncx_x0_ratio = ncx_x0_ratio,
             mhd_fp       = MHD_FP,
             kprof_fp     = KPROF_FP,
-            verbose      = verbose,
+            verbose      = False,
             psi_N_inner_boundary = psi_N_inner,
             T_e_source = 'epednn',
             T_prof = T_prof_keV,
             T_prof_psi_N = psi_N_Te_new,
         )
         base_model.setup_epednn()
+
+    gfile_pres_grid = base_model.psi_N_pres
+    gfile_pres = base_model.pres_gfile
 
     if te_plot_profiles:
         red_blue = LinearSegmentedColormap.from_list('red_blue', ['red', 'blue'])
@@ -249,4 +297,4 @@ def profiles_loop_solve(
         fig1.tight_layout()
         plt.show()
 
-    return psi_N_inner_boundary_new, T_prof_keV, best_x, best_ne
+    return pedestal_width, pedestal_height, gfile_pres, gfile_pres_grid
