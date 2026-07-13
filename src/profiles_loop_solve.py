@@ -5,6 +5,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import shutil
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.interpolate import interp1d
 
@@ -25,6 +26,8 @@ def profiles_loop_solve(
     free_params = None,
     eped_tol_max = 1e-3,
     eped_iter_max = 50,
+    kbm_gate_eps = 0.01,
+    EPEDNN_core = 'pfile',
     verbose = False,
 ):
     """Solve the self-consistent pedestal problem using the EPEDNN model and the Saarelma-Connor model.
@@ -54,6 +57,10 @@ def profiles_loop_solve(
         Maximum tolerance for the pedestal height and width.
     eped_iter_max : int
         Maximum number of iterations for the EPEDNN model.
+    kbm_gate_eps : float
+        Minimum gate error for the KBM model.
+    EPEDNN_core : str
+        Core to use for the EPEDNN model.
     verbose : bool
         Whether to print verbose output.
 
@@ -92,7 +99,7 @@ def profiles_loop_solve(
         linear_solver="lu",      # or "gamg" for GMRES + algebraic multigrid on J
         nCX_ic="solve",
         kbm_treatment="inline",
-        kbm_gate_eps=0.01, # 1e-3 minimum
+        kbm_gate_eps=kbm_gate_eps, # 1e-3 minimum
         verbose=False,
     )
 
@@ -114,19 +121,21 @@ def profiles_loop_solve(
     print("Base model built.")
 
     # Parameters to be used in the loop
-    prev_best_x = None
-    prev_best_ne = None
     tanh_width_new = None
     psi_N_Te_new = None
     T_prof_keV = None
     pedestal_height = None
     pedestal_width = None
 
-    for eped_iter in range(eped_iter_max):
+    # Clear outputs from any previous scan (including appended failure logs) and setup logging files
+    for name in os.listdir(ne_success_fp):
+        path = os.path.join(ne_success_fp, name)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
 
-        # Clear outputs from any previous scan (including appended failure logs) and setup logging files
-        for file in os.listdir(ne_success_fp):
-            os.remove(os.path.join(ne_success_fp, file))
+    for eped_iter in range(eped_iter_max):
 
         # Run solver and save outputs
         x_sol, ne_sol, nFC_sol, nCX_sol = base_model.solve_coupled_nondim(tanh_width=tanh_width_new, **SOLVE_KW)
@@ -150,7 +159,7 @@ def profiles_loop_solve(
             pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile')    
         else:
             pedestal_height_prev, pedestal_width_prev = pedestal_height, pedestal_width
-            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core='pfile')
+            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core=EPEDNN_core)
         tanh_width_new = psi_to_x(1-pedestal_width) * -1 # will error if result if negative which should not happen
         print(f"Pedestal height: {pedestal_height} MPa, Pedestal width: {pedestal_width} (psi_N)")
 
@@ -158,7 +167,7 @@ def profiles_loop_solve(
             eped_tol = ((pedestal_height - pedestal_height_prev) / pedestal_height_prev
                         + (pedestal_width - pedestal_width_prev) / pedestal_width_prev)
             print(f"Normalized pedestal pressure height and width tolerance: {eped_tol}")
-            if eped_tol < eped_tol_max:
+            if abs(eped_tol) < eped_tol_max:
                 break
 
         # --- New T_e profile (EPED1 tanh form, Eq. 1b without core H term) ---

@@ -2,6 +2,7 @@ import os
 import numpy as np
 from scipy.interpolate import RectBivariateSpline, interp1d
 from scipy.integrate import simpson, solve_bvp, cumulative_trapezoid
+from scipy import constants
 import matplotlib.pyplot as plt
 from src.adas.adas_ionisation import scd_adas
 from src.adas.adas_cx import scx_adas
@@ -179,7 +180,7 @@ class saarelma_connor:
 
         # Calculate velocities
         self.Z_i = Z_i
-        self.e_i = Z_i * 1.602e-19 # C
+        self.e_i = Z_i * constants.e # C
         k_B = 1.38064852e-23 # J/K, Boltzmann constant
         self.V_th_i = np.sqrt(2*k_B*self.T_i_K/(M_i*self.M_eff)) # m/s, per psi_N_eval for Ti
         self.V_th_e = np.sqrt(2*k_B*self.T_e_K/M_e) # m/s, per psi_N_eval for Te
@@ -220,7 +221,7 @@ class saarelma_connor:
         self.T_e_pres_pfile = interp1d(self.psi_Te_eval_pfile, self.T_e_pfile, kind='linear',
                             bounds_error=False, fill_value='extrapolate')(self.psi_N_pres) * (1e3) # eV, on psi_N_pres grid
         if self.T_rat_flag:
-            self.T_i_pres_pfile = self.T_e_pres_pfile * self.T_rat * (1e3) # eV, on psi_N_pres grid
+            self.T_i_pres_pfile = self.T_e_pres_pfile * self.T_rat # eV, on psi_N_pres grid
         else:
             raise NotImplementedError("T_rat_flag must be True for now")
 
@@ -2564,7 +2565,7 @@ class saarelma_connor:
         # Calculate pressure and volavgP
         V_full_plasma = interp1d(self.psi_N_pres, self.V_plasma, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
         dV_dpsi = np.gradient(V_full_plasma, psi_N_plasma)
-        pressure = (n_e_plasma * (2 * T_tot_plasma)) * 1.60218e-19 # Pa
+        pressure = (n_e_plasma * T_tot_plasma) * constants.e # Pa
         self.volavgP = (simpson(pressure * dV_dpsi, psi_N_plasma)
                         / simpson(dV_dpsi, psi_N_plasma))
 
@@ -2711,6 +2712,7 @@ class saarelma_connor:
                 assert False, 'x_ne must be provided if ne_ped is provided'
             self._x_ne = x_ne
         self.calc_betan(self._x_ne,self._neped,psiN_Te,Te_prev,EPEDNN_core)
+        print(f'betan: {self.betan}')
 
         ne_ped_h = interp1d(self._x_ne, self._neped, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
 

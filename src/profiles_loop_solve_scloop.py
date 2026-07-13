@@ -32,6 +32,8 @@ def profiles_loop_solve_scloop(
     ncx_x0_ratios_minmax = [0.1,10],
     eped_tol_max = 1e-3,
     eped_iter_max = 50,
+    kbm_gate_eps = 0.01,
+    EPEDNN_core = 'pfile',
     verbose = False,
 ):
     """Solve the self-consistent pedestal problem using the EPEDNN model and the Saarelma-Connor model.
@@ -97,7 +99,7 @@ def profiles_loop_solve_scloop(
         linear_solver="lu",      # or "gamg" for GMRES + algebraic multigrid on J
         nCX_ic="solve",
         kbm_treatment="inline",
-        kbm_gate_eps=0.01, # 1e-3 minimum
+        kbm_gate_eps=kbm_gate_eps, # 1e-3 minimum
         verbose=False,
     )
 
@@ -249,10 +251,10 @@ def profiles_loop_solve_scloop(
         if eped_iter == 0:
             pedestal_height_prev = 0.0
             pedestal_width_prev = 0.0
-            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile')    
+            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile')
         else:
             pedestal_height_prev, pedestal_width_prev = pedestal_height, pedestal_width
-            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core='pfile')
+            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core=EPEDNN_core)
         tanh_width_new = psi_to_x(1-pedestal_width) * -1 # will error if result if negative which should not happen
         print(f"Pedestal height: {pedestal_height} MPa, Pedestal width: {pedestal_width} (psi_N)")
 
@@ -347,6 +349,27 @@ def profiles_loop_solve_scloop(
                 'label': f'Iter {eped_iter}',
                 'ls': '-',
             })
+
+            fig,ax = plt.subplots(figsize=(6, 4))
+            ax.plot(psi_N_ne[sort_idx], (best_ne[sort_idx] / 1e19), lw=2, ls='-',
+                    color='blue', label=f'Iter {eped_iter}')
+            ax.set_xlabel(r'$\psi_N$')
+            ax.set_ylabel(r'$n_e$ ($10^{19}$ m$^{-3}$)')
+            ax.set_title('Solved $n_e$ profiles')
+            ax.legend()
+            ax.grid(alpha=0.3)
+            ax.set_xlim(0.8, 1.0)
+
+            fig,ax = plt.subplots(figsize=(6, 4))
+            ax.plot(psi_N_Te_new, Te_spliced_eV, lw=2, ls='-',
+                    color='blue', label=f'Iter {eped_iter}')
+            ax.set_xlabel(r'$\psi_N$')
+            ax.set_ylabel(r'$T_e$ [eV]')
+            ax.set_title('Solved $T_e$ profiles')
+            ax.legend()
+            ax.grid(alpha=0.3)
+            ax.set_xlim(0.8, 1.0)
+            ax.set_ylim(0, 10000)
 
         # MAKE THIS PART FASTER
         base_model = saarelma_connor_nondim( # reset base_model to the new T_e profile and related quantities
