@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --time=14:00:00
+#SBATCH --time=05:00:00
 #SBATCH --output=multieq_%j.out
 #SBATCH --error=multieq_%j.err
 #SBATCH --chdir=/mnt/homes_global/jal2351/software/saarelma-conner-ped/tests/EPEDNN
@@ -25,6 +25,6 @@ echo "Working directory: $(pwd)"
 echo "Python: $(which python)"
 python --version
 
-python epednn_multieq_profilesloop_scloop.py
+python epednn_multieq_profilesloop.py
 
 echo "Job finished at $(date)"

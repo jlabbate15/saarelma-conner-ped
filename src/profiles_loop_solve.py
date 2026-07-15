@@ -81,6 +81,8 @@ def profiles_loop_solve(
     te_plot_profiles = []
     ne_plot_profiles = []
 
+    equil_tag = Path(MHD_FP).name[1:]
+
     # Load in free parameters
     if free_params is None:
         raise ValueError("Must specify free_params")
@@ -128,19 +130,21 @@ def profiles_loop_solve(
     pedestal_width = None
 
     # Clear outputs from any previous scan (including appended failure logs) and setup logging files
-    for name in os.listdir(ne_success_fp):
-        path = os.path.join(ne_success_fp, name)
-        if os.path.isdir(path):
+    equil_dir = Path(ne_success_fp) / equil_tag
+    equil_dir.mkdir(parents=True, exist_ok=True)
+
+    for path in equil_dir.iterdir():
+        if path.is_dir():
             shutil.rmtree(path)
         else:
-            os.remove(path)
+            path.unlink()
 
     for eped_iter in range(eped_iter_max):
 
         # Run solver and save outputs
         x_sol, ne_sol, nFC_sol, nCX_sol = base_model.solve_coupled_nondim(tanh_width=tanh_width_new, **SOLVE_KW)
         sol = {'x': x_sol, 'y': ne_sol, 'nFC': nFC_sol, 'nCX': nCX_sol, 'alpha_crit': alpha_crit, 'C_KBM': C_KBM, 'De_chie_etg': De_chie_etg, 'nFC_x0': nFC_x0, 'ncx_x0_ratio': ncx_x0_ratio}
-        np.save(f'{ne_success_fp}/ne_iter_{eped_iter}.npy', sol, allow_pickle=True)
+        np.save(f'{equil_dir}/ne_iter_{eped_iter}.npy', sol, allow_pickle=True)
         best_x = np.asarray(sol['x'], dtype=float)
         best_ne = np.asarray(sol['y'], dtype=float)
 
