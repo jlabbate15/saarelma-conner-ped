@@ -299,7 +299,8 @@ class saarelma_connor_nondim(saarelma_connor):
     # Pressure / KBM coefficients in non-dim units
     # ------------------------------------------------------------------
 
-    def calc_pressure_quantities_nondim(self, hat_n_e, average_alpha_pedestal=False):
+    def calc_pressure_quantities_nondim(self, hat_n_e,
+                                        gate_mode=None):
         """Non-dim version of :meth:`saarelma_connor.calc_pressure_quantities`.
 
         Computes the pedestal-averaged Connor-Hastie alpha in physical
@@ -313,9 +314,23 @@ class saarelma_connor_nondim(saarelma_connor):
         hat_n_e : array_like, shape (n_dofs,)
             Dimensionless electron density at the mesh DOFs (DOF order,
             not necessarily monotonic in hat_x).
-        average_alpha_pedestal : bool, default True
-            If True, use the pedestal-averaged alpha (preferred -- this
-            matches solver.py behaviour).  Otherwise use the local alpha.
+        gate_mode : {None, "average", "majority", "local"}
+            How the KBM on/off gate is decided:
+
+            ``"average"``
+                Gate on the pedestal-averaged alpha:
+                ``gate = mean(alpha) > alpha_crit`` (single on/off for
+                the whole grid).  When on, the local A/B coefficient
+                structure is applied at every point (no pointwise gate).
+            ``"majority"``
+                Gate on a majority vote of the local alpha: on for the
+                whole grid iff more than half of the pedestal grid
+                points have alpha > alpha_crit.  When on, the local
+                (A, B) KBM coefficient structure is applied at every
+                point (no pointwise gate).
+            ``"local"``
+                Pointwise gate (legacy behaviour): each grid point is
+                gated by its own local alpha.
 
         Sets
         ----
@@ -323,6 +338,13 @@ class saarelma_connor_nondim(saarelma_connor):
             Dimensionless KBM coefficients in DOF order.
         self.alpha_bar_ped : float
             Pedestal-averaged alpha (same definition as the parent).
+        self.alpha_frac_above : float
+            Fraction of pedestal grid points with alpha > alpha_crit.
+        self.kbm_gate_on : bool or ndarray
+            Gate state: a scalar bool for "average"/"majority", a
+            pointwise bool array (DOF order) for "local".
+        self.alpha_local_ped : ndarray
+            Local Connor-Hastie alpha in DOF order (diagnostic).
         """
         hat_x_dofs = self._fd_cache["hat_x_dofs"]
         sort_idx = np.argsort(hat_x_dofs)
@@ -346,19 +368,37 @@ class saarelma_connor_nondim(saarelma_connor):
         dpdx = np.gradient(_pres, x_si)                # Pa/m
         _alpha = alpha_nodp * dpdx                     # dimensionless
 
-        if average_alpha_pedestal:
-            alpha_bar = float(np.mean(_alpha))
-            self.alpha_bar_ped = alpha_bar
-            gate = alpha_bar > self.alpha_crit
-            D_KBM_si = np.where(gate, (alpha_bar - self.alpha_crit) * G_KBM, 0.0)
-            A_KBM_si = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
-            B_KBM_si = np.where(gate, G_KBM * alpha_nodp, 0.0)
-        else:
-            self.alpha_bar_ped = np.nan
+        # Resolve the gate mode
+        gate_mode = str(gate_mode).lower()
+        if gate_mode not in ("average", "majority", "local"):
+            raise ValueError(
+                f"gate_mode must be 'average', 'majority', or 'local', "
+                f"got {gate_mode!r}."
+            )
+
+        alpha_bar = float(np.mean(_alpha))
+        self.alpha_bar_ped = alpha_bar
+        self.alpha_frac_above = float(np.mean(_alpha > self.alpha_crit))
+        self.alpha_local_ped = _alpha[unsort_idx]
+
+        if gate_mode == "average":
+            gate = alpha_bar > self.alpha_crit # True or False, not an array of different values
+            self.kbm_gate_on = bool(gate)
+        elif gate_mode == "majority":
+            # KBM on for the whole grid iff more than half of the
+            # pedestal grid points are locally above alpha_crit.  When
+            # on, the local A/B coefficient structure is applied at
+            # every point (no pointwise gate), so the KBM terms are
+            # truly active everywhere; D_KBM is the matching local
+            # (alpha - alpha_crit)*G_KBM diagnostic.
+            gate = self.alpha_frac_above > 0.5
+            self.kbm_gate_on = bool(gate)
+        else:  # local (pointwise legacy gate)
             gate = _alpha > self.alpha_crit
-            D_KBM_si = np.where(gate, (_alpha - self.alpha_crit) * G_KBM, 0.0)
-            A_KBM_si = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
-            B_KBM_si = np.where(gate, G_KBM * alpha_nodp, 0.0)
+            self.kbm_gate_on = gate[unsort_idx]
+        D_KBM_si = np.where(gate, (_alpha - self.alpha_crit) * G_KBM, 0.0)
+        A_KBM_si = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
+        B_KBM_si = np.where(gate, G_KBM * alpha_nodp, 0.0)
 
         # Rescale to hat units (App. A.8 Eqs. (eq:hat-A-KBM), (eq:hat-B-KBM)):
         #   hat_A = A / [D]_0
@@ -386,7 +426,7 @@ class saarelma_connor_nondim(saarelma_connor):
         self, hat_ne, hat_T_fd, hat_dT_dx_fd,
         hat_alpha_nodp_fd, hat_G_KBM_fd,
         alpha_crit_c, gate_eps_c,
-        boundary=False, hat_dne_dx_inner_c=None, average_alpha_pedestal=False,
+        boundary=False, hat_dne_dx_inner_c=None,
     ):
         """Build the inline (trial-dependent) UFL expressions for the
         Connor-Hastie ``alpha``, the smoothed KBM gate, and the
@@ -415,10 +455,6 @@ class saarelma_connor_nondim(saarelma_connor):
             is needed in the Neumann-flux ds(1) contribution to F1).
             Otherwise use the volume trial derivative ``hat_ne.dx(0)``.
         """
-
-        # currently not including average alpha pedestal to keep fully consistent
-        if average_alpha_pedestal:
-            print("Currently not supporting average alpha pedestal in inline KBM treatment")
         
         if boundary:
             ne_dx_here = hat_dne_dx_inner_c
@@ -449,15 +485,14 @@ class saarelma_connor_nondim(saarelma_connor):
         solver.
 
         ``hat_A_KBM_term`` and ``hat_B_KBM_term`` are UFL expressions
-        (or Functions) carrying the KBM coefficients.  In the
-        ``kbm_treatment="frozen"`` path they are static Functions; in
+        (or Functions) carrying the KBM coefficients.  In
         the ``"inline"`` path they are UFL expressions that depend on
         the trial ``hat_n_e``.
 
         ``hat_A_KBM_bc_term`` / ``hat_B_KBM_bc_term`` are the analogous
         expressions evaluated with the prescribed Neumann slope (used
         only inside the ds(1) boundary integrand).  If left None the
-        volume expressions are reused (the static-frozen path).
+        volume expressions are reused.
         """
         if hat_A_KBM_bc_term is None:
             hat_A_KBM_bc_term = hat_A_KBM_term
@@ -530,7 +565,10 @@ class saarelma_connor_nondim(saarelma_connor):
                       nCX_ic="solve",
                       kbm_treatment="inline",
                       kbm_gate_eps=None,
-                      average_alpha_pedestal=False,
+                      picard_gate_mode="average",
+                      picard_max_it=50,
+                      picard_rtol=1e-8,
+                      picard_relax=1.0,
                       verbose=None):
         """Non-dimensional Firedrake solver for the coupled three-equation
         Saarelma--Connor neutral-transport pedestal model.
@@ -573,14 +611,6 @@ class saarelma_connor_nondim(saarelma_connor):
         ``kbm_treatment`` controls how the piecewise KBM gate
         (Heaviside on alpha - alpha_crit) is handled.
 
-        ``"frozen"`` (legacy)
-            ``calc_pressure_quantities_nondim`` is called once with the
-            initial guess for hat_n_e and the resulting
-            ``hat_A_KBM`` / ``hat_B_KBM`` / ``hat_D_KBM`` are baked into
-            static Functions before the SNES solve.  The gate cannot
-            update as hat_n_e evolves -- the answer depends on which
-            side of alpha_crit the *initial guess* landed.
-
         ``"inline"`` (default, new)
             ``hat_A_KBM`` and ``hat_B_KBM`` are written directly as UFL
             expressions of the trial hat_n_e (App. A.7--A.8 of the
@@ -600,10 +630,48 @@ class saarelma_connor_nondim(saarelma_connor):
             Newton step; on convergence the model is on its own KBM
             branch by construction.
 
+        ``"picard"``
+            Outer Picard (fixed-point) loop following Saarelma et al.
+            (2023): each Picard iteration the KBM gate and A/B
+            coefficients are evaluated from the *current* hat_n_e (the
+            initial guess on the first pass, thereafter the previously
+            solved profile), then frozen while SNES solves the
+            three-field system.  The loop repeats until the density
+            profile is unchanged to ``picard_rtol`` and the gate state
+            is stable (or ``picard_max_it`` is hit).  How the
+            whole-grid on/off gate is decided each iteration is set by
+            ``picard_gate_mode``; when on, both modes freeze the same
+            local A/B KBM structure everywhere (no pointwise gate):
+
+            ``picard_gate_mode="average"`` (default)
+                KBM on iff the pedestal-averaged alpha (Eq. 24, with
+                p = n_e*(T_e+T_i)) exceeds alpha_crit.
+            ``picard_gate_mode="majority"``
+                KBM on iff more than half of the pedestal grid points
+                have local alpha > alpha_crit.
+
         ``kbm_gate_eps`` : float or None, default None
-            Smoothing width of the Heaviside.  ``None`` -> 5% of
-            ``alpha_crit`` (with a 1e-3 floor).  Smaller eps makes the
-            gate sharper but harder for Newton to converge.
+            Smoothing width of the Heaviside (inline treatment only).
+            ``None`` -> 5% of ``alpha_crit`` (with a 1e-3 floor).
+            Smaller eps makes the gate sharper but harder for Newton
+            to converge.
+
+        ``picard_max_it`` : int, default 50
+            Maximum number of Picard iterations ("picard" only).
+
+        ``picard_rtol`` : float, default 1e-8
+            Relative L2 tolerance on the change in hat_n_e between
+            Picard iterations ("picard" only).
+
+        ``picard_relax`` : float in (0, 1], default 1.0
+            Under-relaxation factor for the frozen hat_A_KBM / hat_B_KBM
+            update: coeff_new = relax * coeff_computed + (1 - relax) *
+            coeff_old.  Use < 1 if the gate flip-flops between iterations.
+            1.0 means this effect is disabled.
+
+        After a "picard" solve, ``self.picard_info`` records the
+        iteration history (alpha_bar, gate state, profile change) and
+        whether the loop converged.
         """
         if not _FIREDRAKE_AVAILABLE:
             raise ImportError(
@@ -715,18 +783,42 @@ class saarelma_connor_nondim(saarelma_connor):
             )
 
         # ------------------------------------------------------------------
-        # KBM (frozen at the initial guess for the SNES solve, exactly as
-        # in solver.py.solve_coupled).
+        # KBM coefficients evaluated at the initial guess.  For
+        # "picard" they seed the first Picard iteration; for "inline"
+        # they are only used for diagnostics (alpha_bar of the guess).
         # ------------------------------------------------------------------
+        kbm_treatment = str(kbm_treatment).lower()
+        if kbm_treatment not in ("inline", "picard"):
+            raise ValueError(
+                "kbm_treatment must be 'inline' or 'picard' "
+                f"got {kbm_treatment!r}."
+            )
+        picard_gate_mode = str(picard_gate_mode).lower()
+        if kbm_treatment == "picard" and picard_gate_mode not in ("average", "majority"):
+            raise ValueError(
+                "picard_gate_mode must be 'average' or 'majority', "
+                f"got {picard_gate_mode!r}."
+            )
+        picard_relax = float(picard_relax)
+        if kbm_treatment == "picard" and not (0.0 < picard_relax <= 1.0):
+            raise ValueError(
+                f"picard_relax must be in (0, 1], got {picard_relax}."
+            )
+
+        if kbm_treatment == "picard":
+            gate_mode_input = picard_gate_mode
+        elif kbm_treatment == "inline":
+            gate_mode_input = "local"
+
         self.calc_pressure_quantities_nondim(
             ne_init / self._n0_nd,
-            average_alpha_pedestal=average_alpha_pedestal,
+            gate_mode=gate_mode_input,
         )
 
         # use the initial guess for ne to get the initial guess for nFC from Eq. (14) in Saarelma et al. (2023)
         order_desc = np.argsort(x_dofs_si)[::-1]
         x_desc = x_dofs_si[order_desc]
-        ne_desc = np.interp(x_desc, self.x_init, self.n_e_pres)
+        ne_desc = ne_init[order_desc]  # SI m^-3; same ne guess used for nCX below
         Si_desc = np.interp(x_desc, self.x_init, self.S_i_pres)
         fFC_desc = np.interp(x_desc, self.x_init, self.fFC)
         Scx_desc = np.interp(x_desc, self.x_init, self.S_cx_pres)
@@ -903,14 +995,8 @@ class saarelma_connor_nondim(saarelma_connor):
             bcs.append(DirichletBC(W.sub(0), hat_ne_inner_c, 1))
 
         # ------------------------------------------------------------------
-        # KBM treatment dispatch.
+        # KBM treatment dispatch
         # ------------------------------------------------------------------
-        kbm_treatment = str(kbm_treatment).lower()
-        if kbm_treatment not in ("frozen", "inline"):
-            raise ValueError(
-                f"kbm_treatment must be 'frozen' or 'inline', got {kbm_treatment!r}."
-            )
-
         # Smoothing width for the Heaviside in the inline gate.  Default
         # is 5% of alpha_crit (>= 1e-3 to avoid division by zero at
         # alpha_crit == 0).
@@ -932,6 +1018,13 @@ class saarelma_connor_nondim(saarelma_connor):
             "alpha_crit": float(self.alpha_crit),
             "alpha_bar_initial_guess": float(self.alpha_bar_ped),
         }
+        if kbm_treatment == "picard":
+            self.kbm_info.update({
+                "picard_gate_mode": picard_gate_mode,
+                "picard_max_it":    int(picard_max_it),
+                "picard_rtol":      float(picard_rtol),
+                "picard_relax":     float(picard_relax),
+            })
 
         # ------------------------------------------------------------------
         # Assemble residuals and solve via SNES.
@@ -939,12 +1032,25 @@ class saarelma_connor_nondim(saarelma_connor):
         v_e, v_F, v_C = TestFunctions(W)
         hat_ne_curr, hat_nFC_curr, hat_nCX_curr = split(u)
 
-        if kbm_treatment == "frozen":
-            hat_A_KBM_term    = self._fd_cache["hat_A_KBM_fd"]
-            hat_B_KBM_term    = self._fd_cache["hat_B_KBM_fd"]
-            hat_A_KBM_bc_term = None  # reuse the volume term
+        if kbm_treatment == "picard":
+            # Per-iteration-frozen KBM coefficients, updated between
+            # Picard iterations from the latest hat_n_e.  "average" and
+            # "majority" differ only in how the whole-grid on/off gate
+            # is decided (see calc_pressure_quantities_nondim); when
+            # on, both freeze the same local A/B structure everywhere.
+            hat_A_KBM_picard_fd = Function(V, name="hat_A_KBM_picard")
+            hat_B_KBM_picard_fd = Function(V, name="hat_B_KBM_picard")
+            hat_A_KBM_picard_fd.dat.data[:] = self._hat_A_KBM
+            hat_B_KBM_picard_fd.dat.data[:] = self._hat_B_KBM
+            self._fd_cache["hat_A_KBM_picard_fd"] = hat_A_KBM_picard_fd
+            self._fd_cache["hat_B_KBM_picard_fd"] = hat_B_KBM_picard_fd
+            hat_A_KBM_term = hat_A_KBM_picard_fd
+            hat_B_KBM_term = hat_B_KBM_picard_fd
+
+            # reuse the frozen terms for SNES solve (F1 construction still constructs boundary from setting these to 'None')
+            hat_A_KBM_bc_term = None  # reuse the frozen terms for SNES solve
             hat_B_KBM_bc_term = None
-        else:  # inline
+        elif kbm_treatment == "inline":  # inline
             # Volume terms: depend on the trial via hat_ne.dx(0).
             (_alpha_ufl, _gate_ufl,
              hat_A_KBM_term, hat_B_KBM_term) = self._kbm_inline_terms(
@@ -955,7 +1061,6 @@ class saarelma_connor_nondim(saarelma_connor):
                 self._fd_cache["hat_G_KBM_fd"],
                 alpha_crit_c, gate_eps_c,
                 boundary=False,
-                average_alpha_pedestal=average_alpha_pedestal,
             )
             # Boundary terms (Neumann ds(1)): the prescribed slope is
             # substituted for hat_n_e' inside alpha so the gate at the
@@ -970,7 +1075,6 @@ class saarelma_connor_nondim(saarelma_connor):
                 alpha_crit_c, gate_eps_c,
                 boundary=True,
                 hat_dne_dx_inner_c=hat_dne_dx_inner_c,
-                average_alpha_pedestal=average_alpha_pedestal,
             )
 
         F1 = self._build_f1_weak_form_nondim(
@@ -1009,7 +1113,88 @@ class saarelma_connor_nondim(saarelma_connor):
             ksp_rtol=ksp_rtol,
             ksp_max_it=ksp_max_it,
         )
-        solve(F == 0, u, bcs=bcs, solver_parameters=snes_params)
+
+        if kbm_treatment == "picard":
+            # ----------------------------------------------------------
+            # Outer Picard loop (Saarelma et al. 2023): freeze the KBM
+            # gate/coefficients from the current density profile, solve
+            # the three-field system with SNES, recompute the gate from
+            # the new profile, and repeat until the profile and gate
+            # stop changing.
+            # ----------------------------------------------------------
+            picard_history = []
+            prev_hat_ne = u.subfunctions[0].dat.data.copy()
+            prev_gate = bool(self.kbm_gate_on)
+            picard_converged = False
+            n_picard = 0
+            for it in range(1, int(picard_max_it) + 1):
+                n_picard = it
+                # Solve with the currently frozen KBM coefficients
+                # (warm start from the previous iterate stored in u).
+                solve(F == 0, u, bcs=bcs, solver_parameters=snes_params)
+                hat_ne_new = u.subfunctions[0].dat.data.copy()
+
+                dn_rel = (
+                    np.linalg.norm(hat_ne_new - prev_hat_ne)
+                    / max(np.linalg.norm(prev_hat_ne), 1e-300)
+                )
+
+                # Recompute alpha / gate / KBM coeffs from the newly
+                # solved profile and refreeze (optional under-relaxation).
+                self.calc_pressure_quantities_nondim(
+                    hat_ne_new, gate_mode=picard_gate_mode,
+                )
+                gate_now = bool(self.kbm_gate_on)
+
+                # Picard relax and update the frozen KBM coefficients (updates weak form F)
+                hat_A_KBM_picard_fd.dat.data[:] = (
+                    picard_relax * self._hat_A_KBM
+                    + (1.0 - picard_relax) * hat_A_KBM_picard_fd.dat.data
+                )
+                hat_B_KBM_picard_fd.dat.data[:] = (
+                    picard_relax * self._hat_B_KBM
+                    + (1.0 - picard_relax) * hat_B_KBM_picard_fd.dat.data
+                )
+
+                picard_history.append({
+                    "iteration":        it,
+                    "alpha_bar":        float(self.alpha_bar_ped),
+                    "alpha_frac_above": float(self.alpha_frac_above),
+                    "kbm_gate_on":      gate_now,
+                    "dne_rel":          float(dn_rel),
+                })
+                if v:
+                    print(
+                        f"[picard] it {it:3d}: |dne|_rel = {dn_rel:.3e}, "
+                        f"alpha_bar = {self.alpha_bar_ped:.4f}, "
+                        f"frac(alpha>crit) = {self.alpha_frac_above:.2f}, "
+                        f"KBM {'ON' if gate_now else 'OFF'}"
+                    )
+
+                if dn_rel < float(picard_rtol) and gate_now == prev_gate:
+                    picard_converged = True
+                    break
+                prev_hat_ne = hat_ne_new
+                prev_gate = gate_now
+
+            self.picard_info = {
+                "converged":  picard_converged,
+                "iterations": n_picard,
+                "gate_mode":  picard_gate_mode,
+                "history":    picard_history,
+            }
+            self.kbm_info["picard_converged"] = picard_converged
+            self.kbm_info["picard_iterations"] = n_picard
+            if not picard_converged:
+                raise RuntimeError(
+                    f"[picard] Picard loop did not converge in "
+                    f"{picard_max_it} iterations "
+                    f"(last |dne|_rel = {picard_history[-1]['dne_rel']:.3e}); "
+                    "consider increasing picard_max_it or setting "
+                    "picard_relax < 1."
+                )
+        else:
+            solve(F == 0, u, bcs=bcs, solver_parameters=snes_params)
 
         # ------------------------------------------------------------------
         # Extract converged hat profiles, then recover SI profiles.
