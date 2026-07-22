@@ -21,21 +21,27 @@ from src.load_equil import initialize_inputs
 verbose = False
 
 # Output directory
-output_dir = 'multiequil'
+output_dir = 'multiequil_kbmavg'
 
 # Scan parameters
 x_res = 20
 eped_tol_max = 1e-4
+# From param_err.py scan with kbm_treatment= picard average: alpha_crit=0.1, C_KBM=0.1, De_chie_etg=0.1, nFC_x0=3.16228e+15, ncx_x0_ratio=1.259
 free_params = {
     'alpha_crit': 0.1,
-    'C_KBM': 1,
+    'C_KBM': 0.1,
     'De_chie_etg': 0.1,
     'nFC_x0': 3.16228e15,
-    'ncx_x0_ratio': 17.783
+    'ncx_x0_ratio': 1.259
 }
 eped_iter_max = 50
-kbm_gate_eps = 0.1
 EPEDNN_core = 'previous T, stiched ne'
+kbm_treatment = "picard"
+kbm_gate_eps = 0.1
+picard_gate_mode = "average"
+picard_max_it = 50
+picard_rtol = 1e-8
+picard_relax = 1.0
 
 # Equilibria parameters
 equil_num = 100
@@ -69,6 +75,11 @@ for mhd_fp, kprof_fp in equilibria:
             eped_iter_max = eped_iter_max,
             kbm_gate_eps = kbm_gate_eps,
             EPEDNN_core = EPEDNN_core,
+            kbm_treatment = kbm_treatment,
+            picard_gate_mode = picard_gate_mode,
+            picard_max_it = picard_max_it,
+            picard_rtol = picard_rtol,
+            picard_relax = picard_relax,
             verbose = verbose,
         )
         p_gfile = pres_pred(ped_wid, gfile_pres, gfile_pres_grid)

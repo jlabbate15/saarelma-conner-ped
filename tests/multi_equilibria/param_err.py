@@ -12,14 +12,14 @@ from src.solver_nondim import saarelma_connor_nondim
 equil_num = 100
 
 # Scan parameters
-N = 5 # size of each free parameter array
+N = 3 # size of each free parameter array
 alpha_crits = np.logspace(-1, 1, N)
 C_KBMs = np.logspace(-1, 1, N)
 De_chie_etgs = np.logspace(-1, 1, N)
 nFC_x0s = np.logspace(14, 17, N)
 ncx_x0_ratios = np.logspace(0.1,1.25,N)
 psi_val = 0.85 # this is for the scan, not the analysis
-x_res = 40
+x_res = 20
 
 # Static parameters
 P_tot_e = 5e6 # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
@@ -27,7 +27,7 @@ P_tot_e = 5e6 # W, total heating power given to electrons (can be assumed to be 
 # Output data and files
 GEQDSK_DIR = Path("/mnt/homes_global/jal2351/software/sc_inputs/CAKEgeqdsks")
 PFILE_DIR = Path("/mnt/homes_global/jal2351/software/sc_inputs/CAKEpfiles")
-scan_success_dir = Path('scan_results_eqdbOak_100_5/')
+scan_success_dir = Path('scan_results_eqdbOak_equil100_N3_kbmavg/')
 verbose = False
 
 # Solver parameters
@@ -38,8 +38,12 @@ SOLVE_KW = dict(
     ne_inner_bc="neumann",   # Saarelma A7 default; see dirichlet comparison below
     linear_solver="lu",      # or "gamg" for GMRES + algebraic multigrid on J
     nCX_ic="solve",
-    kbm_treatment="inline",
+    kbm_treatment="picard",
     kbm_gate_eps=0.1, # 1e-3 minimum
+    picard_gate_mode="average",
+    picard_max_it=50,
+    picard_rtol=1e-8,
+    picard_relax=1.0,
     verbose=verbose,
 )
 

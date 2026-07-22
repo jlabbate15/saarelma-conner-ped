@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=multieq
+#SBATCH --job-name=multieq_epednn_kbmavg
 #SBATCH --partition=LocalQ
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --time=05:00:00
-#SBATCH --output=multieq_%j.out
-#SBATCH --error=multieq_%j.err
+#SBATCH --time=20:00:00
+#SBATCH --output=multieq_epednn_kbmavg_%j.out
+#SBATCH --error=multieq_epednn_kbmavg_%j.err
 #SBATCH --chdir=/mnt/homes_global/jal2351/software/saarelma-conner-ped/tests/EPEDNN
 
 set -euo pipefail

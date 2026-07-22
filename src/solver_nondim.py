@@ -320,8 +320,9 @@ class saarelma_connor_nondim(saarelma_connor):
             ``"average"``
                 Gate on the pedestal-averaged alpha:
                 ``gate = mean(alpha) > alpha_crit`` (single on/off for
-                the whole grid).  When on, the local A/B coefficient
-                structure is applied at every point (no pointwise gate).
+                the whole grid).  When on, Saarelma et al. (2023) Eq. 25
+                diffusivity is used on the whole grid:
+                ``D_KBM = (alpha_bar - alpha_crit) * G_KBM``.
             ``"majority"``
                 Gate on a majority vote of the local alpha: on for the
                 whole grid iff more than half of the pedestal grid
@@ -382,23 +383,29 @@ class saarelma_connor_nondim(saarelma_connor):
         self.alpha_local_ped = _alpha[unsort_idx]
 
         if gate_mode == "average":
-            gate = alpha_bar > self.alpha_crit # True or False, not an array of different values
+            # Saarelma et al. (2023) Eqs. 24--25: whole-grid gate on
+            # alpha_bar, diffusivity locked to (alpha_bar - alpha_crit).
+            gate = alpha_bar > self.alpha_crit
             self.kbm_gate_on = bool(gate)
+            D_KBM_si = np.where(gate, (alpha_bar - self.alpha_crit) * G_KBM, 0.0)
+            # A/B kept as diagnostics / unused by Picard-"average"
+            # (that path freezes D into the A-slot with B = 0).
+            A_KBM_si = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
+            B_KBM_si = np.where(gate, G_KBM * alpha_nodp, 0.0)
         elif gate_mode == "majority":
-            # KBM on for the whole grid iff more than half of the
-            # pedestal grid points are locally above alpha_crit.  When
-            # on, the local A/B coefficient structure is applied at
-            # every point (no pointwise gate), so the KBM terms are
-            # truly active everywhere; D_KBM is the matching local
-            # (alpha - alpha_crit)*G_KBM diagnostic.
+            # Whole-grid on/off from a majority vote of local alpha;
+            # when on, freeze the local A/B structure everywhere, does NOT use a global gate like "average".
             gate = self.alpha_frac_above > 0.5
             self.kbm_gate_on = bool(gate)
+            D_KBM_si = np.where(gate, (_alpha - self.alpha_crit) * G_KBM, 0.0)
+            A_KBM_si = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
+            B_KBM_si = np.where(gate, G_KBM * alpha_nodp, 0.0)
         else:  # local (pointwise legacy gate)
             gate = _alpha > self.alpha_crit
             self.kbm_gate_on = gate[unsort_idx]
-        D_KBM_si = np.where(gate, (_alpha - self.alpha_crit) * G_KBM, 0.0)
-        A_KBM_si = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
-        B_KBM_si = np.where(gate, G_KBM * alpha_nodp, 0.0)
+            D_KBM_si = np.where(gate, (_alpha - self.alpha_crit) * G_KBM, 0.0)
+            A_KBM_si = np.where(gate, -G_KBM * self.alpha_crit, 0.0)
+            B_KBM_si = np.where(gate, G_KBM * alpha_nodp, 0.0)
 
         # Rescale to hat units (App. A.8 Eqs. (eq:hat-A-KBM), (eq:hat-B-KBM)):
         #   hat_A = A / [D]_0
@@ -555,7 +562,7 @@ class saarelma_connor_nondim(saarelma_connor):
                       bc_origin="p-file",
                       ne_inner=None,
                       dne_dx_inner=None,
-                      initial_guess="linear",
+                      initial_guess="tanh",
                       tanh_width=None,
                       tanh_center=None,
                       linear_solver="lu",
@@ -632,23 +639,25 @@ class saarelma_connor_nondim(saarelma_connor):
 
         ``"picard"``
             Outer Picard (fixed-point) loop following Saarelma et al.
-            (2023): each Picard iteration the KBM gate and A/B
-            coefficients are evaluated from the *current* hat_n_e (the
-            initial guess on the first pass, thereafter the previously
-            solved profile), then frozen while SNES solves the
-            three-field system.  The loop repeats until the density
-            profile is unchanged to ``picard_rtol`` and the gate state
-            is stable (or ``picard_max_it`` is hit).  How the
-            whole-grid on/off gate is decided each iteration is set by
-            ``picard_gate_mode``; when on, both modes freeze the same
-            local A/B KBM structure everywhere (no pointwise gate):
+            (2023): each Picard iteration the KBM gate and coefficients
+            are evaluated from the *current* hat_n_e (the initial guess
+            on the first pass, thereafter the previously solved
+            profile), then frozen while SNES solves the three-field
+            system.  The loop repeats until the density profile is
+            unchanged to ``picard_rtol`` and the gate state is stable
+            (or ``picard_max_it`` is hit).  ``picard_gate_mode`` selects
+            both the whole-grid gate criterion and the frozen flux
+            structure:
 
             ``picard_gate_mode="average"`` (default)
-                KBM on iff the pedestal-averaged alpha (Eq. 24, with
-                p = n_e*(T_e+T_i)) exceeds alpha_crit.
+                KBM on iff pedestal-averaged alpha exceeds alpha_crit
+                (Eq. 24).  When on, freeze
+                ``hat_D_KBM = (alpha_bar - alpha_crit) * hat_G`` into
+                the A-slot with B = 0 (Eq. 25 diffusivity).
             ``picard_gate_mode="majority"``
                 KBM on iff more than half of the pedestal grid points
-                have local alpha > alpha_crit.
+                have local alpha > alpha_crit.  When on, freeze the
+                local A/B KBM structure everywhere (no pointwise gate).
 
         ``kbm_gate_eps`` : float or None, default None
             Smoothing width of the Heaviside (inline treatment only).
@@ -664,7 +673,7 @@ class saarelma_connor_nondim(saarelma_connor):
             Picard iterations ("picard" only).
 
         ``picard_relax`` : float in (0, 1], default 1.0
-            Under-relaxation factor for the frozen hat_A_KBM / hat_B_KBM
+            Under-relaxation factor for the frozen KBM coefficient
             update: coeff_new = relax * coeff_computed + (1 - relax) *
             coeff_old.  Use < 1 if the gate flip-flops between iterations.
             1.0 means this effect is disabled.
@@ -1034,21 +1043,30 @@ class saarelma_connor_nondim(saarelma_connor):
 
         if kbm_treatment == "picard":
             # Per-iteration-frozen KBM coefficients, updated between
-            # Picard iterations from the latest hat_n_e.  "average" and
-            # "majority" differ only in how the whole-grid on/off gate
-            # is decided (see calc_pressure_quantities_nondim); when
-            # on, both freeze the same local A/B structure everywhere.
-            hat_A_KBM_picard_fd = Function(V, name="hat_A_KBM_picard")
-            hat_B_KBM_picard_fd = Function(V, name="hat_B_KBM_picard")
-            hat_A_KBM_picard_fd.dat.data[:] = self._hat_A_KBM
-            hat_B_KBM_picard_fd.dat.data[:] = self._hat_B_KBM
-            self._fd_cache["hat_A_KBM_picard_fd"] = hat_A_KBM_picard_fd
-            self._fd_cache["hat_B_KBM_picard_fd"] = hat_B_KBM_picard_fd
-            hat_A_KBM_term = hat_A_KBM_picard_fd
-            hat_B_KBM_term = hat_B_KBM_picard_fd
-
-            # reuse the frozen terms for SNES solve (F1 construction still constructs boundary from setting these to 'None')
-            hat_A_KBM_bc_term = None  # reuse the frozen terms for SNES solve
+            # Picard iterations from the latest hat_n_e.
+            #
+            # average: freeze hat_D_KBM = (alpha_bar - alpha_crit)*hat_G
+            #          into the A-slot with B = 0 (Saarelma Eq. 25).
+            # majority: freeze the local A/B structure everywhere when
+            #          the majority vote says the gate is on.
+            if picard_gate_mode == "average":
+                hat_A_KBM_picard_fd = Function(V, name="hat_D_KBM_picard")
+                hat_A_KBM_picard_fd.dat.data[:] = self._hat_D_KBM
+                self._fd_cache["hat_D_KBM_picard_fd"] = hat_A_KBM_picard_fd
+                hat_B_KBM_picard_fd = None
+                hat_A_KBM_term = hat_A_KBM_picard_fd
+                hat_B_KBM_term = Constant(0.0)
+            else:  # majority
+                hat_A_KBM_picard_fd = Function(V, name="hat_A_KBM_picard")
+                hat_B_KBM_picard_fd = Function(V, name="hat_B_KBM_picard")
+                hat_A_KBM_picard_fd.dat.data[:] = self._hat_A_KBM
+                hat_B_KBM_picard_fd.dat.data[:] = self._hat_B_KBM
+                self._fd_cache["hat_A_KBM_picard_fd"] = hat_A_KBM_picard_fd
+                self._fd_cache["hat_B_KBM_picard_fd"] = hat_B_KBM_picard_fd
+                hat_A_KBM_term = hat_A_KBM_picard_fd
+                hat_B_KBM_term = hat_B_KBM_picard_fd
+            # Reuse volume coefficients on ds(1) (static Functions).
+            hat_A_KBM_bc_term = None
             hat_B_KBM_bc_term = None
         elif kbm_treatment == "inline":  # inline
             # Volume terms: depend on the trial via hat_ne.dx(0).
@@ -1146,15 +1164,22 @@ class saarelma_connor_nondim(saarelma_connor):
                 )
                 gate_now = bool(self.kbm_gate_on)
 
-                # Picard relax and update the frozen KBM coefficients (updates weak form F)
-                hat_A_KBM_picard_fd.dat.data[:] = (
-                    picard_relax * self._hat_A_KBM
-                    + (1.0 - picard_relax) * hat_A_KBM_picard_fd.dat.data
-                )
-                hat_B_KBM_picard_fd.dat.data[:] = (
-                    picard_relax * self._hat_B_KBM
-                    + (1.0 - picard_relax) * hat_B_KBM_picard_fd.dat.data
-                )
+                # Picard relax and update the frozen KBM coefficients
+                # (Functions referenced by F; no form rebuild needed).
+                if picard_gate_mode == "average":
+                    hat_A_KBM_picard_fd.dat.data[:] = ( # = self._hat_D_KBM if picard_relax == 1.0. hat_A_KBM_picard_fd is frozen from the previous iterate.
+                        picard_relax * self._hat_D_KBM
+                        + (1.0 - picard_relax) * hat_A_KBM_picard_fd.dat.data
+                    )
+                else:  # majority: freeze A/B
+                    hat_A_KBM_picard_fd.dat.data[:] = (
+                        picard_relax * self._hat_A_KBM
+                        + (1.0 - picard_relax) * hat_A_KBM_picard_fd.dat.data
+                    )
+                    hat_B_KBM_picard_fd.dat.data[:] = (
+                        picard_relax * self._hat_B_KBM
+                        + (1.0 - picard_relax) * hat_B_KBM_picard_fd.dat.data
+                    )
 
                 picard_history.append({
                     "iteration":        it,

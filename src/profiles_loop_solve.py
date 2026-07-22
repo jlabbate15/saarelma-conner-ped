@@ -27,6 +27,11 @@ def profiles_loop_solve(
     eped_tol_max = 1e-3,
     eped_iter_max = 50,
     kbm_gate_eps = 0.01,
+    kbm_treatment = "inline",
+    picard_gate_mode = None,
+    picard_max_it = 50,
+    picard_rtol = 1e-8,
+    picard_relax = 1.0,
     EPEDNN_core = 'pfile',
     verbose = False,
 ):
@@ -59,6 +64,16 @@ def profiles_loop_solve(
         Maximum number of iterations for the EPEDNN model.
     kbm_gate_eps : float
         Minimum gate error for the KBM model.
+    kbm_treatment : str
+        Treatment for the KBM model.
+    picard_gate_mode : str
+        Mode for the Picard gate.
+    picard_max_it : int
+        Maximum number of iterations for the Picard gate.
+    picard_rtol : float
+        Relative tolerance for the Picard gate.
+    picard_relax : float
+        Relaxation factor for the Picard gate.
     EPEDNN_core : str
         Core to use for the EPEDNN model.
     verbose : bool
@@ -100,8 +115,12 @@ def profiles_loop_solve(
         ne_inner_bc=ne_inner_bc,   # Saarelma A7 default; see dirichlet comparison below
         linear_solver="lu",      # or "gamg" for GMRES + algebraic multigrid on J
         nCX_ic="solve",
-        kbm_treatment="inline",
+        kbm_treatment=kbm_treatment,
         kbm_gate_eps=kbm_gate_eps, # 1e-3 minimum
+        picard_gate_mode=picard_gate_mode,
+        picard_max_it=picard_max_it,
+        picard_rtol=picard_rtol,
+        picard_relax=picard_relax,
         verbose=False,
     )
 

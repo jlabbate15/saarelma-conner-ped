@@ -34,6 +34,11 @@ def profiles_loop_solve_scloop(
     eped_iter_max = 50,
     kbm_gate_eps = 0.01,
     EPEDNN_core = 'pfile',
+    kbm_treatment = "inline",
+    picard_gate_mode = None,
+    picard_max_it = 50,
+    picard_rtol = 1e-8,
+    picard_relax = 1.0,
     verbose = False,
 ):
     """Solve the self-consistent pedestal problem using the EPEDNN model and the Saarelma-Connor model.
@@ -63,6 +68,16 @@ def profiles_loop_solve_scloop(
         Maximum tolerance for the pedestal height and width.
     eped_iter_max : int
         Maximum number of iterations for the EPEDNN model.
+    kbm_treatment : str
+        Treatment for the KBM.
+    picard_gate_mode : str
+        Mode for the Picard gate.
+    picard_max_it : int
+        Maximum number of iterations for the Picard gate.
+    picard_rtol : float
+        Relative tolerance for the Picard gate.
+    picard_relax : float
+        Relaxation factor for the Picard gate.
     verbose : bool
         Whether to print verbose output.
 
@@ -98,8 +113,12 @@ def profiles_loop_solve_scloop(
         ne_inner_bc=ne_inner_bc,   # Saarelma A7 default; see dirichlet comparison below
         linear_solver="lu",      # or "gamg" for GMRES + algebraic multigrid on J
         nCX_ic="solve",
-        kbm_treatment="inline",
+        kbm_treatment=kbm_treatment,
         kbm_gate_eps=kbm_gate_eps, # 1e-3 minimum
+        picard_gate_mode=picard_gate_mode,
+        picard_max_it=picard_max_it,
+        picard_rtol=picard_rtol,
+        picard_relax=picard_relax,
         verbose=False,
     )
 
@@ -262,7 +281,7 @@ def profiles_loop_solve_scloop(
             eped_tol = ((pedestal_height - pedestal_height_prev) / pedestal_height_prev
                         + (pedestal_width - pedestal_width_prev) / pedestal_width_prev)
             print(f"Normalized pedestal pressure height and width tolerance: {eped_tol}")
-            if eped_tol < eped_tol_max:
+            if abs(eped_tol) < eped_tol_max:
                 break
 
         # --- New T_e profile (EPED1 tanh form, Eq. 1b without core H term) ---
