@@ -1,0 +1,1 @@
+# Extension on solver.py to solve the original Saarelma-Connor model (Saarelma et al., 2023)
