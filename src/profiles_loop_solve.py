@@ -17,6 +17,8 @@ from src.solver_nondim import saarelma_connor_nondim
 def profiles_loop_solve(
     MHD_FP = None,
     KPROF_FP = None,
+    kprof_loc = 'p',
+    manual_profs = None,
     ne_success_fp = 'compare_nondim',
     initial_guess = "tanh",
     ne_inner_bc = "neumann",
@@ -43,6 +45,10 @@ def profiles_loop_solve(
         Path to MHD equilibrium file.
     KPROF_FP : str
         Path to KPROF profile file.
+    kprof_loc : str
+        Location of the kinetic parameters, currently supporting: 'p', 'manual'.
+    manual_profs : dict
+        Dictionary of manual profiles for the electron temperature and density, currently supporting: 'pfile', 'epednn'.
     ne_success_fp : str
         Path to directory to save successfull solutions.
     initial_guess : str
@@ -133,7 +139,8 @@ def profiles_loop_solve(
             ncx_x0_ratio = ncx_x0_ratio,
             psi_N_inner_boundary = psi_N_inner,
             mhd_fp       = MHD_FP,
-            kprof_fp     = KPROF_FP,
+            kprof_loc    = kprof_loc,
+            manual_profs = manual_profs,
             verbose      = False,
             # psi_N_inner_boundary = 0.85, # set to None to use adaptive inner boundary method
     )

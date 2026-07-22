@@ -117,6 +117,7 @@ class saarelma_connor:
         kprof_loc = 'p', # location of kinetic parameters, currently supporting: p-file
         mhd_fp = None, # filepath to MHD paramter file
         kprof_fp = None, # filepath to kinetic paramter file
+        manual_profs = None, # manual profiles for the electron temperature and density, currently supporting: 'pfile', 'epednn'
         T_e_source = 'pfile', # source of the electron temperature profile, currently supporting: 'pfile', 'epednn'
         T_prof = None, # temperature profile, currently supporting: 'pfile', 'epednn'
         T_prof_psi_N = None, # psi_N values at which T_e is evaluated if using the EPEDNN model
@@ -167,7 +168,7 @@ class saarelma_connor:
 
         # Load in quantities
         self.mhd_load(mhd_loc,mhd_fp) # load in MHD quantities
-        self.kprof_load(kprof_loc,kprof_fp,T_prof=T_prof,T_prof_psi_N=T_prof_psi_N) # load in kinetic quantities
+        self.kprof_load(kprof_loc,kprof_fp,T_prof=T_prof,T_prof_psi_N=T_prof_psi_N,manual_profs=manual_profs) # load in kinetic quantities
 
         # TEMPERATURE IS GIVEN AS AN INPUT TO THIS MODEL
         
@@ -633,7 +634,7 @@ class saarelma_connor:
 
             self.plasma_surface_area_and_volume()
 
-    def kprof_load(self,kprof_loc='p',kprof_fp=None,T_prof=None,T_prof_psi_N=None):
+    def kprof_load(self,kprof_loc='p',kprof_fp=None,T_prof=None,T_prof_psi_N=None,manual_profs=None):
         """Load kinetic equilibrium parameters using method specified by kprof_loc flag. 
         Parameters that will be loaded include: T_e, n_e
         Calculates: dn_e/dx|x=-inf, T_i
@@ -681,18 +682,29 @@ class saarelma_connor:
             self.psi_Te_eval_pfile = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
 
             self.n_e_pfile = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
-            self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated]
-            if self.T_e_source == 'pfile':
-                self.T_e = pf['te(KeV)'] # T_e values (keV) evaluated at psi_Te_eval
-                self.psi_Te_eval = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
-            elif self.T_e_source == 'epednn':
-                assert T_prof is not None, 'T_prof must be provided if T_e_source is epednn'
-                self.T_e = T_prof # keV
-                self.psi_Te_eval = T_prof_psi_N # psi_N values at which T_e is evaluated
-            self.T_e_K = self.T_e * 1e3 * 11604.52 # T_e values (K) evaluated at psi_Te_eval
+            self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated
+
+        elif kprof_loc == 'manual':
+            # Specify full T_e and corresponding psi_N profile
+            self.T_e_pfile = manual_profs['Te'] # T_e values (keV) evaluated at psi_Te_eval
+            self.psi_Te_eval_pfile = self.psi_N_pres[-1] * (manual_profs['rho_Te']**2) # psi_N values at which T_e is evaluated
+
+            # Specify n_e'(psi_N=0.85) and n_e(psi_N=1.0) boundary conditions
+            # n_e_pfile is only used for the cross_sections and the boundary conditions
+            self.n_e_pfile = manual_profs['ne'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
+            self.psi_ne_eval = self.psi_N_pres[-1] * (manual_profs['rho_ne']**2) # psi_N values at which n_e is evaluated
 
         else:
             assert False, 'kprof_loc method not supported'
+
+        if self.T_e_source == 'pfile':
+            self.T_e = self.T_e_pfile # T_e values (keV) evaluated at psi_Te_eval
+            self.psi_Te_eval = self.psi_Te_eval_pfile # psi_N values at which T_e is evaluated
+        elif self.T_e_source == 'epednn':
+            assert T_prof is not None, 'T_prof must be provided if T_e_source is epednn'
+            self.T_e = T_prof # keV
+            self.psi_Te_eval = T_prof_psi_N # psi_N values at which T_e is evaluated
+        self.T_e_K = self.T_e * 1e3 * 11604.52 # T_e values (K) evaluated at psi_Te_eval
 
         if self.T_rat_flag:
             self.T_i = self.T_e * self.T_rat # keV
