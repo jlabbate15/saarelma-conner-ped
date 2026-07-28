@@ -118,9 +118,6 @@ class saarelma_connor:
         mhd_fp = None, # filepath to MHD paramter file
         kprof_fp = None, # filepath to kinetic paramter file
         manual_profs = None, # manual profiles for the electron temperature and density, currently supporting: 'pfile', 'epednn'
-        T_e_source = 'pfile', # source of the electron temperature profile, currently supporting: 'pfile', 'epednn'
-        T_prof = None, # temperature profile, currently supporting: 'pfile', 'epednn'
-        T_prof_psi_N = None, # psi_N values at which T_e is evaluated if using the EPEDNN model
         T_rat_flag = True, # True if using a temperature ratio between ions and electrons, False if doing something else
         T_rat = 1,
         pol_norm = False, # True for when the poloidal flux is not normalized by 2pi. COCOS 7 convention is pol_norm=False, so poloidal flux is normalized by 2pi
@@ -135,7 +132,6 @@ class saarelma_connor:
 
         # User-specified flags
         self.regime_flag = regime_flag
-        self.T_e_source = T_e_source
         self.equations_to_solve = equations_to_solve
         self.error_check = error_check
         self.T_rat_flag = T_rat_flag
@@ -168,13 +164,10 @@ class saarelma_connor:
 
         # Load in quantities
         self.mhd_load(mhd_loc,mhd_fp) # load in MHD quantities
-        self.kprof_load(kprof_loc,kprof_fp,T_prof=T_prof,T_prof_psi_N=T_prof_psi_N,manual_profs=manual_profs) # load in kinetic quantities
-
-        # TEMPERATURE IS GIVEN AS AN INPUT TO THIS MODEL
+        self.kprof_load(kprof_loc,kprof_fp,manual_profs=manual_profs) # load in kinetic quantities
         
         # Calculate the magnetic field at each RZ grid point, sets self.B
         self.calc_B(self.rgrid,self.zgrid)
-
 
         # calculate the flux surface-averaged |grad(r)| and |grad(r)|^2 and some other quantities like r_psi (outboard midplane minor radius for each flux surface)
         self.calc_gradr() # only a function of geometry
@@ -634,6 +627,108 @@ class saarelma_connor:
 
             self.plasma_surface_area_and_volume()
 
+    def OMFITnc_load(self, filename):
+        """
+        Reads an OMFITnc file, averages T_e and n_e across the first dimension,
+        and interpolates them onto a common, unified psi_N grid.
+
+        Parameters:
+            filename (str): Path to the NetCDF file.
+
+        Returns:
+            tuple: (psi_N_unified, Te_1d, ne_1d) as 1D numpy arrays.
+            Te_1d in keV, ne_1d in m^-3.
+
+        # Example usage:
+        # psi_grid, Te_profile, ne_profile = self.OMFITnc_load('my_plasma_data.cdf')
+        """
+        from omfit_classes.omfit_nc import OMFITnc
+        nc = OMFITnc(filename)
+
+        def _nc_array(var_name):
+            """OMFITnc variables are SortedDicts; numeric data lives under 'data'."""
+            var = nc[var_name]
+            if hasattr(var, 'keys') and 'data' in var:
+                return np.asarray(var['data'], dtype=float)
+            return np.asarray(var, dtype=float)
+
+        def _nc_has(var_name):
+            return var_name in nc
+
+        def _reduce_time(arr):
+            """Average over a leading time axis if present."""
+            arr = np.asarray(arr, dtype=float)
+            if arr.ndim > 1:
+                return np.mean(arr, axis=0)
+            return arr
+
+        # 1. Extract and average the physics variables
+        Te_raw = _reduce_time(_nc_array('T_e'))
+        ne_raw = _reduce_time(_nc_array('n_e'))
+
+        # Convert Te to keV if the file stores eV (IDA OMFITnc files use eV)
+        te_unit = ''
+        if hasattr(nc['T_e'], 'keys') and 'unit' in nc['T_e']:
+            te_unit = str(nc['T_e']['unit']).lower()
+        if te_unit in ('ev', 'electron volt', 'electron-volt'):
+            Te_raw = Te_raw / 1e3
+        elif te_unit in ('kev',):
+            pass
+        elif np.nanmax(np.abs(Te_raw)) > 100:
+            # Heuristic: values >> 100 are almost certainly eV, not keV
+            Te_raw = Te_raw / 1e3
+
+        # 2. Determine psi_N grids (files may use psi_n / psi_N / separate Te,ne grids)
+        if _nc_has('psi_N_Te') and _nc_has('psi_N_ne'):
+            psi_Te = _reduce_time(_nc_array('psi_N_Te'))
+            psi_ne = _reduce_time(_nc_array('psi_N_ne'))
+        else:
+            for psi_key in ('psi_n', 'psi_N', 'psiN', 'psin'):
+                if _nc_has(psi_key):
+                    break
+            else:
+                raise KeyError(
+                    f"No psi_N grid found in {filename}. "
+                    f"Available keys: {[k for k in nc.keys() if not str(k).startswith('__')]}"
+                )
+            psi_shared = _reduce_time(_nc_array(psi_key))
+            psi_Te = psi_shared
+            psi_ne = psi_shared
+
+        # Keep only the closed-flux domain for interpolation onto [0, 1]
+        def _clip_profile(psi, prof):
+            psi = np.asarray(psi, dtype=float).ravel()
+            prof = np.asarray(prof, dtype=float).ravel()
+            order = np.argsort(psi)
+            psi, prof = psi[order], prof[order]
+            mask = (psi >= 0.0) & (psi <= 1.0)
+            if np.count_nonzero(mask) < 2:
+                mask = np.ones_like(psi, dtype=bool)
+            # Drop duplicate psi points that break interp1d
+            _, uniq = np.unique(psi[mask], return_index=True)
+            uniq = np.sort(uniq)
+            return psi[mask][uniq], prof[mask][uniq]
+
+        psi_Te, Te_raw = _clip_profile(psi_Te, Te_raw)
+        psi_ne, ne_raw = _clip_profile(psi_ne, ne_raw)
+        num_points = max(len(psi_Te), len(psi_ne))
+
+        # 3. Unified evaluation grid on [0, 1]
+        psi_N_unified = np.linspace(0.0, 1.0, num_points)
+
+        # 4. Interpolate both profiles onto the unified grid
+        Te_interp_func = interp1d(
+            psi_Te, Te_raw, kind='cubic', bounds_error=False, fill_value='extrapolate'
+        )
+        ne_interp_func = interp1d(
+            psi_ne, ne_raw, kind='cubic', bounds_error=False, fill_value='extrapolate'
+        )
+
+        Te_unified = Te_interp_func(psi_N_unified)
+        ne_unified = ne_interp_func(psi_N_unified)
+
+        return psi_N_unified, Te_unified, ne_unified
+
     def kprof_load(self,kprof_loc='p',kprof_fp=None,T_prof=None,T_prof_psi_N=None,manual_profs=None):
         """Load kinetic equilibrium parameters using method specified by kprof_loc flag. 
         Parameters that will be loaded include: T_e, n_e
@@ -653,7 +748,8 @@ class saarelma_connor:
             psi_N values at which T_e is evaluated if using the EPEDNN model
         """
 
-        if kprof_loc == 'p':
+        # currently self.T_e = self.T_e_pfile, fix when cleaning up code
+        if kprof_loc == 'pfile':
 
             def read_pfile(path):
                 data = {}
@@ -679,31 +775,46 @@ class saarelma_connor:
 
             # Store pfile information
             self.T_e_pfile = pf['te(KeV)'] # T_e values (keV) evaluated at psi_Te_eval
+            self.T_e = self.T_e_pfile # keV
             self.psi_Te_eval_pfile = pf['te(KeV)_psi'] # psi_N values at which T_e is evaluated
+            self.psi_Te_eval = self.psi_Te_eval_pfile # psi_N values at which T_e is evaluated
 
             self.n_e_pfile = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
             self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated
 
-        elif kprof_loc == 'manual':
+        elif kprof_loc == 'OMFITnc':
+            psi_N_unified, self.T_e_pfile, self.n_e_pfile = self.OMFITnc_load(kprof_fp)
+            self.T_e = self.T_e_pfile # keV
+            self.psi_Te_eval_pfile = psi_N_unified
+            self.psi_Te_eval = self.psi_Te_eval_pfile # psi_N values at which T_e is evaluated
+            self.psi_ne_eval = psi_N_unified
+
+        elif kprof_loc == 'manual rho grid':
             # Specify full T_e and corresponding psi_N profile
             self.T_e_pfile = manual_profs['Te'] # T_e values (keV) evaluated at psi_Te_eval
+            self.T_e = self.T_e_pfile # keV
             self.psi_Te_eval_pfile = self.psi_N_pres[-1] * (manual_profs['rho_Te']**2) # psi_N values at which T_e is evaluated
+            self.psi_Te_eval = self.psi_Te_eval_pfile # psi_N values at which T_e is evaluated
 
             # Specify n_e'(psi_N=0.85) and n_e(psi_N=1.0) boundary conditions
             # n_e_pfile is only used for the cross_sections and the boundary conditions
             self.n_e_pfile = manual_profs['ne'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
             self.psi_ne_eval = self.psi_N_pres[-1] * (manual_profs['rho_ne']**2) # psi_N values at which n_e is evaluated
 
+        elif kprof_loc == 'manual EPEDNN loop':
+            assert manual_profs is not None, 'T and n_e, n_CX, n_FC profiles must be provided if T_e_source is epednn'
+            self.T_e_pfile = manual_profs['Te'] # keV
+            self.T_e = self.T_e_pfile # keV
+            self.psi_Te_eval_pfile = manual_profs['psi_N_Te'] # psi_N values at which T_e is evaluated
+            self.psi_Te_eval = self.psi_Te_eval_pfile # psi_N values at which T_e is evaluated
+            self.n_e_pfile = manual_profs['ne'] # m^-3; n_e values evaluated at psi_ne_eval
+            self.psi_ne_eval = manual_profs['psi_N_n'] # psi_N values at which n_e is evaluated
+            self.nCX_manual = manual_profs['nCX'] # m^-3; evaluated at manual_profs['psi_N_n']
+            self.nFC_manual = manual_profs['nFC'] # m^-3; evaluated at manual_profs['psi_N_n']
+            self.psi_N_n_manual = manual_profs['psi_N_n'] # psi_N values at which n_e, n_CX, n_FC are evaluated
         else:
             assert False, 'kprof_loc method not supported'
 
-        if self.T_e_source == 'pfile':
-            self.T_e = self.T_e_pfile # T_e values (keV) evaluated at psi_Te_eval
-            self.psi_Te_eval = self.psi_Te_eval_pfile # psi_N values at which T_e is evaluated
-        elif self.T_e_source == 'epednn':
-            assert T_prof is not None, 'T_prof must be provided if T_e_source is epednn'
-            self.T_e = T_prof # keV
-            self.psi_Te_eval = T_prof_psi_N # psi_N values at which T_e is evaluated
         self.T_e_K = self.T_e * 1e3 * 11604.52 # T_e values (K) evaluated at psi_Te_eval
 
         if self.T_rat_flag:
@@ -2607,7 +2718,9 @@ class saarelma_connor:
         # beta = ((1/betat) + (1/betap))**(-1)
 
         # EPED / Troyon: β_N = β_t[%] * a * abs(B_t) [T] / I_p[MA] -> this is what OpenFUSIONToolkit uses for β_N
-        self.betan = 100 * betat * (self.a * abs(self.bt) / self.Ip)
+        if self.verbose:
+            print(f'betat: {betat}, a: {self.a}, bt: {self.bt}, Ip: {self.Ip}')
+        self.betan = 100 * betat * (self.a * abs(self.bt) / abs(self.Ip))
 
     def setup_epednn(self):
         """Setup the EPEDNN model with quantities from the Saarelma-Connor setup
@@ -2733,7 +2846,7 @@ class saarelma_connor:
             "betan": float(self.betan[0]),       # Normalized beta
             "bt": float(abs(self.bt[0])),                # Toroidal magnetic field at the magnetic axis (T)
             "delta": float(self.delta),       # Effective triangularity
-            "ip": float(self.Ip),          # Plasma current (MA)
+            "ip": float(abs(self.Ip)),          # Plasma current (MA)
             "kappa": float(self.kappa),       # Elongation
             "m": float(self.M_eff),           # Effective mass (must be 2.0 for D or 2.5 for D-T)
             "neped": float(ne_ped_h),       # Pedestal density (in 10^19 m^-3)

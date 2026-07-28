@@ -1,9 +1,9 @@
 [submodule "dependencies/EPEDNN.jl"]
 	path = dependencies/EPEDNN.jl
 	url = https://github.com/ProjectTorreyPines/EPEDNN.jl.git
-[submodule "dependencies/bouquet"]
-	path = dependencies/bouquet
-	url = https://github.com/d-burg/bouquet.git
 [submodule "dependencies/OpenFUSIONToolkit"]
 	path = dependencies/OpenFUSIONToolkit
 	url = https://github.com/OpenFUSIONToolkit/OpenFUSIONToolkit.git
+[submodule "dependencies/epednn_mit"]
+	path = dependencies/epednn_mit
+	url = https://github.com/aaronkho/epednn_mit.git

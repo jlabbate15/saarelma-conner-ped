@@ -20,7 +20,6 @@ def profiles_loop_solve(
     kprof_loc = 'p',
     manual_profs = None,
     ne_success_fp = 'compare_nondim',
-    initial_guess = "tanh",
     ne_inner_bc = "neumann",
     x_res = 40,
     P_tot_e = 5e6, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
@@ -51,8 +50,6 @@ def profiles_loop_solve(
         Dictionary of manual profiles for the electron temperature and density, currently supporting: 'pfile', 'epednn'.
     ne_success_fp : str
         Path to directory to save successfull solutions.
-    initial_guess : str
-        Initial guess for the pedestal height and width.
     ne_inner_bc : str
         Boundary condition for the electron density at the inner boundary.
     x_res : int
@@ -117,10 +114,8 @@ def profiles_loop_solve(
     SOLVE_KW = dict(
         x_res=x_res,
         fe_degree=2,
-        initial_guess=initial_guess,
         ne_inner_bc=ne_inner_bc,   # Saarelma A7 default; see dirichlet comparison below
         linear_solver="lu",      # or "gamg" for GMRES + algebraic multigrid on J
-        nCX_ic="solve",
         kbm_treatment=kbm_treatment,
         kbm_gate_eps=kbm_gate_eps, # 1e-3 minimum
         picard_gate_mode=picard_gate_mode,
@@ -139,8 +134,8 @@ def profiles_loop_solve(
             ncx_x0_ratio = ncx_x0_ratio,
             psi_N_inner_boundary = psi_N_inner,
             mhd_fp       = MHD_FP,
+            kprof_fp     = KPROF_FP,
             kprof_loc    = kprof_loc,
-            manual_profs = manual_profs,
             verbose      = False,
             # psi_N_inner_boundary = 0.85, # set to None to use adaptive inner boundary method
     )
@@ -168,6 +163,14 @@ def profiles_loop_solve(
     for eped_iter in range(eped_iter_max):
 
         # Run solver and save outputs
+        if eped_iter == 0:
+            SOLVE_KW['initial_guess'] = "tanh"
+            SOLVE_KW['nCX_ic'] = "solve"
+            SOLVE_KW['nFC_ic'] = "solve"
+        else:
+            SOLVE_KW['initial_guess'] = "manual EPEDNN loop" # use previous loop's profiles as initial guess for ne, nFC, nCX
+            SOLVE_KW['nCX_ic'] = "manual EPEDNN loop"
+            SOLVE_KW['nFC_ic'] = "manual EPEDNN loop"
         x_sol, ne_sol, nFC_sol, nCX_sol = base_model.solve_coupled_nondim(tanh_width=tanh_width_new, **SOLVE_KW)
         sol = {'x': x_sol, 'y': ne_sol, 'nFC': nFC_sol, 'nCX': nCX_sol, 'alpha_crit': alpha_crit, 'C_KBM': C_KBM, 'De_chie_etg': De_chie_etg, 'nFC_x0': nFC_x0, 'ncx_x0_ratio': ncx_x0_ratio}
         np.save(f'{equil_dir}/ne_iter_{eped_iter}.npy', sol, allow_pickle=True)
@@ -286,6 +289,18 @@ def profiles_loop_solve(
             })
 
         # MAKE THIS PART FASTER
+        x_to_psiN = interp1d(x_grid_full, psi_N_pres, kind='linear',
+                        bounds_error=False, fill_value='extrapolate')
+        psi_N_ne = x_to_psiN(best_x)
+        sort_idx = np.argsort(psi_N_ne)
+        manual_profs = {
+            'Te': T_prof_keV,
+            'psi_N_Te': psi_N_Te_new,
+            'ne': best_ne[sort_idx],
+            'nCX': nCX_sol[sort_idx],
+            'nFC': nFC_sol[sort_idx],
+            'psi_N_n': psi_N_ne[sort_idx],
+        }
         base_model = saarelma_connor_nondim( # reset base_model to the new T_e profile and related quantities
             P_tot_e      = P_tot_e,
             alpha_crit   = alpha_crit,
@@ -294,13 +309,10 @@ def profiles_loop_solve(
             nFC_x0       = nFC_x0,
             ncx_x0_ratio = ncx_x0_ratio,
             mhd_fp       = MHD_FP,
-            kprof_loc     = kprof_loc,
+            kprof_loc    = 'manual EPEDNN loop',
             manual_profs = manual_profs,
             verbose      = False,
             psi_N_inner_boundary = psi_N_inner,
-            T_e_source = 'epednn',
-            T_prof = T_prof_keV,
-            T_prof_psi_N = psi_N_Te_new,
         )
         base_model.setup_epednn()
 

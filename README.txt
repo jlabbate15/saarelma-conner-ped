@@ -3,3 +3,10 @@ It includes the following extensions to this model:
 - No extensions yet!
 
 This code was created by John Anthony Labbate (jal2351@columbia.edu) and Andrew Oak Nelson. Enjoy!
+
+Dependencies that need to be pip installed:
+- OpenFusionToolkit
+- omfit-classes
+ - Uncertainties
+- Firedrake
+- HDF5

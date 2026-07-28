@@ -570,6 +570,7 @@ class saarelma_connor_nondim(saarelma_connor):
                       ksp_max_it=200,
                       reuse_setup=True,
                       nCX_ic="solve",
+                      nFC_ic="solve",
                       kbm_treatment="inline",
                       kbm_gate_eps=None,
                       picard_gate_mode="average",
@@ -705,6 +706,7 @@ class saarelma_connor_nondim(saarelma_connor):
 
         # Read off ne(x_inner), dne/dx(x_inner) in SI -- same conventions
         # as solver.py.solve_coupled.
+        # BC conditions for nFC, nCX, ne will not change throughout EPEDNN loop
         if bc_origin == "p-file":
             ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres))
             self.ne_inner = ne_inner_val
@@ -771,7 +773,6 @@ class saarelma_connor_nondim(saarelma_connor):
         # ------------------------------------------------------------------
         # Initial guess (in SI, then rescaled to hat-units).
         # ------------------------------------------------------------------
-        # initial guesses for n_e are structured with the assumption that ne (and dnedx) are known at x_inner
         if initial_guess == "linear":
             xi = (x_dofs_si - x_left_si) / (x_right_si - x_left_si)
             ne_init  = ne_inner_val + (self.ne_x0 - ne_inner_val) * xi
@@ -785,6 +786,15 @@ class saarelma_connor_nondim(saarelma_connor):
             s_ne   = 0.5 * (1.0 - np.tanh((x_dofs_si - center) / (0.5 * width)))
             # s_neut = 1.0 - s_ne
             ne_init  = self.ne_x0 + (ne_inner_val - self.ne_x0) * s_ne
+        elif initial_guess == "manual EPEDNN loop":
+            order_desc = np.argsort(x_dofs_si)[::-1]
+            x_desc = x_dofs_si[order_desc]
+            x_n_manual = np.interp(
+                self.psi_N_n_manual, self.psi_N_pres, self.x_init
+            )
+            ne_init_on_desc = np.interp(x_desc, x_n_manual, self.n_e_pfile)
+            ne_init = np.empty_like(x_dofs_si)
+            ne_init[order_desc] = ne_init_on_desc
         else:
             raise ValueError(
                 f"Unknown initial_guess={initial_guess!r}; expected "
@@ -824,22 +834,35 @@ class saarelma_connor_nondim(saarelma_connor):
             gate_mode=gate_mode_input,
         )
 
-        # use the initial guess for ne to get the initial guess for nFC from Eq. (14) in Saarelma et al. (2023)
-        order_desc = np.argsort(x_dofs_si)[::-1]
-        x_desc = x_dofs_si[order_desc]
-        ne_desc = ne_init[order_desc]  # SI m^-3; same ne guess used for nCX below
-        Si_desc = np.interp(x_desc, self.x_init, self.S_i_pres)
-        fFC_desc = np.interp(x_desc, self.x_init, self.fFC)
-        Scx_desc = np.interp(x_desc, self.x_init, self.S_cx_pres)
-        integrand_init = (
-            ne_desc * (Si_desc + Scx_desc) / (fFC_desc * abs(self.V_FC))
-        )
-        cumint_desc = cumulative_trapezoid(integrand_init, x_desc, initial=0.0)
-        nFC_on_desc = self.nFC_x0 * np.exp(cumint_desc)
-        nFC_init = np.empty_like(x_dofs_si)
-        nFC_init[order_desc] = nFC_on_desc
-        if any(nFC_init < 0):
-            raise ValueError(f"nFC_init = {nFC_init} is negative, which is not allowed.")
+        if nFC_ic == "solve":
+            # use the initial guess for ne to get the initial guess for nFC from Eq. (14) in Saarelma et al. (2023)
+            order_desc = np.argsort(x_dofs_si)[::-1]
+            x_desc = x_dofs_si[order_desc]
+            ne_desc = ne_init[order_desc]  # SI m^-3; same ne guess used for nCX below
+            Si_desc = np.interp(x_desc, self.x_init, self.S_i_pres)
+            fFC_desc = np.interp(x_desc, self.x_init, self.fFC)
+            Scx_desc = np.interp(x_desc, self.x_init, self.S_cx_pres)
+            integrand_init = (
+                ne_desc * (Si_desc + Scx_desc) / (fFC_desc * abs(self.V_FC))
+            )
+            cumint_desc = cumulative_trapezoid(integrand_init, x_desc, initial=0.0)
+            nFC_on_desc = self.nFC_x0 * np.exp(cumint_desc)
+            nFC_init = np.empty_like(x_dofs_si)
+            nFC_init[order_desc] = nFC_on_desc
+            if any(nFC_init < 0):
+                raise ValueError(f"nFC_init = {nFC_init} is negative, which is not allowed.")
+        elif nFC_ic == "manual EPEDNN loop":
+            # nFC_manual is tabulated vs psi_N; map that psi_N grid to x,
+            # then interpolate onto the DOF grid in descending-x order
+            # (same order_desc convention as the "solve" branch above).
+            order_desc = np.argsort(x_dofs_si)[::-1]
+            x_desc = x_dofs_si[order_desc]
+            x_n_manual = np.interp(
+                self.psi_N_n_manual, self.psi_N_pres, self.x_init
+            )
+            nFC_on_desc = np.interp(x_desc, x_n_manual, self.nFC_manual)
+            nFC_init = np.empty_like(x_dofs_si)
+            nFC_init[order_desc] = nFC_on_desc
 
         if nCX_ic == "solve":
             # Initial guess for nCX from the n_CX fluid governing equation
@@ -880,6 +903,15 @@ class saarelma_connor_nondim(saarelma_connor):
             nCX_init[order_desc] = nCX_on_desc
         elif nCX_ic == "scale nFC":
             nCX_init = nFC_init * self.nCX_x0 / self.nFC_x0
+        elif nCX_ic == "manual EPEDNN loop":
+            order_desc = np.argsort(x_dofs_si)[::-1]
+            x_desc = x_dofs_si[order_desc]
+            x_n_manual = np.interp(
+                self.psi_N_n_manual, self.psi_N_pres, self.x_init
+            )
+            nCX_on_desc = np.interp(x_desc, x_n_manual, self.nCX_manual)
+            nCX_init = np.empty_like(x_dofs_si)
+            nCX_init[order_desc] = nCX_on_desc
         else:
             raise ValueError(f"Unknown nCX_ic={nCX_ic!r}; expected 'solve' or 'scale nFC'.")
 
@@ -894,6 +926,7 @@ class saarelma_connor_nondim(saarelma_connor):
         u_prev.assign(u)
 
         # Rescale BC values into hat-units (App. A.8 Eq. (eq:hat-flux-A8) etc.) using initial guesses to accommodate Dirichlet or Neumann boundary condition choice
+        # BC conditions for nFC, nCX, ne will not change throughout EPEDNN loop
         hat_ne_x0      = 1.0
         hat_ne_inner   = ne_init[0]   / self._n0_nd
         hat_nFC_x0     = self.nFC_x0    / self._n0_nd
