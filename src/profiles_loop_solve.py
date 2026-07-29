@@ -162,6 +162,7 @@ def profiles_loop_solve(
             path.unlink()
 
     for eped_iter in range(eped_iter_max):
+        print(f"EPEDNN-SC Loop Iter {eped_iter}")
 
         # Run solver and save outputs
         if eped_iter == 0:
@@ -247,7 +248,6 @@ def profiles_loop_solve(
         psi_N_inner_boundary_new = psi_ped
 
         if verbose:  # collect profile data for post-loop plotting
-            print(f"Iter {eped_iter}")
             Te_spliced_eV = T_prof_keV * 1e3
             print(f"  Te_ped = {Te_ped_eV:.1f} eV, T_sep = {T_sep_eV:.1f} eV "
                   f"(ne_ped = {ne_ped_val:.3e} m^-3, psi_ped = {psi_ped:.4f}, "
@@ -313,6 +313,7 @@ def profiles_loop_solve(
             mhd_fp       = MHD_FP,
             kprof_loc    = 'manual EPEDNN loop',
             # kprof_loc = 'pfile',
+            kprof_fp = KPROF_FP,
             manual_profs = manual_profs,
             verbose      = False,
             psi_N_inner_boundary = psi_N_inner,
