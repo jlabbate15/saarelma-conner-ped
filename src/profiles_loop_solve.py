@@ -35,6 +35,7 @@ def profiles_loop_solve(
     picard_relax = 1.0,
     EPEDNN_core = 'pfile',
     verbose = False,
+    verbose_sc = False,
 ):
     """Solve the self-consistent pedestal problem using the EPEDNN model and the Saarelma-Connor model.
 
@@ -122,7 +123,7 @@ def profiles_loop_solve(
         picard_max_it=picard_max_it,
         picard_rtol=picard_rtol,
         picard_relax=picard_relax,
-        verbose=False,
+        verbose=verbose_sc,
     )
 
     base_model = saarelma_connor_nondim(
@@ -136,7 +137,7 @@ def profiles_loop_solve(
             mhd_fp       = MHD_FP,
             kprof_fp     = KPROF_FP,
             kprof_loc    = kprof_loc,
-            verbose      = False,
+            verbose      = verbose_sc,
             # psi_N_inner_boundary = 0.85, # set to None to use adaptive inner boundary method
     )
     psi_N_inner_boundary_new = psi_N_inner
@@ -246,6 +247,7 @@ def profiles_loop_solve(
         psi_N_inner_boundary_new = psi_ped
 
         if verbose:  # collect profile data for post-loop plotting
+            print(f"Iter {eped_iter}")
             Te_spliced_eV = T_prof_keV * 1e3
             print(f"  Te_ped = {Te_ped_eV:.1f} eV, T_sep = {T_sep_eV:.1f} eV "
                   f"(ne_ped = {ne_ped_val:.3e} m^-3, psi_ped = {psi_ped:.4f}, "
@@ -310,6 +312,7 @@ def profiles_loop_solve(
             ncx_x0_ratio = ncx_x0_ratio,
             mhd_fp       = MHD_FP,
             kprof_loc    = 'manual EPEDNN loop',
+            # kprof_loc = 'pfile',
             manual_profs = manual_profs,
             verbose      = False,
             psi_N_inner_boundary = psi_N_inner,

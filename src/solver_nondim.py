@@ -726,6 +726,11 @@ class saarelma_connor_nondim(saarelma_connor):
                 ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres))
                 self.ne_inner = ne_inner_val
                 dne_dx_inner_val = float(dne_dx_inner)
+        elif bc_origin == "manual EPEDNN loop": # functionally the same as "p-file" since manual_profs overrides the pfile variables
+            ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres))
+            self.ne_inner = ne_inner_val
+            dne_dx_pres = np.gradient(self.n_e_pres, self.x_init)
+            dne_dx_inner_val = float(np.interp(self.x_inner, self.x_init, dne_dx_pres))
         else:
             raise ValueError(
                 f"bc_origin must be 'p-file' or 'user' or 'p-file user combo', got {bc_origin!r}."
