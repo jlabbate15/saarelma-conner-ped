@@ -19,7 +19,7 @@ def profiles_loop_solve(
     KPROF_FP = None,
     kprof_loc = 'p',
     manual_profs = None,
-    ne_success_fp = 'compare_nondim',
+    out_dir = None,
     ne_inner_bc = "neumann",
     x_res = 40,
     P_tot_e = 5e6, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
@@ -34,6 +34,7 @@ def profiles_loop_solve(
     picard_rtol = 1e-8,
     picard_relax = 1.0,
     EPEDNN_core = 'pfile',
+    ig = None,
     verbose = False,
     verbose_sc = False,
 ):
@@ -49,8 +50,8 @@ def profiles_loop_solve(
         Location of the kinetic parameters, currently supporting: 'p', 'manual'.
     manual_profs : dict
         Dictionary of manual profiles for the electron temperature and density, currently supporting: 'pfile', 'epednn'.
-    ne_success_fp : str
-        Path to directory to save successfull solutions.
+    out_dir : str
+        Path to directory to save successful solutions from the Saarelma-Connor model.
     ne_inner_bc : str
         Boundary condition for the electron density at the inner boundary.
     x_res : int
@@ -152,7 +153,7 @@ def profiles_loop_solve(
     pedestal_width = None
 
     # Clear outputs from any previous scan (including appended failure logs) and setup logging files
-    equil_dir = Path(ne_success_fp) / equil_tag
+    equil_dir = Path(out_dir) / equil_tag
     equil_dir.mkdir(parents=True, exist_ok=True)
 
     for path in equil_dir.iterdir():
@@ -160,22 +161,44 @@ def profiles_loop_solve(
             shutil.rmtree(path)
         else:
             path.unlink()
+    
+    betan = -1 # initialize to -1 to indicate that betan is not yet calculated
 
     for eped_iter in range(eped_iter_max):
         print(f"EPEDNN-SC Loop Iter {eped_iter}")
 
         # Run solver and save outputs
         if eped_iter == 0:
+            SOLVE_KW['bc_origin'] = "p-file"
+            SOLVE_KW['initial_guess'] = "tanh"
+            SOLVE_KW['nCX_ic'] = "solve"
+            SOLVE_KW['nFC_ic'] = "solve"
+        elif eped_iter > 0 and ig=='solve':
+            SOLVE_KW['bc_origin'] = "manual EPEDNN loop"
+            SOLVE_KW['initial_guess'] = "tanh" 
+            SOLVE_KW['nCX_ic'] = "solve"
+            SOLVE_KW['nFC_ic'] = "solve"
+        elif eped_iter > 0 and ig=='manual':
+            SOLVE_KW['bc_origin'] = "manual EPEDNN loop"
+            SOLVE_KW['initial_guess'] = "manual EPEDNN loop" # use previous loop's profiles as initial guess for ne, nFC, nCX
+            SOLVE_KW['nCX_ic'] = "manual EPEDNN loop"
+            SOLVE_KW['nFC_ic'] = "manual EPEDNN loop"
+        elif eped_iter > 0 and ig=='fix': # only T changes, the densities are fixed from the pfile
+            SOLVE_KW['bc_origin'] = "p-file"
             SOLVE_KW['initial_guess'] = "tanh"
             SOLVE_KW['nCX_ic'] = "solve"
             SOLVE_KW['nFC_ic'] = "solve"
         else:
-            SOLVE_KW['initial_guess'] = "manual EPEDNN loop" # use previous loop's profiles as initial guess for ne, nFC, nCX
-            SOLVE_KW['nCX_ic'] = "manual EPEDNN loop"
-            SOLVE_KW['nFC_ic'] = "manual EPEDNN loop"
-        x_sol, ne_sol, nFC_sol, nCX_sol = base_model.solve_coupled_nondim(tanh_width=tanh_width_new, **SOLVE_KW)
-        sol = {'x': x_sol, 'y': ne_sol, 'nFC': nFC_sol, 'nCX': nCX_sol, 'alpha_crit': alpha_crit, 'C_KBM': C_KBM, 'De_chie_etg': De_chie_etg, 'nFC_x0': nFC_x0, 'ncx_x0_ratio': ncx_x0_ratio}
-        np.save(f'{equil_dir}/ne_iter_{eped_iter}.npy', sol, allow_pickle=True)
+            raise ValueError(f"Invalid initial guess mode: {ig}")
+        x_sol, ne_sol, nFC_sol, nCX_sol, T_e_pres, psi_N_pres = base_model.solve_coupled_nondim(tanh_width=tanh_width_new, **SOLVE_KW) # tanh_width only used if initial_guess='tanh'
+        # x -> psi_N on the density solution grid (for output only; same map as below)
+        psi_N_ne = interp1d(np.asarray(base_model.r_psi, dtype=float) - float(base_model.r_psi[-1]),
+                            np.asarray(base_model.psi_N_pres, dtype=float),
+                            kind='linear', bounds_error=False, fill_value='extrapolate')(x_sol)
+        sol = {'x': x_sol, 'y': ne_sol, 'nFC': nFC_sol, 'nCX': nCX_sol,
+               'T_e': T_e_pres, 'psi_N': psi_N_pres, 'psi_N_ne': psi_N_ne,
+               'alpha_crit': alpha_crit, 'C_KBM': C_KBM, 'De_chie_etg': De_chie_etg, 'nFC_x0': nFC_x0, 'ncx_x0_ratio': ncx_x0_ratio,
+               'betan': betan, 'ig': ig}
         best_x = np.asarray(sol['x'], dtype=float)
         best_ne = np.asarray(sol['y'], dtype=float)
 
@@ -191,10 +214,10 @@ def profiles_loop_solve(
         if eped_iter == 0:
             pedestal_height_prev = 0.0
             pedestal_width_prev = 0.0
-            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile')    
+            pedestal_height, pedestal_width, betan = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile')    
         else:
             pedestal_height_prev, pedestal_width_prev = pedestal_height, pedestal_width
-            pedestal_height, pedestal_width = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core=EPEDNN_core)
+            pedestal_height, pedestal_width, betan = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core=EPEDNN_core)
         tanh_width_new = psi_to_x(1-pedestal_width) * -1 # will error if result if negative which should not happen
         print(f"Pedestal height: {pedestal_height} MPa, Pedestal width: {pedestal_width} (psi_N)")
 
@@ -202,8 +225,12 @@ def profiles_loop_solve(
             eped_tol = ((pedestal_height - pedestal_height_prev) / pedestal_height_prev
                         + (pedestal_width - pedestal_width_prev) / pedestal_width_prev)
             print(f"Normalized pedestal pressure height and width tolerance: {eped_tol}")
+            sol['loop_tol'] = eped_tol
+            np.save(f'{equil_dir}/ne_and_Te_iter_{eped_iter}.npy', sol, allow_pickle=True)
             if abs(eped_tol) < eped_tol_max:
                 break
+        else:
+            np.save(f'{equil_dir}/ne_and_Te_iter_{eped_iter}.npy', sol, allow_pickle=True)
 
         # --- New T_e profile (EPED1 tanh form, Eq. 1b without core H term) ---
         #   T(psi) = T_sep + aT0 * { tanh[2(1 - psi_mid)/Delta]
@@ -303,21 +330,36 @@ def profiles_loop_solve(
             'nFC': nFC_sol[sort_idx],
             'psi_N_n': psi_N_ne[sort_idx],
         }
-        base_model = saarelma_connor_nondim( # reset base_model to the new T_e profile and related quantities
-            P_tot_e      = P_tot_e,
-            alpha_crit   = alpha_crit,
-            C_KBM        = C_KBM,
-            De_chie_etg  = De_chie_etg,
-            nFC_x0       = nFC_x0,
-            ncx_x0_ratio = ncx_x0_ratio,
-            mhd_fp       = MHD_FP,
-            kprof_loc    = 'manual EPEDNN loop',
-            # kprof_loc = 'pfile',
-            kprof_fp = KPROF_FP,
-            manual_profs = manual_profs,
-            verbose      = False,
-            psi_N_inner_boundary = psi_N_inner,
-        )
+        if ig == 'manual' or ig == 'solve':
+            base_model = saarelma_connor_nondim( # reset base_model to the new T_e profile and define new "p-file" profiles from the manual profiles
+                P_tot_e      = P_tot_e,
+                alpha_crit   = alpha_crit,
+                C_KBM        = C_KBM,
+                De_chie_etg  = De_chie_etg,
+                nFC_x0       = nFC_x0,
+                ncx_x0_ratio = ncx_x0_ratio,
+                mhd_fp       = MHD_FP,
+                kprof_loc    = 'manual EPEDNN loop',
+                kprof_fp = KPROF_FP,
+                manual_profs = manual_profs,
+                verbose      = False,
+                psi_N_inner_boundary = psi_N_inner,
+            )
+        elif ig == 'fix':
+            base_model = saarelma_connor_nondim( # reset base_model to the new T_e profile and use the p-file n_e
+                P_tot_e      = P_tot_e,
+                alpha_crit   = alpha_crit,
+                C_KBM        = C_KBM,
+                De_chie_etg  = De_chie_etg,
+                nFC_x0       = nFC_x0,
+                ncx_x0_ratio = ncx_x0_ratio,
+                mhd_fp       = MHD_FP,
+                kprof_loc    = 'pfile',
+                kprof_fp     = KPROF_FP,
+                manual_profs = manual_profs,
+                verbose      = False,
+                psi_N_inner_boundary = psi_N_inner,
+            )
         base_model.setup_epednn()
 
     gfile_pres_grid = base_model.psi_N_pres

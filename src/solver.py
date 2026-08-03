@@ -749,7 +749,7 @@ class saarelma_connor:
         """
 
         # currently self.T_e = self.T_e_pfile, fix when cleaning up code
-        if kprof_loc == 'pfile':
+        if kprof_loc == 'pfile' and manual_profs is None: # use true pfile for n_e and T_e
 
             def read_pfile(path):
                 data = {}
@@ -781,6 +781,39 @@ class saarelma_connor:
 
             self.n_e_pfile = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
             self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated
+
+        elif kprof_loc == 'pfile' and manual_profs is not None: # use manual profiles for T_e but not n_e
+            def read_pfile(path):
+                data = {}
+                key = ''
+                with open(path) as f:
+                    for line in f:
+                        if '3 N Z A' in line:
+                            break
+                        if line.startswith('201'):
+                            key = line.split()[2]
+                            data[key] = np.array([])
+                            data[f'{key}_psi'] = np.array([])
+                        else:
+                            psi, dat, _ = line.split()
+                            psi = float(psi)
+                            dat = float(dat)
+                            data[key] = np.append(data[key], dat)
+                            data[f'{key}_psi'] = np.append(data[f'{key}_psi'], psi)
+                return data
+
+            # Extract profiles
+            pf = read_pfile(kprof_fp)
+
+            # Store pfile information
+            self.n_e_pfile = pf['ne(10^20/m^3)'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
+            self.psi_ne_eval = pf['ne(10^20/m^3)_psi'] # psi_N values at which n_e is evaluated
+
+            # Store manual profiles information
+            self.T_e_pfile = manual_profs['Te'] # keV
+            self.T_e = self.T_e_pfile # keV
+            self.psi_Te_eval_pfile = manual_profs['psi_N_Te'] # psi_N values at which T_e is evaluated
+            self.psi_Te_eval = self.psi_Te_eval_pfile # psi_N values at which T_e is evaluated
 
         elif kprof_loc == 'OMFITnc':
             psi_N_unified, self.T_e_pfile, self.n_e_pfile = self.OMFITnc_load(kprof_fp)
@@ -2885,4 +2918,4 @@ class saarelma_connor:
         else:
             assert False, 'specified regime_flag not supported'
 
-        return self.pedestal_pressure, self.pedestal_width
+        return self.pedestal_pressure, self.pedestal_width, self.betan

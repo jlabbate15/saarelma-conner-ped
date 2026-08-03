@@ -559,7 +559,7 @@ class saarelma_connor_nondim(saarelma_connor):
                       x_res=20,
                       fe_degree=2,
                       ne_inner_bc="neumann",
-                      bc_origin="p-file",
+                      bc_origin=None,
                       ne_inner=None,
                       dne_dx_inner=None,
                       initial_guess="tanh",
@@ -569,6 +569,7 @@ class saarelma_connor_nondim(saarelma_connor):
                       ksp_rtol=1e-8,
                       ksp_max_it=200,
                       reuse_setup=True,
+                      scale_ne_inner=None,
                       nCX_ic="solve",
                       nFC_ic="solve",
                       kbm_treatment="inline",
@@ -601,6 +602,8 @@ class saarelma_connor_nondim(saarelma_connor):
         are in SI units.
 
         tanh_width is in x units
+
+        scale_ne_inner is a scaling factor for the inner boundary density for testing purposes
 
         Sets
         ----
@@ -709,6 +712,8 @@ class saarelma_connor_nondim(saarelma_connor):
         # BC conditions for nFC, nCX, ne will not change throughout EPEDNN loop
         if bc_origin == "p-file":
             ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres))
+            if scale_ne_inner is not None:
+                ne_inner_val = ne_inner_val * scale_ne_inner
             self.ne_inner = ne_inner_val
             dne_dx_pres = np.gradient(self.n_e_pres, self.x_init)
             dne_dx_inner_val = float(np.interp(self.x_inner, self.x_init, dne_dx_pres))
@@ -1288,4 +1293,4 @@ class saarelma_connor_nondim(saarelma_connor):
                 f"  hat_n_CX in [{self.hat_nCX_sol.min():.3e}, {self.hat_nCX_sol.max():.3e}]"
             )
 
-        return self.x_sol, self.ne_sol, self.nFC_sol, self.nCX_sol
+        return self.x_sol, self.ne_sol, self.nFC_sol, self.nCX_sol, self.T_e_pres, self.psi_N_pres
