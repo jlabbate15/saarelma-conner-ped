@@ -18,14 +18,17 @@ from src.load_equil import initialize_inputs
 
 # ------------------------------------------------------------
 # Inputs
-verbose = False
+verbose_EPEDNNloop = False
+verbose_sc = False
 
 # Output directory
-output_dir = 'multiequil_kbmavg'
+output_dir = 'multiequil_PTHmode_Snyder'
+Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 # Scan parameters
 x_res = 20
-eped_tol_max = 1e-4
+eped_tol_max = 1e-5
+eped_iter_max = 5
 # From param_err.py scan with kbm_treatment= picard average: alpha_crit=0.1, C_KBM=0.1, De_chie_etg=0.1, nFC_x0=3.16228e+15, ncx_x0_ratio=1.259
 free_params = {
     'alpha_crit': 0.1,
@@ -34,7 +37,7 @@ free_params = {
     'nFC_x0': 3.16228e15,
     'ncx_x0_ratio': 1.259
 }
-eped_iter_max = 50
+ig = 'solve' # bc
 EPEDNN_core = 'previous T, stiched ne'
 kbm_treatment = "picard"
 kbm_gate_eps = 0.1
@@ -44,9 +47,10 @@ picard_rtol = 1e-8
 picard_relax = 1.0
 
 # Equilibria parameters
-equil_num = 100
-geqdsk_dir = Path('/mnt/homes_global/jal2351/software/sc_inputs/CAKEgeqdsks')
-pfile_dir = Path('/mnt/homes_global/jal2351/software/sc_inputs/CAKEpfiles')
+geqdsk_dir = Path('/mnt/homes_global/jal2351/software/sc_inputs/gHighPerfHMode')
+pfile_dir = Path('/mnt/homes_global/jal2351/software/sc_inputs/OMFITnc_HighPerfHMode')
+kprof_loc = 'OMFITnc'
+equil_num = len(list(pfile_dir.glob('*.cdf')))
 # ------------------------------------------------------------
 
 # Load in equilibria

@@ -25,7 +25,7 @@ def profiles_loop_solve(
     P_tot_e = 5e6, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
     psi_N_inner = 0.85,
     free_params = None,
-    eped_tol_max = 1e-3,
+    eped_tol_max = 1e-5,
     eped_iter_max = 50,
     kbm_gate_eps = 0.01,
     kbm_treatment = "inline",
@@ -35,6 +35,7 @@ def profiles_loop_solve(
     picard_relax = 1.0,
     EPEDNN_core = 'pfile',
     ig = None,
+    epednn_model = 'EPED1',
     verbose = False,
     verbose_sc = False,
 ):
@@ -139,10 +140,11 @@ def profiles_loop_solve(
             kprof_fp     = KPROF_FP,
             kprof_loc    = kprof_loc,
             verbose      = verbose_sc,
+            manual_profs = manual_profs, # only used if kprof_loc is set so they are
             # psi_N_inner_boundary = 0.85, # set to None to use adaptive inner boundary method
     )
     psi_N_inner_boundary_new = psi_N_inner
-    base_model.setup_epednn()
+    base_model.setup_epednn(model=epednn_model)
     print("Base model built.")
 
     # Parameters to be used in the loop
@@ -173,17 +175,17 @@ def profiles_loop_solve(
             SOLVE_KW['initial_guess'] = "tanh"
             SOLVE_KW['nCX_ic'] = "solve"
             SOLVE_KW['nFC_ic'] = "solve"
-        elif eped_iter > 0 and ig=='solve':
+        elif eped_iter > 0 and ig=='solve': # bc
             SOLVE_KW['bc_origin'] = "manual EPEDNN loop"
             SOLVE_KW['initial_guess'] = "tanh" 
             SOLVE_KW['nCX_ic'] = "solve"
             SOLVE_KW['nFC_ic'] = "solve"
-        elif eped_iter > 0 and ig=='manual':
+        elif eped_iter > 0 and ig=='manual': # bc+ig
             SOLVE_KW['bc_origin'] = "manual EPEDNN loop"
             SOLVE_KW['initial_guess'] = "manual EPEDNN loop" # use previous loop's profiles as initial guess for ne, nFC, nCX
             SOLVE_KW['nCX_ic'] = "manual EPEDNN loop"
             SOLVE_KW['nFC_ic'] = "manual EPEDNN loop"
-        elif eped_iter > 0 and ig=='fix': # only T changes, the densities are fixed from the pfile
+        elif eped_iter > 0 and ig=='fix': # fix; only T changes, the densities are fixed from the pfile
             SOLVE_KW['bc_origin'] = "p-file"
             SOLVE_KW['initial_guess'] = "tanh"
             SOLVE_KW['nCX_ic'] = "solve"
@@ -214,10 +216,10 @@ def profiles_loop_solve(
         if eped_iter == 0:
             pedestal_height_prev = 0.0
             pedestal_width_prev = 0.0
-            pedestal_height, pedestal_width, betan = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile')    
+            pedestal_height, pedestal_width, betan = base_model.feed_epednn(model=epednn_model, ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile')    
         else:
             pedestal_height_prev, pedestal_width_prev = pedestal_height, pedestal_width
-            pedestal_height, pedestal_width, betan = base_model.feed_epednn(ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core=EPEDNN_core)
+            pedestal_height, pedestal_width, betan = base_model.feed_epednn(model=epednn_model, ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core=EPEDNN_core)
         tanh_width_new = psi_to_x(1-pedestal_width) * -1 # will error if result if negative which should not happen
         print(f"Pedestal height: {pedestal_height} MPa, Pedestal width: {pedestal_width} (psi_N)")
 
@@ -360,10 +362,10 @@ def profiles_loop_solve(
                 verbose      = False,
                 psi_N_inner_boundary = psi_N_inner,
             )
-        base_model.setup_epednn()
+        base_model.setup_epednn(model=epednn_model)
 
-    gfile_pres_grid = base_model.psi_N_pres
-    gfile_pres = base_model.pres_gfile
+    # gfile_pres_grid = base_model.psi_N_pres
+    # gfile_pres = base_model.pres_gfile
 
     if te_plot_profiles:
         red_blue = LinearSegmentedColormap.from_list('red_blue', ['red', 'blue'])
@@ -395,4 +397,4 @@ def profiles_loop_solve(
         fig1.tight_layout()
         plt.show()
 
-    return pedestal_width, pedestal_height, gfile_pres, gfile_pres_grid
+    return pedestal_width, pedestal_height

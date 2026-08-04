@@ -65,6 +65,8 @@ def load_and_interpolate_scx(filepath):
     # 6. Create the base interpolator (returns NaN if out of bounds)
     base_interpolator = RegularGridInterpolator((temp_ev, dens_m3), scx_m3_s, 
                                                 bounds_error=False, fill_value=np.nan)
+    # base_interpolator = RegularGridInterpolator((temp_ev, dens_m3), scx_m3_s, 
+    #                                               bounds_error=False, fill_value=None)
     
     # 7. Create a wrapper function to catch out-of-bounds inputs
     def scx_wrapper(points):

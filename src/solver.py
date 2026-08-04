@@ -616,7 +616,7 @@ class saarelma_connor:
             self.psi_pres = np.linspace(self.eq['psimag'], self.eq['psibry'], len(self.eq['pres']))[1:]
             self.psi_N_pres = (self.psi_pres - self.eq['psimag']) / (self.eq['psibry'] - self.eq['psimag'])
 
-            self.pres_gfile = self.eq['pres'][1:] # pressure is NOT an input to this model but using this for plotting
+            # self.pres_gfile = self.eq['pres'][1:] # pressure is NOT an input to this model but using this for plotting - want to use pfile pressure instead
 
             # Grids
             self.rgrid = np.linspace(self.eq['rleft'],self.eq['rleft']+self.eq['rdim'],self.eq['nr']) # m, 1D R grid
@@ -2755,7 +2755,7 @@ class saarelma_connor:
             print(f'betat: {betat}, a: {self.a}, bt: {self.bt}, Ip: {self.Ip}')
         self.betan = 100 * betat * (self.a * abs(self.bt) / abs(self.Ip))
 
-    def setup_epednn(self):
+    def setup_epednn(self, model='EPED1'):
         """Setup the EPEDNN model with quantities from the Saarelma-Connor setup
 
         Parameters
@@ -2773,90 +2773,114 @@ class saarelma_connor:
 
         print("Setting up EPEDNN...")
 
-        # Requires dependency "juliacall" to translate Python inputs to FUSE EPED.jl
-        # Requires dependency EPEDNN
+        if model == 'EPED1':
+            # Requires dependency "juliacall" to translate Python inputs to FUSE EPED.jl
+            # Requires dependency EPEDNN
 
-        import juliapkg
+            import juliapkg
 
-        # 1. Tell juliapkg to add your local EPEDNN package in development mode.
-        # This registers it with the isolated Julia environment PythonCall uses.
-        epednn_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "dependencies",
-            "EPEDNN.jl",
-        )
-        if not os.path.isdir(epednn_path):
-            raise FileNotFoundError(
-                f"EPEDNN.jl not found at {epednn_path}. "
-                "Initialize it with: git submodule update --init dependencies/EPEDNN.jl"
+            # 1. Tell juliapkg to add your local EPEDNN package in development mode.
+            # This registers it with the isolated Julia environment PythonCall uses.
+            epednn_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "dependencies",
+                "EPEDNN.jl",
             )
-        juliapkg.add(
-            "EPEDNN",
-            uuid="e64856f0-3bb8-4376-b4b7-c03396503991",
-            path=epednn_path,
-            dev=True,
-        )
+            if not os.path.isdir(epednn_path):
+                raise FileNotFoundError(
+                    f"EPEDNN.jl not found at {epednn_path}. "
+                    "Initialize it with: git submodule update --init dependencies/EPEDNN.jl"
+                )
+            juliapkg.add(
+                "EPEDNN",
+                uuid="e64856f0-3bb8-4376-b4b7-c03396503991",
+                path=epednn_path,
+                dev=True,
+            )
 
-        # 2. Resolve and instantiate. THIS is what fixes your missing dependency error!
-        juliapkg.resolve()
+            # 2. Resolve and instantiate. THIS is what fixes your missing dependency error!
+            juliapkg.resolve()
 
-        # 3. Now that the environment is set up, load juliacall and your package
-        from juliacall import Main as jl
-        jl.seval('using EPEDNN')
+            # 3. Now that the environment is set up, load juliacall and your package
+            from juliacall import Main as jl
+            jl.seval('using EPEDNN')
 
-        # from juliacall import Main as jl
+            # from juliacall import Main as jl
 
-        # 1. Load the Julia EPEDNN module (Assuming EPEDNN is already installed in your Julia environment)
-        '''
-            # To install EPEDNN, run the following command in your terminal:
-            conda activate sc_ped
-            cd /Users/nelsonlab/codes/saarelma-conner-ped
-            julia
+            # 1. Load the Julia EPEDNN module (Assuming EPEDNN is already installed in your Julia environment)
+            '''
+                # To install EPEDNN, run the following command in your terminal:
+                conda activate sc_ped
+                cd /Users/nelsonlab/codes/saarelma-conner-ped
+                julia
 
-            # if you need to install julia, run the following command in your terminal:
-            curl -fsSL https://install.julialang.org | sh
-            # then restart terminal
-            julia --version
-            # if this doesn't work, you could try the following although I did not verify this works:
-            echo 'export PATH="$HOME/.juliaup/bin:$PATH"' >> ~/.zshrc
-            source ~/.zshrc
-            julia --version
+                # if you need to install julia, run the following command in your terminal:
+                curl -fsSL https://install.julialang.org | sh
+                # then restart terminal
+                julia --version
+                # if this doesn't work, you could try the following although I did not verify this works:
+                echo 'export PATH="$HOME/.juliaup/bin:$PATH"' >> ~/.zshrc
+                source ~/.zshrc
+                julia --version
 
-            # Then in Julia:
-            using Pkg
-            Pkg.activate(".")  # optional but recommended: use this repo as the active Julia project
-            Pkg.develop(path="dependencies/EPEDNN.jl")
-            Pkg.instantiate()
+                # Then in Julia:
+                using Pkg
+                Pkg.activate(".")  # optional but recommended: use this repo as the active Julia project
+                Pkg.develop(path="dependencies/EPEDNN.jl")
+                Pkg.instantiate()
 
-            #Then in Julia: 
-            using EPEDNN
+                #Then in Julia: 
+                using EPEDNN
 
 
-            Make sure that EPEDNN submodule is installed, the General Julia package registry is installed, and juliacall and juliapkg are installed.
-            The following commands may help:
+                Make sure that EPEDNN submodule is installed, the General Julia package registry is installed, and juliacall and juliapkg are installed.
+                The following commands may help:
 
-            pip install juliapkg
-            git submodule update --init dependencies/EPEDNN.jl
-            # Only needed if juliapkg fails on registry download:
-            git clone --depth 1 https://github.com/JuliaRegistries/General.git \
-            ~/.julia/registries/General
-            pip install juliacall
-        '''
-        # you can run Julia commands in Python using jl.seval('command')
-        # jl.seval('using Pkg')
-        # jl.seval('Pkg.activate(".")  # optional but recommended: use this repo as the active Julia project')
-        # jl.seval('Pkg.develop(path="/Users/nelsonlab/codes/saarelma-conner-ped/dependencies/EPEDNN.jl")')
-        # jl.seval('Pkg.instantiate()')
-        # jl.seval('using EPEDNN')
+                pip install juliapkg
+                git submodule update --init dependencies/EPEDNN.jl
+                # Only needed if juliapkg fails on registry download:
+                git clone --depth 1 https://github.com/JuliaRegistries/General.git \
+                ~/.julia/registries/General
+                pip install juliacall
+            '''
+            # you can run Julia commands in Python using jl.seval('command')
+            # jl.seval('using Pkg')
+            # jl.seval('Pkg.activate(".")  # optional but recommended: use this repo as the active Julia project')
+            # jl.seval('Pkg.develop(path="/Users/nelsonlab/codes/saarelma-conner-ped/dependencies/EPEDNN.jl")')
+            # jl.seval('Pkg.instantiate()')
+            # jl.seval('using EPEDNN')
 
-        # 2. Load the pre-trained EPED neural network model
-        # This mimics the EPEDNN.loadmodelonce("EPED1NNmodel.bson") step
-        model_filename = "EPED1NNmodel.bson" 
-        self.epednn_model = jl.EPEDNN.loadmodelonce(model_filename)
+            # 2. Load the pre-trained EPED neural network model
+            # This mimics the EPEDNN.loadmodelonce("EPED1NNmodel.bson") step
+            model_filename = "EPED1NNmodel.bson" 
+            self.epednn_model = jl.EPEDNN.loadmodelonce(model_filename)
+        elif model == 'EPED_SPARC':
+            # Vendored package lives at dependencies/epednn_mit/src/epednn_mit/;
+            # it is not installed into the env by default, so put src/ on sys.path.
+            import sys
+            from pathlib import Path
+            epednn_root = Path(__file__).resolve().parent.parent / "dependencies" / "epednn_mit"
+            epednn_src = epednn_root / "src"
+            if not epednn_src.is_dir():
+                raise FileNotFoundError(
+                    f"epednn_mit not found at {epednn_src}. "
+                    "Expected dependencies/epednn_mit/src in the repo."
+                )
+            if str(epednn_src) not in sys.path:
+                sys.path.insert(0, str(epednn_src))
+            from epednn_mit.models.sparc.tensorflow_model import generate_epednn_mit_sparc_tensorflow
+            from epednn_mit.utils.load import load_weights
+            weights_dir = epednn_src / "epednn_mit" / "models" / "sparc"
+            weights = load_weights(sorted(weights_dir.glob("*sparc*.pkl")))
+            if not weights:
+                raise FileNotFoundError(f"No *sparc*.pkl weights found in {weights_dir}")
+            self.epednn_model = generate_epednn_mit_sparc_tensorflow(weights)
+
         self.bt = np.array(self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2])
+        print(f'bt: {self.bt}')
 
 
-    def feed_epednn(self, ne_ped=None, x_ne=None, psiN_Te=None, Te_prev=None, EPEDNN_core='pfile'):
+    def feed_epednn(self, model='EPED1', ne_ped=None, x_ne=None, psiN_Te=None, Te_prev=None, EPEDNN_core='pfile'):
         """Feed the Saarelma-Connor solution to the EPEDNN model"""
         
         # Define inputs in Python
@@ -2867,12 +2891,18 @@ class saarelma_connor:
         else:
             self._neped = ne_ped
             if x_ne is None:
-                assert False, 'x_ne must be provided if ne_ped is provided'
-            self._x_ne = x_ne
+                print('Warning: Most functionalities require x_ne to be provided if ne_ped is provided')
+                # assert False, 'x_ne must be provided if ne_ped is provided'
+                self._x_ne = None
+            else:
+                self._x_ne = x_ne
         self.calc_betan(self._x_ne,self._neped,psiN_Te,Te_prev,EPEDNN_core)
         print(f'betan: {self.betan}')
 
-        ne_ped_h = interp1d(self._x_ne, self._neped, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
+        if self._x_ne is None:
+            ne_ped_h = self._neped
+        else:
+            ne_ped_h = interp1d(self._x_ne, self._neped, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
 
         inputs = {
             "a": float(self.a),           # Minor radius (m)
@@ -2887,27 +2917,57 @@ class saarelma_connor:
             "zeffped": float(self.Z_i)      # Effective charge
         }
 
-        # Call the Julia model using the Python inputs
-        # We pass the inputs into the Julia function, along with the keyword arguments
-        solution = self.epednn_model(
-            inputs["a"], 
-            inputs["betan"], 
-            inputs["bt"], 
-            inputs["delta"],
-            inputs["ip"], 
-            inputs["kappa"], 
-            inputs["m"], 
-            inputs["neped"],
-            inputs["r"], 
-            inputs["zeffped"],
-            only_powerlaw=False,        # Set to True if you only want the scaling law
-            warn_nn_train_bounds=True   # Warns if inputs are outside the training data. Good for debugging
-        )
+        if model == 'EPED1':
+            # Call the Julia model using the Python inputs
+            # We pass the inputs into the Julia function, along with the keyword arguments
+            solution = self.epednn_model(
+                inputs["a"], 
+                inputs["betan"], 
+                inputs["bt"], 
+                inputs["delta"],
+                inputs["ip"], 
+                inputs["kappa"], 
+                inputs["m"], 
+                inputs["neped"],
+                inputs["r"], 
+                inputs["zeffped"],
+                only_powerlaw=False,        # Set to True if you only want the scaling law
+                warn_nn_train_bounds=True   # Warns if inputs are outside the training data. Good for debugging
+            )
 
-        # Extract the results back into Python
-        # The solution structure has pressure and width for different modes (GH, G, H)
-        self.pedestal_pressure = solution.pressure.GH.H  # in MPa
-        self.pedestal_width = solution.width.GH.H        # in normalized poloidal flux
+            # Extract the results back into Python
+            # The solution structure has pressure and width for different modes (GH, G, H)
+            self.pedestal_pressure = solution.pressure.GH.H  # in MPa
+            self.pedestal_width = solution.width.GH.H        # in normalized poloidal flux
+
+
+        elif model == 'EPED_SPARC':
+            ''' Training dataset was on (in order of input position from the EPEDNN_MIT README): 
+            Ip:     [  1.6  , 14.3   ]
+            Bt:     [  7.2  , 12.2   ]
+            R:      [  1.85 ,  1.85  ]
+            a:      [  0.57 ,  0.57  ]
+            kappa:  [  1.53 ,  2.29  ]
+            delta:  [  0.39 ,  0.59  ]
+            neped:  [  2.84 , 90.235 ]
+            betan:  [  0.8  ,  1.6   ]
+            zeff:   [  1.3  ,  2.5   ]
+            '''
+            x = np.atleast_2d([
+                inputs["ip"], 
+                inputs["bt"], 
+                inputs["r"], 
+                inputs["a"], 
+                inputs["kappa"], 
+                inputs["delta"], 
+                inputs["neped"], 
+                inputs["betan"], 
+                inputs["zeffped"]
+            ])
+            solution = self.epednn_model.predict(x)[0]  # [[ped_height, ped_width]]
+            print(solution)
+            self.pedestal_pressure = solution[0]  # in MPa
+            self.pedestal_width = solution[1]        # in normalized poloidal flux
 
         # Apply ELM-free regime scaling
         if self.regime_flag == 'PT H-mode':
