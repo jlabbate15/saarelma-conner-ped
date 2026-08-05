@@ -1,6 +1,8 @@
 # Run only EPEDNN
 
 import sys
+import csv
+from collections import defaultdict
 import numpy as np
 from scipy.interpolate import interp1d
 from pathlib import Path
@@ -15,9 +17,52 @@ out_dir = 'EPEDNN_pure_output/'
 gfile_fps = '/mnt/homes_global/jal2351/software/sc_inputs/gHighPerfHMode/'
 kprof_fps = '/mnt/homes_global/jal2351/software/sc_inputs/OMFITnc_HighPerfHMode/'
 
-psiN_ped_est = 0.95
+# Fallback removed: equilibria without a fit ped-top are skipped (see loop below).
+# Pedestal-top psiN from run_fit_pedestals.py (p_tot, gradient method).
+# EPEDNN neped / zeffped must be taken here — NOT at a fixed psiN=0.95, and
+# NOT with Zeff=1 (IDA ped Zeff is typically ~1.5-1.9).
+PED_TOP_CSV = (
+    '/mnt/homes_global/jal2351/software/sc_inputs/'
+    'pedestal_tops_summary_HighPerfHMode.csv'
+)
 
 epednn_model = 'EPED1'
+
+
+def load_ped_tops(csv_path=PED_TOP_CSV):
+    """shot -> list of {time_ms, ped_top_grad, ped_top_1mw, grad_width}."""
+    by_shot = defaultdict(list)
+    path = Path(csv_path)
+    if not path.exists():
+        raise FileNotFoundError(
+            f'Missing ped-top CSV: {csv_path}\n'
+            f'Run sc_inputs/run_fit_pedestals.py first.'
+        )
+    with open(path) as f:
+        for row in csv.DictReader(f):
+            if row.get('bad') in ('1', 'True', 'true') or not row.get('ped_top_grad'):
+                continue
+            by_shot[int(row['shot'])].append({
+                'time_ms': float(row['time_ms']),
+                'ped_top_grad': float(row['ped_top_grad']),
+                'ped_top_1mw': float(row['ped_top_1mw']),
+                'grad_width': float(row['grad_width']),
+            })
+    if not by_shot:
+        raise RuntimeError(f'No usable ped-top rows in {csv_path}')
+    return by_shot
+
+
+def ped_top_for_tag(equil_tag, ped_tops, prefer='ped_top_grad'):
+    """Map g-file tag '125729.03589' -> nearest fit ped-top psiN, or None."""
+    shot_s, time_s = equil_tag.split('.', 1)
+    shot = int(shot_s)
+    time_ms = float(time_s)  # '03589' -> 3589 ms
+    rows = ped_tops.get(shot)
+    if not rows:
+        return None
+    return min(rows, key=lambda r: abs(r['time_ms'] - time_ms))[prefer]
+
 
 def OMFITnc_load(filename):
     """
@@ -28,15 +73,12 @@ def OMFITnc_load(filename):
         filename (str): Path to the NetCDF file.
 
     Returns:
-        tuple: (psi_N_unified, Te_1d, ne_1d, p_ion_1d) as 1D numpy arrays.
-        Te_1d in keV, ne_1d in m^-3, p_ion_1d in Pa.
+        tuple: (psi_N_unified, Te_1d, ne_1d, p_ion_1d, Zeff_1d) as 1D numpy arrays.
+        Te_1d in keV, ne_1d in m^-3, p_ion_1d in Pa, Zeff_1d dimensionless.
 
     Notes:
         IDA OMFITnc files typically lack T_i / n_i. Ion pressure is taken from
         p_ion when present (checked O(1) vs pe = ne*Te*e); otherwise pe is used.
-
-    # Example usage:
-    # psi_grid, Te, ne, p_ion = OMFITnc_load('my_plasma_data.cdf')
     """
     from omfit_classes.omfit_nc import OMFITnc
     nc = OMFITnc(filename)
@@ -156,18 +198,41 @@ def OMFITnc_load(filename):
     else:
         p_ion_unified = pe_unified
 
-    return psi_N_unified, Te_unified, ne_unified, p_ion_unified
+    # Zeff profile (needed for EPEDNN zeffped). Fall back to 1.0 if absent.
+    if _nc_has('Zeff'):
+        zeff_raw = _reduce_time(_nc_array('Zeff'))
+        psi_z, zeff_raw = _clip_profile(psi_ne, zeff_raw)
+        Zeff_unified = interp1d(
+            psi_z, zeff_raw, kind='cubic', bounds_error=False, fill_value='extrapolate'
+        )(psi_N_unified)
+    else:
+        Zeff_unified = np.ones_like(psi_N_unified)
+
+    return psi_N_unified, Te_unified, ne_unified, p_ion_unified, Zeff_unified
 
 
+ped_tops = load_ped_tops()
 equil_num = len(list(Path(kprof_fps).glob('*.cdf')))
 equilibria = initialize_inputs(equil_num, gfile_fps, kprof_fps, p_filetype='OMFITnc')
 
-i=0
-for mhd_fp, kprof_fp in equilibria:
+Path(out_dir).mkdir(parents=True, exist_ok=True)
 
-    psi_N_unified, Te_unified, ne_unified, p_ion_unified = OMFITnc_load(kprof_fp)
-    ne_ped = np.interp(psiN_ped_est, psi_N_unified, ne_unified)  # m^-3
+i = 0
+n_skip = 0
+for mhd_fp, kprof_fp in equilibria:
+    equil_tag = Path(mhd_fp).name[1:]
+    psiN_ped = ped_top_for_tag(equil_tag, ped_tops, prefer='ped_top_grad')
+    if psiN_ped is None or not np.isfinite(psiN_ped):
+        print(f'  SKIP {equil_tag}: no fit ped-top in {PED_TOP_CSV}')
+        n_skip += 1
+        continue
+
+    psi_N_unified, Te_unified, ne_unified, p_ion_unified, Zeff_unified = OMFITnc_load(
+        kprof_fp
+    )
+    ne_ped = np.interp(psiN_ped, psi_N_unified, ne_unified)  # m^-3
     ne_ped = ne_ped / 1e19  # m^-3 -> 10^19 m^-3 (EPEDNN input)
+    zeff_ped = float(np.interp(psiN_ped, psi_N_unified, Zeff_unified))
     e_charge = 1.602176634e-19  # C
     # Total kinetic pressure profile [Pa]: p_ion + pe, both on psi_N_unified
     # pe = ne[m^-3] * Te[eV] * e; Te_unified is keV so *1e3
@@ -175,7 +240,7 @@ for mhd_fp, kprof_fp in equilibria:
 
     # Run EPEDNN
     base_model = saarelma_connor_nondim(
-        P_tot_e      = 5e6, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
+        P_tot_e      = 5e6,  # W
         alpha_crit   = 1,
         C_KBM        = 1,
         De_chie_etg  = 1,
@@ -187,7 +252,31 @@ for mhd_fp, kprof_fp in equilibria:
         kprof_loc    = 'OMFITnc',
         verbose      = False,
     )
+    # feed_epednn maps self.Z_i -> zeffped. Override AFTER __init__ so ion
+    # charge e_i (set from the constructor default Z_i=1 for D) stays correct.
+    base_model.Z_i = zeff_ped
     base_model.setup_epednn(model=epednn_model)
-    pedestal_height, pedestal_width, betan = base_model.feed_epednn(model=epednn_model, ne_ped=ne_ped, EPEDNN_core='pfile')
-    equil_tag = Path(mhd_fp).name[1:]
-    np.save(Path(out_dir) / Path(equil_tag + '.npy'), {'pedestal_height': pedestal_height, 'pedestal_width': pedestal_width, 'betan': betan, 'kfile_pres': kfile_pres, 'psiN_kfilepres': psi_N_unified})
+    pedestal_height, pedestal_width, betan = base_model.feed_epednn(
+        model=epednn_model, ne_ped=ne_ped, EPEDNN_core='pfile'
+    )
+    np.save(
+        Path(out_dir) / Path(equil_tag + '.npy'),
+        {
+            'pedestal_height': pedestal_height,
+            'pedestal_width': pedestal_width,
+            'betan': betan,
+            'kfile_pres': kfile_pres,
+            'psiN_kfilepres': psi_N_unified,
+            'psiN_ped_exp': psiN_ped,
+            'ne_ped_1e19': ne_ped,
+            'zeff_ped': zeff_ped,
+        },
+    )
+    i += 1
+    if i % 25 == 0:
+        print(f'  {i}/{len(equilibria)}  last={equil_tag}  '
+              f'psiN_ped={psiN_ped:.4f}  zeff={zeff_ped:.3f}  '
+              f'p_h={float(pedestal_height)*1e3:.2f} kPa')
+
+print(f'Done: saved {i}/{len(equilibria)} equilibria to {out_dir} '
+      f'(skipped {n_skip} without ped-top fit)')
