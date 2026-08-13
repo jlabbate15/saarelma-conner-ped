@@ -23,6 +23,8 @@ def profiles_loop_solve(
     ne_inner_bc = "neumann",
     x_res = 40,
     P_tot_e = 5e6, # W, total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox
+    species = 'D',
+    Z_i = 1,
     psi_N_inner = 0.85,
     free_params = None,
     eped_tol_max = 1e-5,
@@ -59,6 +61,10 @@ def profiles_loop_solve(
         Number of grid points in the radial direction.
     P_tot_e : float
         Total heating power given to electrons (can be assumed to be half the total heating power according to S. Saarelma et al 2023 Nucl. Fusion 63 052002), will be read from TokTox.
+    species : str
+        Species of ions, currently supporting: 'D', 'D-T'.
+    Z_i : int
+        Charge number of ions.
     psi_N_inner : float
         Inner boundary of the pedestal in normalized poloidal flux.
         Per-DOF x coordinates (m), unsorted (as stored in dat.data).
@@ -130,6 +136,8 @@ def profiles_loop_solve(
 
     base_model = saarelma_connor_nondim(
             P_tot_e      = P_tot_e,
+            species      = species,
+            Z_i          = Z_i,
             alpha_crit   = alpha_crit,
             C_KBM        = C_KBM,
             De_chie_etg  = De_chie_etg,
@@ -173,7 +181,7 @@ def profiles_loop_solve(
         if eped_iter == 0:
             SOLVE_KW['bc_origin'] = "p-file"
             SOLVE_KW['initial_guess'] = "tanh"
-            SOLVE_KW['nCX_ic'] = "solve"
+            SOLVE_KW['nCX_ic'] = "scale nFC"
             SOLVE_KW['nFC_ic'] = "solve"
         elif eped_iter > 0 and ig=='solve': # bc
             SOLVE_KW['bc_origin'] = "manual EPEDNN loop"
@@ -335,6 +343,8 @@ def profiles_loop_solve(
         if ig == 'manual' or ig == 'solve':
             base_model = saarelma_connor_nondim( # reset base_model to the new T_e profile and define new "p-file" profiles from the manual profiles
                 P_tot_e      = P_tot_e,
+                species      = species,
+                Z_i          = Z_i,
                 alpha_crit   = alpha_crit,
                 C_KBM        = C_KBM,
                 De_chie_etg  = De_chie_etg,
@@ -350,6 +360,8 @@ def profiles_loop_solve(
         elif ig == 'fix':
             base_model = saarelma_connor_nondim( # reset base_model to the new T_e profile and use the p-file n_e
                 P_tot_e      = P_tot_e,
+                species      = species,
+                Z_i          = Z_i,
                 alpha_crit   = alpha_crit,
                 C_KBM        = C_KBM,
                 De_chie_etg  = De_chie_etg,

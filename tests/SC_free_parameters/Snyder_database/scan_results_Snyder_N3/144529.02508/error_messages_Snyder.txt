@@ -1,0 +1,27 @@
+eq_tag, alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner, message
+144529.02508, 0.1, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 4 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+144529.02508, 0.1, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 6 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+144529.02508, 1.0, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+144529.02508, 1.0, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+144529.02508, 10.0, 0.1, 0.1, 1e+17, 4.732, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 8.628e-01); consider increasing picard_max_it or setting picard_relax < 1.
+144529.02508, 10.0, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+144529.02508, 10.0, 1.0, 0.1, 1e+17, 4.732, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 9.426e-01); consider increasing picard_max_it or setting picard_relax < 1.
+144529.02508, 10.0, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+144529.02508, 10.0, 1.0, 1.0, 1e+17, 17.783, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 8.651e-02); consider increasing picard_max_it or setting picard_relax < 1.
+144529.02508, 10.0, 10.0, 0.1, 1e+17, 4.732, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 9.607e-01); consider increasing picard_max_it or setting picard_relax < 1.
+144529.02508, 10.0, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 3 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+144529.02508, 10.0, 10.0, 1.0, 1e+17, 17.783, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 3.555e-01); consider increasing picard_max_it or setting picard_relax < 1.

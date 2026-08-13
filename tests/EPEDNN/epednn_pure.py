@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 from src.solver_nondim import saarelma_connor_nondim
 from src.load_equil import initialize_inputs
 
-out_dir = 'EPEDNN_pure_output/'
+out_dir = 'EPEDNN_pure_output_v2/'
 
 gfile_fps = '/mnt/homes_global/jal2351/software/sc_inputs/gHighPerfHMode/'
 kprof_fps = '/mnt/homes_global/jal2351/software/sc_inputs/OMFITnc_HighPerfHMode/'
@@ -27,6 +27,8 @@ PED_TOP_CSV = (
 )
 
 epednn_model = 'EPED1'
+
+ne_ped_source = 'Oak'
 
 
 def load_ped_tops(csv_path=PED_TOP_CSV):
@@ -217,6 +219,11 @@ equilibria = initialize_inputs(equil_num, gfile_fps, kprof_fps, p_filetype='OMFI
 
 Path(out_dir).mkdir(parents=True, exist_ok=True)
 
+if ne_ped_source == 'Oak':
+    _oak = np.load('Oak_pedestal_fits.npy', allow_pickle=True).item()
+    ne_peds = np.asarray(_oak['n_e'], dtype=float) / 1e19  # m^-3 -> 10^19 m^-3
+    equil_shotandtime_ne = list(_oak['equil_shotandtime'])
+
 i = 0
 n_skip = 0
 for mhd_fp, kprof_fp in equilibria:
@@ -230,8 +237,33 @@ for mhd_fp, kprof_fp in equilibria:
     psi_N_unified, Te_unified, ne_unified, p_ion_unified, Zeff_unified = OMFITnc_load(
         kprof_fp
     )
-    ne_ped = np.interp(psiN_ped, psi_N_unified, ne_unified)  # m^-3
-    ne_ped = ne_ped / 1e19  # m^-3 -> 10^19 m^-3 (EPEDNN input)
+    if ne_ped_source == 'John':
+        ne_ped = np.interp(psiN_ped, psi_N_unified, ne_unified)  # m^-3
+        ne_ped = ne_ped / 1e19  # m^-3 -> 10^19 m^-3 (EPEDNN input)
+    elif ne_ped_source == 'Oak':
+        # Match shot exactly; pick closest time (g-tag ms vs Oak float ms).
+        # equil_tag: '125729.03589' ; equil_shotandtime_ne: '125729.3589.5480'
+        shot_s, time_s = equil_tag.split('.', 1)
+        shot = int(shot_s)
+        time_ms = float(time_s)
+        best_i, best_dt = None, None
+        for i_oak, tag_oak in enumerate(equil_shotandtime_ne):
+            s_oak, t_oak = str(tag_oak).split('.', 1)
+            if int(s_oak) != shot:
+                continue
+            dt = abs(float(t_oak) - time_ms)
+            if best_dt is None or dt < best_dt:
+                best_dt = dt
+                best_i = i_oak
+        if best_i is None:
+            print(f'  SKIP {equil_tag}: no Oak ne_ped for shot {shot}')
+            n_skip += 1
+            continue
+        ne_ped = float(ne_peds[best_i])
+        if not np.isfinite(ne_ped):
+            print(f'  SKIP {equil_tag}: Oak ne_ped is nan (idx={best_i})')
+            n_skip += 1
+            continue
     zeff_ped = float(np.interp(psiN_ped, psi_N_unified, Zeff_unified))
     e_charge = 1.602176634e-19  # C
     # Total kinetic pressure profile [Pa]: p_ion + pe, both on psi_N_unified

@@ -1,0 +1,45 @@
+eq_tag, alpha_crit, C_KBM, De_chie_etg, nFC_x0, ncx_x0_ratio, psi_N_inner, message
+145703.03309, 0.1, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 13 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 0.1, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 1.0, 0.1, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 32 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 1.0, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 14 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 1.0, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 16 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 1.0, 10.0, 0.1, 100000000000000.0, 17.783, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 6.772e-02); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 1.0, 10.0, 0.1, 3162277660168379.5, 1.259, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 2.734e-01); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 1.0, 10.0, 0.1, 3162277660168379.5, 4.732, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 4.488e-02); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 1.0, 10.0, 0.1, 3162277660168379.5, 17.783, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 9.836e-04); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 1.0, 10.0, 0.1, 1e+17, 1.259, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 4.184e-05); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 1.0, 10.0, 0.1, 1e+17, 4.732, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 5.665e-06); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 10.0, 0.1, 0.1, 1e+17, 1.259, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 3.698e-01); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 10.0, 0.1, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 10.0, 0.1, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 10.0, 1.0, 0.1, 1e+17, 1.259, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 7.182e-01); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 10.0, 1.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 10.0, 1.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 10.0, 1.0, 1.0, 1e+17, 17.783, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 6.685e-01); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 10.0, 10.0, 0.1, 1e+17, 1.259, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 8.688e-01); consider increasing picard_max_it or setting picard_relax < 1.
+145703.03309, 10.0, 10.0, 0.1, 1e+17, 4.732, 0.8500, Nonlinear solve failed to converge after 7 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 10.0, 10.0, 0.1, 1e+17, 17.783, 0.8500, Nonlinear solve failed to converge after 5 nonlinear iterations.
+Reason:
+   DIVERGED_LINE_SEARCH
+145703.03309, 10.0, 10.0, 1.0, 1e+17, 17.783, 0.8500, [picard] Picard loop did not converge in 50 iterations (last |dne|_rel = 8.695e-01); consider increasing picard_max_it or setting picard_relax < 1.

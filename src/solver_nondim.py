@@ -426,6 +426,118 @@ class saarelma_connor_nondim(saarelma_connor):
         self.pres = _pres[unsort_idx]
 
     # ------------------------------------------------------------------
+    # Semi-analytic neutral solve (integrating factor on a fine sub-grid)
+    # ------------------------------------------------------------------
+
+    def _solve_neutrals_analytic_nondim(self, hat_ne_dofs, n_sub=4001):
+        """Solve the FC and CX neutral equations exactly for a *given*
+        electron density, on a dense sub-grid that resolves the neutral
+        ionisation boundary layer even when the FE mesh does not.
+
+        Both neutral equations are first-order linear ODEs in x once
+        ``n_e(x)`` is frozen, so they admit integrating-factor solutions
+        that are positive by construction (no CG oscillations, no
+        negative densities).  This is the same mathematics as the
+        ``nFC_ic='solve'`` / ``nCX_ic='solve'`` initial-guess branches,
+        but evaluated on ``n_sub`` points instead of the FE DOFs and
+        including the |grad r|^2 / form-factor variation exactly.
+
+        FC neutrals (Saarelma-Connor Eq. 9):
+
+            |V_FC| d/dx [ f_FC g n_FC ] = n_e (S_i + S_CX) n_FC
+
+        With u = f_FC g n_FC and tau = -x (inward distance >= 0):
+
+            u(tau) = u(0) * exp( -int_0^tau  n_e (S_i+S_CX)
+                                             / (|V_FC| f_FC g)  dtau' )
+
+        CX neutrals (Eq. 10), with w = |V_CX| f_CX g n_CX:
+
+            dw/dtau = -P(tau) w + Q(tau),
+            P = n_e S_i / (|V_CX| f_CX g),
+            Q = (1/2) n_e S_CX n_FC,
+
+        integrated with a per-step exponential integrator
+        (w_{k+1} = w_k e^{-P dtau} + (Q/P)(1 - e^{-P dtau})), which is
+        unconditionally stable and positivity-preserving regardless of
+        how stiff P dtau is.
+
+        Parameters
+        ----------
+        hat_ne_dofs : array_like
+            Dimensionless n_e at the FE mesh DOFs (DOF order).
+        n_sub : int, default 4001
+            Number of points of the dense integration sub-grid on
+            [x_inner, 0].  Choose so that the sub-grid spacing is well
+            below the minimum neutral penetration depth
+            lambda = |V_FC| / (n_e (S_i + S_CX)).
+
+        Returns
+        -------
+        hat_nFC_dofs, hat_nCX_dofs : ndarray
+            Dimensionless neutral densities at the FE mesh DOFs (DOF
+            order), interpolated in log-space from the sub-grid so the
+            boundary-layer decay is preserved.
+        """
+        hat_x_dofs = self._fd_cache["hat_x_dofs"]
+        x_dofs = self._from_hat_x(hat_x_dofs)          # m, DOF order
+        order = np.argsort(x_dofs)
+        x_sorted = x_dofs[order]                        # ascending [-L, 0]
+        ne_sorted = np.asarray(hat_ne_dofs)[order] * self._n0_nd  # m^-3
+
+        # Dense sub-grid, descending from the separatrix (x = 0) inward.
+        x_fine = np.linspace(0.0, x_sorted[0], int(n_sub))
+        tau = -x_fine                                   # >= 0, ascending
+        ne_f = np.clip(np.interp(x_fine, x_sorted, ne_sorted), 0.0, None)
+        Si_f = np.interp(x_fine, self.x_init, self.S_i_pres)
+        Scx_f = np.interp(x_fine, self.x_init, self.S_cx_pres)
+        g_f = np.interp(x_fine, self.x_init, self.gradr2_fsa)
+        fFC_f = np.interp(x_fine, self.x_init, self.fFC)
+        fCX_f = np.interp(x_fine, self.x_init, self.fCX)
+        Vcx_f = np.interp(x_fine, self.x_init, np.abs(self.V_cx_pres))
+        Vfc = abs(self.V_FC)
+
+        # ---- FC neutrals: closed-form integrating factor ----
+        # I_FC(tau) = int_0^tau n_e (S_i + S_CX) / (Vfc f_FC g) dtau' >= 0
+        I_FC = cumulative_trapezoid(
+            ne_f * (Si_f + Scx_f) / (Vfc * fFC_f * g_f), tau, initial=0.0,
+        )
+        ln_u0 = np.log(fFC_f[0] * g_f[0] * self.nFC_x0)
+        ln_nFC_f = ln_u0 - I_FC - np.log(fFC_f * g_f)
+
+        # ---- CX neutrals: exponential-integrator march in tau ----
+        P_f = ne_f * Si_f / (Vcx_f * fCX_f * g_f)       # 1/m
+        Q_f = 0.5 * ne_f * Scx_f * np.exp(ln_nFC_f)     # source, w-units/m
+        w = np.empty_like(tau)
+        w[0] = Vcx_f[0] * fCX_f[0] * g_f[0] * self.nCX_x0
+        dtau = np.diff(tau)
+        Pm = 0.5 * (P_f[:-1] + P_f[1:])
+        Qm = 0.5 * (Q_f[:-1] + Q_f[1:])
+        for k in range(len(dtau)):
+            a = Pm[k] * dtau[k]
+            if a > 1e-12:
+                E = np.exp(-a)
+                w[k + 1] = w[k] * E + (Qm[k] / Pm[k]) * (1.0 - E)
+            else:
+                w[k + 1] = w[k] + Qm[k] * dtau[k]
+        ln_nCX_f = (
+            np.log(np.clip(w, 1e-300, None)) - np.log(Vcx_f * fCX_f * g_f)
+        )
+
+        # ---- Back to the FE DOFs (log-space interpolation) ----
+        tau_dofs = -x_dofs                              # DOF order
+        # np.interp needs ascending xp: tau is ascending by construction.
+        nFC_dofs = np.exp(np.interp(tau_dofs, tau, ln_nFC_f))
+        nCX_dofs = np.exp(np.interp(tau_dofs, tau, ln_nCX_f))
+
+        # Diagnostics (SI, sub-grid)
+        self.x_neutrals_analytic = x_fine
+        self.nFC_analytic = np.exp(ln_nFC_f)
+        self.nCX_analytic = np.exp(ln_nCX_f)
+
+        return nFC_dofs / self._n0_nd, nCX_dofs / self._n0_nd
+
+    # ------------------------------------------------------------------
     # Weak forms
     # ------------------------------------------------------------------
 
@@ -578,6 +690,8 @@ class saarelma_connor_nondim(saarelma_connor):
                       picard_max_it=50,
                       picard_rtol=1e-8,
                       picard_relax=1.0,
+                      neutrals_treatment="fem",
+                      n_neutral_sub=4001,
                       verbose=None):
         """Non-dimensional Firedrake solver for the coupled three-equation
         Saarelma--Connor neutral-transport pedestal model.
@@ -685,6 +799,35 @@ class saarelma_connor_nondim(saarelma_connor):
         After a "picard" solve, ``self.picard_info`` records the
         iteration history (alpha_bar, gate state, profile change) and
         whether the loop converged.
+
+        Neutrals treatment
+        ==================
+        ``neutrals_treatment`` controls how the FC / CX neutral
+        equations are solved.
+
+        ``"fem"`` (default)
+            n_FC and n_CX are solved as part of the mixed three-field
+            Firedrake system (legacy behaviour).  Requires the FE mesh
+            to resolve the neutral penetration depth
+            lambda = |V_FC| / (n_e (S_i + S_CX)); on neutral-opaque
+            devices (e.g. SPARC, lambda ~ 0.2 mm) an unresolved layer
+            produces oscillatory / negative neutral densities and
+            Newton line-search failures.
+
+        ``"analytic"`` (requires ``kbm_treatment="picard"``)
+            Each Picard iteration, n_FC and n_CX are solved *exactly*
+            (integrating factor / per-step exponential integrator) on a
+            dense ``n_neutral_sub``-point sub-grid for the current n_e
+            (see :meth:`_solve_neutrals_analytic_nondim`), then frozen
+            in the n_e equation.  The mixed-system residuals for n_FC /
+            n_CX are replaced by trivial pinning forms so the rest of
+            the machinery (mixed space, BCs, output extraction) is
+            unchanged.  Positivity of the neutrals is guaranteed and
+            ``x_res`` only needs to resolve the *electron* profile.
+
+        ``n_neutral_sub`` : int, default 4001
+            Number of sub-grid points for the analytic neutral solve.
+            Choose so that L / n_neutral_sub << min(lambda).
         """
         if not _FIREDRAKE_AVAILABLE:
             raise ImportError(
@@ -707,6 +850,12 @@ class saarelma_connor_nondim(saarelma_connor):
         else:
             self.x_inner = np.interp(self.psi_N_inner_boundary, self.psi_N_pres, self.x_init)
 
+        ne_inner_bc = str(ne_inner_bc).lower()
+        if ne_inner_bc not in ("dirichlet", "neumann"):
+            raise ValueError(
+                f"ne_inner_bc must be 'dirichlet' or 'neumann', got {ne_inner_bc!r}."
+            )
+
         # Read off ne(x_inner), dne/dx(x_inner) in SI -- same conventions
         # as solver.py.solve_coupled.
         # BC conditions for nFC, nCX, ne will not change throughout EPEDNN loop
@@ -717,6 +866,11 @@ class saarelma_connor_nondim(saarelma_connor):
             self.ne_inner = ne_inner_val
             dne_dx_pres = np.gradient(self.n_e_pres, self.x_init)
             dne_dx_inner_val = float(np.interp(self.x_inner, self.x_init, dne_dx_pres))
+
+            # debugging
+            # dne_dx_inner_val = 10 * dne_dx_inner_val
+            # print(f"ne_inner_val = {ne_inner_val}, dne_dx_inner_val = {dne_dx_inner_val}") # debugging
+            # print(f"self.x_inner = {self.x_inner}, self.x_init = {self.x_init}") # debugging
         elif bc_origin == "user":
             ne_inner_val = float(ne_inner)
             self.ne_inner = ne_inner_val
@@ -739,12 +893,6 @@ class saarelma_connor_nondim(saarelma_connor):
         else:
             raise ValueError(
                 f"bc_origin must be 'p-file' or 'user' or 'p-file user combo', got {bc_origin!r}."
-            )
-
-        ne_inner_bc = str(ne_inner_bc).lower()
-        if ne_inner_bc not in ("dirichlet", "neumann"):
-            raise ValueError(
-                f"ne_inner_bc must be 'dirichlet' or 'neumann', got {ne_inner_bc!r}."
             )
 
         if float(self.x_inner) >= 0.0:
@@ -832,6 +980,18 @@ class saarelma_connor_nondim(saarelma_connor):
         if kbm_treatment == "picard" and not (0.0 < picard_relax <= 1.0):
             raise ValueError(
                 f"picard_relax must be in (0, 1], got {picard_relax}."
+            )
+        neutrals_treatment = str(neutrals_treatment).lower()
+        if neutrals_treatment not in ("fem", "analytic"):
+            raise ValueError(
+                "neutrals_treatment must be 'fem' or 'analytic', "
+                f"got {neutrals_treatment!r}."
+            )
+        if neutrals_treatment == "analytic" and kbm_treatment != "picard":
+            raise ValueError(
+                "neutrals_treatment='analytic' requires "
+                "kbm_treatment='picard' (the neutrals are refrozen from "
+                "the latest n_e inside the Picard loop)."
             )
 
         if kbm_treatment == "picard":
@@ -1069,6 +1229,7 @@ class saarelma_connor_nondim(saarelma_connor):
             "gate_eps":   kbm_gate_eps_val,
             "alpha_crit": float(self.alpha_crit),
             "alpha_bar_initial_guess": float(self.alpha_bar_ped),
+            "neutrals_treatment": neutrals_treatment,
         }
         if kbm_treatment == "picard":
             self.kbm_info.update({
@@ -1152,21 +1313,43 @@ class saarelma_connor_nondim(saarelma_connor):
             hat_A_KBM_bc_term=hat_A_KBM_bc_term,
             hat_B_KBM_bc_term=hat_B_KBM_bc_term,
         )
-        F2 = self._build_f2_weak_form_nondim(
-            hat_ne_curr, hat_nFC_curr,
-            self._fd_cache["hat_g_fd"],
-            self._fd_cache["hat_Si_fd"],
-            self._fd_cache["hat_Scx_fd"],
-            hat_VFC_const, fFC_fd, v_F,
-        )
-        F3 = self._build_f3_weak_form_nondim(
-            hat_ne_curr, hat_nFC_curr, hat_nCX_curr,
-            self._fd_cache["hat_g_fd"],
-            self._fd_cache["hat_Si_fd"],
-            self._fd_cache["hat_Scx_fd"],
-            self._fd_cache["hat_Vcx_fd"],
-            fCX_fd, half, v_C,
-        )
+        if neutrals_treatment == "analytic":
+            # Neutrals are solved exactly (integrating factor) for the
+            # current n_e and frozen into Functions.  The mixed-system
+            # residuals for n_FC / n_CX reduce to pinning forms so the
+            # Newton solve only really works on n_e; the frozen
+            # Functions are refreshed each Picard iteration below.
+            hat_nFC_a, hat_nCX_a = self._solve_neutrals_analytic_nondim(
+                u.subfunctions[0].dat.data, n_sub=n_neutral_sub,
+            )
+            hat_nFC_frozen_fd = Function(V, name="hat_nFC_frozen")
+            hat_nCX_frozen_fd = Function(V, name="hat_nCX_frozen")
+            hat_nFC_frozen_fd.dat.data[:] = hat_nFC_a
+            hat_nCX_frozen_fd.dat.data[:] = hat_nCX_a
+            self._fd_cache["hat_nFC_frozen_fd"] = hat_nFC_frozen_fd
+            self._fd_cache["hat_nCX_frozen_fd"] = hat_nCX_frozen_fd
+            # Warm-start the mixed vector with the analytic profiles.
+            u.subfunctions[1].dat.data[:] = hat_nFC_a
+            u.subfunctions[2].dat.data[:] = hat_nCX_a
+
+            F2 = (hat_nFC_curr - hat_nFC_frozen_fd) * v_F * dx
+            F3 = (hat_nCX_curr - hat_nCX_frozen_fd) * v_C * dx
+        else:  # fem (legacy): neutrals solved in the mixed system
+            F2 = self._build_f2_weak_form_nondim(
+                hat_ne_curr, hat_nFC_curr,
+                self._fd_cache["hat_g_fd"],
+                self._fd_cache["hat_Si_fd"],
+                self._fd_cache["hat_Scx_fd"],
+                hat_VFC_const, fFC_fd, v_F,
+            )
+            F3 = self._build_f3_weak_form_nondim(
+                hat_ne_curr, hat_nFC_curr, hat_nCX_curr,
+                self._fd_cache["hat_g_fd"],
+                self._fd_cache["hat_Si_fd"],
+                self._fd_cache["hat_Scx_fd"],
+                self._fd_cache["hat_Vcx_fd"],
+                fCX_fd, half, v_C,
+            )
 
         F = F1 + F2 + F3
         snes_params = self._build_petsc_solver_parameters(
@@ -1222,6 +1405,23 @@ class saarelma_connor_nondim(saarelma_connor):
                     hat_B_KBM_picard_fd.dat.data[:] = (
                         picard_relax * self._hat_B_KBM
                         + (1.0 - picard_relax) * hat_B_KBM_picard_fd.dat.data
+                    )
+
+                # Refreeze the analytic neutrals from the newly solved
+                # n_e (same under-relaxation as the KBM coefficients).
+                if neutrals_treatment == "analytic":
+                    hat_nFC_a, hat_nCX_a = (
+                        self._solve_neutrals_analytic_nondim(
+                            hat_ne_new, n_sub=n_neutral_sub,
+                        )
+                    )
+                    hat_nFC_frozen_fd.dat.data[:] = (
+                        picard_relax * hat_nFC_a
+                        + (1.0 - picard_relax) * hat_nFC_frozen_fd.dat.data
+                    )
+                    hat_nCX_frozen_fd.dat.data[:] = (
+                        picard_relax * hat_nCX_a
+                        + (1.0 - picard_relax) * hat_nCX_frozen_fd.dat.data
                     )
 
                 picard_history.append({

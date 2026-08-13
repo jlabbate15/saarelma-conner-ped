@@ -24,22 +24,23 @@ verbose_EPEDNNloop = False
 verbose_sc = False
 
 # Output directory
-output_dir = 'multiequil_PTHmode_Snyder_bcig'
+output_dir = 'multiequil_PTHmode_Snyder_bc_newfp'
 Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 # Scan parameters
 x_res = 20
 eped_tol_max = 1e-5
 eped_iter_max = 5
-# From param_err.py scan with kbm_treatment= picard average: alpha_crit=0.1, C_KBM=0.1, De_chie_etg=0.1, nFC_x0=3.16228e+15, ncx_x0_ratio=1.259
+# From param_err.py scan with kbm_treatment= picard average, for the non-Snyder CAKE database: alpha_crit=0.1, C_KBM=0.1, De_chie_etg=0.1, nFC_x0=3.16228e+15, ncx_x0_ratio=1.259
+# From a N=3 scan for the Snyder database: alpha_crit=1, C_KBM=1, De_chie_etg=0.1, nFC_x0=3.16228e+15, ncx_x0_ratio=4.732
 free_params = {
-    'alpha_crit': 0.1,
-    'C_KBM': 0.1,
+    'alpha_crit': 1,
+    'C_KBM': 1,
     'De_chie_etg': 0.1,
     'nFC_x0': 3.16228e15,
-    'ncx_x0_ratio': 1.259
+    'ncx_x0_ratio': 4.732
 }
-ig = 'manual' # bc+ig
+ig = 'solve' # solve=bc, manual=bc+ig
 kbm_treatment = "picard"
 kbm_gate_eps = 0.1
 picard_gate_mode = "average"
