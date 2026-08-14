@@ -3056,7 +3056,7 @@ class saarelma_connor:
             self.epednn_model = generate_epednn_mit_sparc_tensorflow(weights)
 
         self.bt = np.array(self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2])
-        print(f'bt: {self.bt}')
+        # print(f'bt: {self.bt}')
 
 
     def feed_epednn(self, model='EPED1', ne_ped=None, x_ne=None, psiN_Te=None, Te_prev=None, EPEDNN_core='pfile', pres_gfile=False):
@@ -3095,7 +3095,6 @@ class saarelma_connor:
             "r": float(self.Rmajor),           # Major radius (m)
             "zeffped": float(self.Z_i)      # Effective charge
         }
-        print(inputs)
 
         if model == 'EPED1':
             # Call the Julia model using the Python inputs
