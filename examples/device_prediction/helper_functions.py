@@ -146,39 +146,108 @@ def build_manual_profs(profiles):
     return manual_profs
 
 
+def _psi_n_from_rho(rho):
+    """Map a normalized radial coordinate to psi_N (rho_psi = sqrt(psi_N))."""
+    rho = np.asarray(rho, dtype=float)
+    return np.clip(rho ** 2, 0.0, None)
+
+
+def _interp_to_psi(psi_src, y_src, psi_dst):
+    """Linear interpolate y(psi_src) onto psi_dst (both 1-D)."""
+    psi_src = np.asarray(psi_src, dtype=float)
+    y_src = np.asarray(y_src, dtype=float)
+    order = np.argsort(psi_src)
+    return np.interp(psi_dst, psi_src[order], y_src[order])
+
+
+def _density_to_m3(ne, profiles):
+    """Return density in m^-3 from SPARC profiles (SI) or manual_profs (10^20 m^-3)."""
+    ne = np.asarray(ne, dtype=float)
+    units = profiles.get('units') or {}
+    unit = str(units.get('ne', '')).lower().replace(' ', '')
+    if 'm^-3' in unit or unit in ('m-3', '1/m^3', '/m^3'):
+        return ne
+    if '10^20' in unit or '10**20' in unit or '1e20' in unit:
+        return ne * 1e20
+    if '10^19' in unit or '10**19' in unit or '1e19' in unit:
+        return ne * 1e19
+    # SPARCPublic kinetic dict: SI. Solver / ARC manual_profs: 10^20 m^-3.
+    if 'polflux' in profiles:
+        return ne
+    if 'rho_ne' in profiles or 'rho_Te' in profiles:
+        return ne * 1e20
+    if np.nanmax(np.abs(ne)) > 1e18:
+        return ne
+    return ne * 1e20
+
+
 def calc_pressure_profile(profiles):
     """
-    Thermal pressure from kinetic profiles on the polflux psi_N grid.
+    Thermal pressure from kinetic profiles on a psi_N grid.
 
     Defaults to ``p = 2 * ne * Te`` (Te = Ti, ne = ni). If ``Ti`` is present,
     uses ``p = ne * Te + ni * Ti``, with ``ni = ne`` when ``ni`` is missing.
 
+    Accepts either:
+      - SPARCPublic ``profiles`` (``ne`` [m^-3], ``Te``/``Ti`` [keV], ``polflux``)
+      - solver ``manual_profs`` (``ne`` [10^20 m^-3], ``Te``/``Ti`` [keV],
+        ``rho_ne`` / ``rho_Te``; ion grids ``rho_ni`` / ``rho_Ti`` optional)
+
     Parameters
     ----------
     profiles : dict
-        Output of ``read_sparcpublic_profiles`` (ne [m^-3], Te/Ti [keV]).
+        Kinetic profiles in either of the layouts above.
 
     Returns
     -------
     psi_N : ndarray
     p : ndarray
-        Pressure in Pa.
+        Pressure in Pa, on ``psi_N``.
     mode : str
         Formula used.
     """
     eV_to_J = 1.602176634e-19
-    psi_N, _ = psi_n_and_rho_psi(profiles)
-    ne = np.asarray(profiles['ne'], dtype=float)
-    Te_J = np.asarray(profiles['Te'], dtype=float) * 1e3 * eV_to_J  # keV -> J
 
-    if 'Ti' in profiles:
-        Ti_J = np.asarray(profiles['Ti'], dtype=float) * 1e3 * eV_to_J
-        if 'ni' in profiles:
-            ni = np.asarray(profiles['ni'], dtype=float)
-            mode = 'ne*Te + ni*Ti'
+    if 'polflux' in profiles:
+        psi_N, _ = psi_n_and_rho_psi(profiles)
+        ne = _density_to_m3(profiles['ne'], profiles)
+        Te_keV = np.asarray(profiles['Te'], dtype=float)
+        Ti_keV = np.asarray(profiles['Ti'], dtype=float) if 'Ti' in profiles else None
+        ni = _density_to_m3(profiles['ni'], profiles) if 'ni' in profiles else None
+    else:
+        rho_ne = profiles.get('rho_ne', profiles.get('rho'))
+        rho_Te = profiles.get('rho_Te', rho_ne)
+        if rho_ne is None or 'ne' not in profiles or 'Te' not in profiles:
+            raise KeyError(
+                "Need either polflux+ne+Te, or rho_ne/rho_Te+ne+Te "
+                f"(keys: {list(profiles)})"
+            )
+        psi_N = _psi_n_from_rho(rho_ne)
+        ne = _density_to_m3(profiles['ne'], profiles)
+        Te_keV = _interp_to_psi(_psi_n_from_rho(rho_Te), profiles['Te'], psi_N)
+        if 'Ti' in profiles:
+            rho_Ti = profiles.get('rho_Ti', rho_Te)
+            Ti_keV = _interp_to_psi(_psi_n_from_rho(rho_Ti), profiles['Ti'], psi_N)
         else:
+            Ti_keV = None
+        if 'ni' in profiles:
+            rho_ni = profiles.get('rho_ni', rho_ne)
+            ni = _density_to_m3(
+                _interp_to_psi(_psi_n_from_rho(rho_ni), profiles['ni'], psi_N),
+                profiles,
+            )
+        else:
+            ni = None
+
+    Te_J = Te_keV * 1e3 * eV_to_J  # keV -> J
+
+    if Ti_keV is not None:
+        Ti_J = Ti_keV * 1e3 * eV_to_J
+        if ni is None:
             ni = ne
             mode = 'ne*Te + ne*Ti (ni=ne)'
+        else:
+            mode = 'ne*Te + ni*Ti'
         p = ne * Te_J + ni * Ti_J
     else:
         p = 2.0 * ne * Te_J
