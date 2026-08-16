@@ -394,7 +394,7 @@ def profiles_loop_solve(
         ax.set_title('Solved $T_e$ profiles')
         ax.legend()
         ax.grid(alpha=0.3)
-        ax.set_xlim(0.8, 1.0)
+        ax.set_xlim(psi_N_inner, 1.0)
         fig.tight_layout()
 
         fig1, ax1 = plt.subplots(figsize=(6, 4))
@@ -406,7 +406,7 @@ def profiles_loop_solve(
         ax1.set_title('Solved $n_e$ profiles')
         ax1.legend()
         ax1.grid(alpha=0.3)
-        ax1.set_xlim(0.8, 1.0)
+        ax1.set_xlim(psi_N_inner, 1.0)
         fig1.tight_layout()
         plt.show()
 

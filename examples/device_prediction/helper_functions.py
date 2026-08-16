@@ -214,6 +214,12 @@ def calc_pressure_profile(profiles):
         Te_keV = np.asarray(profiles['Te'], dtype=float)
         Ti_keV = np.asarray(profiles['Ti'], dtype=float) if 'Ti' in profiles else None
         ni = _density_to_m3(profiles['ni'], profiles) if 'ni' in profiles else None
+    elif 'psi_N_ne' in profiles and 'psi_N_Te' in profiles:
+        psi_N = profiles['psi_N_ne']
+        ne = profiles['ne']
+        Te_keV = _interp_to_psi(profiles['psi_N_Te'], profiles['Te'], psi_N)
+        Ti_keV = _interp_to_psi(profiles['psi_N_ne'], profiles['Ti'], psi_N) if 'Ti' in profiles else None
+        ni = profiles['ni'] if 'ni' in profiles else None
     else:
         rho_ne = profiles.get('rho_ne', profiles.get('rho'))
         rho_Te = profiles.get('rho_Te', rho_ne)
