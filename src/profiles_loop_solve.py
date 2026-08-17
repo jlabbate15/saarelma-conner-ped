@@ -410,4 +410,4 @@ def profiles_loop_solve(
         fig1.tight_layout()
         plt.show()
 
-    return pedestal_width, pedestal_height
+    return pedestal_width, pedestal_height, sol
