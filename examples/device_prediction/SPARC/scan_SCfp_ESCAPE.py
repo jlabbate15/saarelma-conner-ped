@@ -68,10 +68,9 @@ P_tot_e = (P_ohmic + P_RF) / 2
 
 
 # Parameters for ESCAPE #
-N = 4
 
 # Output directory
-output_dir = f'SPARC_freeparam_loop_N{N}'
+output_dir = f'SPARC_freeparam_loop_nCX'
 Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 # Scan parameters
@@ -91,13 +90,16 @@ verbose_sc = False
 
 import itertools
 
-alpha_crits = np.logspace(-1, 1, N)
-C_KBMs = np.logspace(-1, 1, N)
-De_chie_etgs = np.logspace(-1, 1, N)
-nFC_x0s = np.logspace(15, 17, 3)
-ncx_x0_ratios = np.logspace(0.1, 1.25, N)
+alpha_crits = np.logspace(-2, 1, 2)
+# C_KBMs = np.logspace(-1, 1, 3)
+# De_chie_etgs = np.logspace(-1, 1, 3)
+nFC_x0s = np.logspace(15, 17.5, 1)
+# ncx_x0_ratios = np.logspace(0.1, 1.25, 1)
+C_KBMs = np.linspace(0.1, 1, 1)
+De_chie_etgs = np.linspace(0.5, 1, 1)
+ncx_x0_ratios = np.linspace(1, 20, 10)
 
-scan_total = N**5
+scan_total = len(alpha_crits) * len(C_KBMs) * len(De_chie_etgs) * len(nFC_x0s) * len(ncx_x0_ratios)
 print(f'Total number of scans: {scan_total}')
 
 i=0
@@ -157,9 +159,8 @@ for combo in itertools.product(alpha_crits, C_KBMs, De_chie_etgs, nFC_x0s, ncx_x
         }
         np.save(out_dir / 'out_dict.npy', out_dict)
     except Exception as e:
-        out_dict = {'failed': True, 'error': str(e)}
+        out_dict = {'failed': True, 'free_params': free_params, 'error': str(e)}
         np.save(out_dir / 'failed.npy', out_dict)
-        continue
 
     if i%50 == 0:
         print(f'Scan {i} of {scan_total} completed')

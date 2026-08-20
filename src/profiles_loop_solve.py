@@ -233,8 +233,7 @@ def profiles_loop_solve(
         print(f"Pedestal height: {pedestal_height} MPa, Pedestal width: {pedestal_width} (psi_N)")
 
         if eped_iter > 0:
-            eped_tol = ((pedestal_height - pedestal_height_prev) / pedestal_height_prev
-                        + (pedestal_width - pedestal_width_prev) / pedestal_width_prev)
+            eped_tol = abs((pedestal_height - pedestal_height_prev) / pedestal_height_prev) + abs((pedestal_width - pedestal_width_prev) / pedestal_width_prev)
             print(f"Normalized pedestal pressure height and width tolerance: {eped_tol}")
             sol['loop_tol'] = eped_tol
             np.save(f'{equil_dir}/ne_and_Te_iter_{eped_iter}.npy', sol, allow_pickle=True)
