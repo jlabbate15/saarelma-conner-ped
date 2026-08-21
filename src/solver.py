@@ -239,7 +239,12 @@ class saarelma_connor:
         self.D_NEO = 0.05 * (self.c_s * self.rho_s**2) / self.a
 
         # Outer boundary condition for electrons and FC neutrals
-        self.ne_x0 = self.n_e_pfile[-1]
+        if ne_x0 is None:
+            self.ne_x0 = self.n_e_pfile[-1]
+            self.ne_x0_manual = False
+        else:
+            self.ne_x0 = ne_x0
+            self.ne_x0_manual = True
         if nFC_x0 is None:
             nFC_x0 = self.n_e_pfile[-1] * 1e-4
             if self.verbose:

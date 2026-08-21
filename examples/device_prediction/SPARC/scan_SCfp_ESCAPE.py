@@ -70,7 +70,7 @@ P_tot_e = (P_ohmic + P_RF) / 2
 # Parameters for ESCAPE #
 
 # Output directory
-output_dir = f'SPARC_freeparam_loop_nCX'
+output_dir = f'SPARC_freeparam_loop_DETG'
 Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 # Scan parameters
@@ -95,73 +95,80 @@ alpha_crits = np.logspace(-2, 1, 2)
 # De_chie_etgs = np.logspace(-1, 1, 3)
 nFC_x0s = np.logspace(15, 17.5, 1)
 # ncx_x0_ratios = np.logspace(0.1, 1.25, 1)
-C_KBMs = np.linspace(0.1, 1, 1)
-De_chie_etgs = np.linspace(0.5, 1, 1)
-ncx_x0_ratios = np.linspace(1, 20, 10)
+C_KBMs = np.linspace(0.3, 1, 1)
+De_chie_etgs = np.linspace(0.1, 1, 3)
+ncx_x0_ratios = np.linspace(1, 20, 1)
 
-scan_total = len(alpha_crits) * len(C_KBMs) * len(De_chie_etgs) * len(nFC_x0s) * len(ncx_x0_ratios)
+# ne_x0s = [None, 1e20, 2e20] # m^-3, manually specify outer bc for electron density
+ne_x0s = [None] # m^-3, manually specify outer bc for electron density
+
+scan_total = len(alpha_crits) * len(C_KBMs) * len(De_chie_etgs) * len(nFC_x0s) * len(ncx_x0_ratios) * len(ne_x0s)
 print(f'Total number of scans: {scan_total}')
 
-i=0
 out_dir_ref = Path(output_dir)
-for combo in itertools.product(alpha_crits, C_KBMs, De_chie_etgs, nFC_x0s, ncx_x0_ratios):
-    free_params = {
-        'alpha_crit': combo[0],
-        'C_KBM': combo[1],
-        'De_chie_etg': combo[2],
-        'nFC_x0': combo[3],
-        'ncx_x0_ratio': combo[4]
-    }
-
-    out_dir = out_dir_ref / Path(f'i{i}')
-
-
-    try:
-        ped_wid, ped_h_out, sol = profiles_loop_solve(
-            MHD_FP = mhd_fp,
-            kprof_loc = 'manual rho grid',
-            manual_profs = manual_profs,
-            P_tot_e = P_tot_e,
-            species = 'D-T',
-            Z_i = Zeff,
-            out_dir = out_dir,
-            x_res = x_res,
-            free_params = free_params,
-            eped_tol_max = eped_tol_max,
-            eped_iter_max = eped_iter_max,
-            kbm_gate_eps = kbm_gate_eps,
-            kbm_treatment = kbm_treatment,
-            picard_gate_mode = picard_gate_mode,
-            picard_max_it = picard_max_it,
-            picard_rtol = picard_rtol,
-            picard_relax = picard_relax,
-            ig = 'manual',
-            epednn_model = epednn_model,
-            verbose = verbose_EPEDNNloop,
-            verbose_sc = verbose_sc,
-        )
-
-        # Save results
-        psi_N_p, p_Pa, p_mode = calc_pressure_profile(profiles)
-        psi_ped_top = 1.0 - float(ped_wid)
-        p_at_ped_top = float(np.interp(psi_ped_top, psi_N_p, p_Pa))
-
-        # Save model output
-        out_dict = {
-            'mhd_fp': mhd_fp,
-            'profiles': manual_profs, # need to edit this line
-            'ESCAPE_ped_h': ped_h_out,
-            'ESCAPE_ped_wid': ped_wid,
-            'experimental_ped_h': p_at_ped_top,
-            'free_params': free_params,
-            'profiles_solved': sol, # profiles
-            'i': i,
+j=0
+for ne_x0 in ne_x0s:
+    i=0
+    for combo in itertools.product(alpha_crits, C_KBMs, De_chie_etgs, nFC_x0s, ncx_x0_ratios):
+        free_params = {
+            'alpha_crit': combo[0],
+            'C_KBM': combo[1],
+            'De_chie_etg': combo[2],
+            'nFC_x0': combo[3],
+            'ncx_x0_ratio': combo[4]
         }
-        np.save(out_dir / 'out_dict.npy', out_dict)
-    except Exception as e:
-        out_dict = {'failed': True, 'free_params': free_params, 'error': str(e)}
-        np.save(out_dir / 'failed.npy', out_dict)
 
-    if i%50 == 0:
-        print(f'Scan {i} of {scan_total} completed')
-    i+=1
+        out_dir = out_dir_ref / Path(f'neouter{j}_fp{i}')
+
+
+        try:
+            ped_wid, ped_h_out, sol = profiles_loop_solve(
+                MHD_FP = mhd_fp,
+                kprof_loc = 'manual rho grid',
+                manual_profs = manual_profs,
+                P_tot_e = P_tot_e,
+                species = 'D-T',
+                Z_i = Zeff,
+                out_dir = out_dir,
+                x_res = x_res,
+                ne_x0 = ne_x0,
+                free_params = free_params,
+                eped_tol_max = eped_tol_max,
+                eped_iter_max = eped_iter_max,
+                kbm_gate_eps = kbm_gate_eps,
+                kbm_treatment = kbm_treatment,
+                picard_gate_mode = picard_gate_mode,
+                picard_max_it = picard_max_it,
+                picard_rtol = picard_rtol,
+                picard_relax = picard_relax,
+                ig = 'manual',
+                epednn_model = epednn_model,
+                verbose = verbose_EPEDNNloop,
+                verbose_sc = verbose_sc,
+            )
+
+            # Save results
+            psi_N_p, p_Pa, p_mode = calc_pressure_profile(profiles)
+            psi_ped_top = 1.0 - float(ped_wid)
+            p_at_ped_top = float(np.interp(psi_ped_top, psi_N_p, p_Pa))
+
+            # Save model output
+            out_dict = {
+                'mhd_fp': mhd_fp,
+                'profiles': manual_profs, # need to edit this line
+                'ESCAPE_ped_h': ped_h_out,
+                'ESCAPE_ped_wid': ped_wid,
+                'experimental_ped_h': p_at_ped_top,
+                'free_params': free_params,
+                'profiles_solved': sol, # profiles
+                'i': i,
+            }
+            np.save(out_dir / 'out_dict.npy', out_dict)
+        except Exception as e:
+            out_dict = {'failed': True, 'free_params': free_params, 'error': str(e)}
+            np.save(out_dir / 'failed.npy', out_dict)
+
+        if i%50 == 0:
+            print(f'Scan {i} of {scan_total} completed')
+        i+=1
+    j+=1

@@ -860,7 +860,10 @@ class saarelma_connor_nondim(saarelma_connor):
         # as solver.py.solve_coupled.
         # BC conditions for nFC, nCX, ne will not change throughout EPEDNN loop
         if bc_origin == "p-file":
-            ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres))
+            if self.ne_x0_manual:
+                ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres)) + (self.ne_x0 - float(np.interp(0, self.x_init, self.n_e_pres)))
+            else:
+                ne_inner_val = float(np.interp(self.x_inner, self.x_init, self.n_e_pres))
             if scale_ne_inner is not None:
                 ne_inner_val = ne_inner_val * scale_ne_inner
             self.ne_inner = ne_inner_val
