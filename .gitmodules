@@ -7,3 +7,4 @@
 [submodule "dependencies/epednn_mit"]
 	path = dependencies/epednn_mit
 	url = https://github.com/aaronkho/epednn_mit.git
+	branch = scoping_model

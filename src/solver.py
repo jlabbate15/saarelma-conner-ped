@@ -3048,10 +3048,11 @@ class saarelma_connor:
             # This mimics the EPEDNN.loadmodelonce("EPED1NNmodel.bson") step
             model_filename = "EPED1NNmodel.bson" 
             self.epednn_model = jl.EPEDNN.loadmodelonce(model_filename)
-        elif model == 'EPED_SPARC':
+        elif model in ('EPED_SPARC', 'EPED_SCOPING'):
             # Vendored package lives at dependencies/epednn_mit/src/epednn_mit/;
             # it is not installed into the env by default, so put src/ on sys.path.
             import sys
+            import importlib
             from pathlib import Path
             epednn_root = Path(__file__).resolve().parent.parent / "dependencies" / "epednn_mit"
             epednn_src = epednn_root / "src"
@@ -3062,13 +3063,22 @@ class saarelma_connor:
                 )
             if str(epednn_src) not in sys.path:
                 sys.path.insert(0, str(epednn_src))
-            from epednn_mit.models.sparc.tensorflow_model import generate_epednn_mit_sparc_tensorflow
+            # The two model families share a layout, so select the subpackage by name.
+            subpkg = {'EPED_SPARC': 'sparc', 'EPED_SCOPING': 'scoping'}[model]
+            weights_dir = epednn_src / "epednn_mit" / "models" / subpkg
+            if not weights_dir.is_dir():
+                raise FileNotFoundError(
+                    f"epednn_mit model '{subpkg}' not found at {weights_dir}. "
+                    "The scoping model lives on the 'scoping_model' branch of the submodule: "
+                    "git -C dependencies/epednn_mit checkout scoping_model"
+                )
+            module = importlib.import_module(f"epednn_mit.models.{subpkg}.tensorflow_model")
+            generate = getattr(module, f"generate_epednn_mit_{subpkg}_tensorflow")
             from epednn_mit.utils.load import load_weights
-            weights_dir = epednn_src / "epednn_mit" / "models" / "sparc"
-            weights = load_weights(sorted(weights_dir.glob("*sparc*.pkl")))
+            weights = load_weights(sorted(weights_dir.glob(f"*{subpkg}*.pkl")))
             if not weights:
-                raise FileNotFoundError(f"No *sparc*.pkl weights found in {weights_dir}")
-            self.epednn_model = generate_epednn_mit_sparc_tensorflow(weights)
+                raise FileNotFoundError(f"No *{subpkg}*.pkl weights found in {weights_dir}")
+            self.epednn_model = generate(weights)
 
         self.bt = np.array(self.calc_B(self.eq['raxis'],self.eq['zaxis'])[1][2])
         # print(f'bt: {self.bt}')
@@ -3172,6 +3182,46 @@ class saarelma_connor:
             print(solution)
             self.pedestal_pressure = solution[0] / 1000     # in MPa -> kPa
             self.pedestal_width = solution[1]              # in normalized poloidal flux
+
+        elif model == 'EPED_SCOPING':
+            '''The minimum and maximum of the training dataset input ranges used to generate these models are below, in order of input position:
+
+            a:      [  0.4  ,   2.2  ]
+            aspect: [  2.0  ,   4.2  ]
+            kappa:  [  1.3  ,   2.5  ]
+            delta:  [  0.3  ,   0.7  ]
+            bt:     [  2.0  ,  18.0  ]  * Not a clean boundary so (3.0, 17.0) might be more prudent
+            qstar:  [  3.0  ,   5.0  ]
+            betan:  [  0.3  ,   3.7  ]
+            zeff:   [  1.2  ,   3.2  ]
+            fgped:  [  0.3  ,   1.3  ]
+            nsfrac: [  0.2  ,   0.8  ]
+            tesep:  [ 50.0  , 500.0  ]'''
+
+            inputs['aspect'] = inputs['r'] / inputs['a']
+            inputs['tesep'] = self.T_e[-1] * 1000 # eV
+            n_GW = inputs['ip'] / (np.pi * inputs['a']**2)  # m^-3
+            inputs['fgped'] = inputs['neped'] * 1e-1 / n_GW
+
+            x = np.atleast_2d([
+                inputs["a"], 
+                inputs["aspect"],
+                inputs["kappa"],
+                inputs["delta"],
+                inputs["bt"], 
+                inputs["qstar"], # missing
+                inputs["betan"],
+                inputs["zeffped"],
+                inputs["fgped"],
+                inputs["nsfrac"], # missing
+                inputs["tesep"]
+            ])
+            solution = self.epednn_model.predict(x)[0]  # [[ped_height, ped_width]]
+            print(solution)
+            self.pedestal_pressure = solution[0] / 1000     # in MPa -> kPa
+            self.pedestal_width = solution[1]              # in normalized poloidal flux
+
+
 
         # Apply ELM-free regime scaling
         if self.regime_flag == 'PT H-mode':
