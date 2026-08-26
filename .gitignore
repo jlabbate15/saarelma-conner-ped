@@ -6,3 +6,6 @@
 tests/multi_equilibria/scan_results*/**/*.txt
 *.geqdsk
 *.npy
+
+# Local data directories
+examples/device_prediction/Yinsen_Maritime/
