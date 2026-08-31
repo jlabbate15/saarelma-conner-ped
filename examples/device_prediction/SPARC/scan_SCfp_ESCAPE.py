@@ -70,7 +70,7 @@ P_tot_e = (P_ohmic + P_RF) / 2
 # Parameters for ESCAPE #
 
 # Output directory
-output_dir = f'SPARC_freeparam_loop_DETG'
+output_dir = f'SPARC_workflow'
 Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 # Scan parameters
@@ -90,14 +90,11 @@ verbose_sc = False
 
 import itertools
 
-alpha_crits = np.logspace(-2, 1, 2)
-# C_KBMs = np.logspace(-1, 1, 3)
-# De_chie_etgs = np.logspace(-1, 1, 3)
-nFC_x0s = np.logspace(15, 17.5, 1)
-# ncx_x0_ratios = np.logspace(0.1, 1.25, 1)
-C_KBMs = np.linspace(0.3, 1, 1)
+alpha_crits = np.array([0.01,2,10])
+nFC_x0s = np.logspace(14.5, 16.5, 4)
+C_KBMs = np.linspace(0.1, 1, 3)
 De_chie_etgs = np.linspace(0.1, 1, 3)
-ncx_x0_ratios = np.linspace(1, 20, 1)
+ncx_x0_ratios = np.array([0.1, 1.0, 10.0, 20.0])
 
 # ne_x0s = [None, 1e20, 2e20] # m^-3, manually specify outer bc for electron density
 ne_x0s = [None] # m^-3, manually specify outer bc for electron density
