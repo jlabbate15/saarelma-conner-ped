@@ -121,7 +121,7 @@ for ne_x0 in ne_x0s:
         try:
             ped_wid, ped_h_out, sol = profiles_loop_solve(
                 MHD_FP = mhd_fp,
-                kprof_loc = 'manual rho grid',
+                kprof_loc = 'manual psi_N grid',
                 manual_profs = manual_profs,
                 P_tot_e = P_tot_e,
                 species = 'D-T',

@@ -40,6 +40,8 @@ def profiles_loop_solve(
     EPEDNN_core = 'pfile',
     ig = None,
     epednn_model = 'EPED1',
+    epednn_neped_psin_eval = 0.95,
+    epednn_neped_source = 'solved',
     verbose = False,
     verbose_sc = False,
 ):
@@ -90,6 +92,15 @@ def profiles_loop_solve(
         Relaxation factor for the Picard gate.
     EPEDNN_core : str
         Core to use for the EPEDNN model.
+    epednn_neped_psin_eval : float
+        psi_N at which the pedestal density handed to EPEDNN is sampled.
+    epednn_neped_source : {'solved', 'reference'}
+        Which density profile that sample is taken from. 'solved' uses the
+        Saarelma-Connor solution from this iteration (self-consistent, but at
+        iteration 0 it can sit well below the measured profile). 'reference'
+        uses the input p-file / OMFITnc n_e, i.e. the dashed 'Reference n_e'
+        curve. Only the EPEDNN neped input changes; betan is computed from the
+        solved profile either way.
     verbose : bool
         Whether to print verbose output.
 
@@ -220,17 +231,39 @@ def profiles_loop_solve(
         x_grid_full = np.asarray(base_model.r_psi, dtype=float) - float(base_model.r_psi[-1])
         psi_to_x = interp1d(psi_N_pres, x_grid_full, kind='linear',
                             bounds_error=False, fill_value='extrapolate')
+        x_to_psiN_full = interp1d(x_grid_full, psi_N_pres, kind='linear',
+                                  bounds_error=False, fill_value='extrapolate')
         psi_ped_grid = np.linspace(psi_N_inner, 1.0, x_res)
         # x_ped_grid = psi_to_x(psi_ped_grid)
 
         # --- Feed best profile into EPEDNN --------------------------------
+        # neped is sampled at epednn_neped_psin_eval, from either the solved
+        # profile or the input ("reference") one. It is passed explicitly so
+        # feed_epednn does not re-derive it at x_inner (the pedestal-strip
+        # inner boundary), which is a different psi_N entirely.
+        if epednn_neped_source == 'solved':
+            _psi_ne = np.asarray(x_to_psiN_full(best_x), dtype=float)
+            _ne_src = np.asarray(best_ne, dtype=float)
+        elif epednn_neped_source == 'reference':
+            _psi_ne = np.asarray(base_model.psi_N_pres, dtype=float)
+            _ne_src = np.asarray(base_model.n_e_pres, dtype=float)
+        else:
+            raise ValueError(
+                f"epednn_neped_source must be 'solved' or 'reference', "
+                f"got {epednn_neped_source!r}"
+            )
+        _order = np.argsort(_psi_ne)
+        neped_epednn = float(np.interp(float(epednn_neped_psin_eval),
+                                       _psi_ne[_order], _ne_src[_order])) / 1e19  # 10^19 m^-3
+        print(f"neped fed to EPEDNN: {neped_epednn:.3f}e19 m^-3 "
+              f"({epednn_neped_source} n_e at psi_N = {epednn_neped_psin_eval:.3f})")
         if eped_iter == 0:
             pedestal_height_prev = 0.0
             pedestal_width_prev = 0.0
-            pedestal_height, pedestal_width, betan = base_model.feed_epednn(model=epednn_model, ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile', Z_eff=Z_eff)    
+            pedestal_height, pedestal_width, betan = base_model.feed_epednn(model=epednn_model, ne_ped=best_ne, x_ne=best_x, EPEDNN_core='pfile', Z_eff=Z_eff, neped_value=neped_epednn)    
         else:
             pedestal_height_prev, pedestal_width_prev = pedestal_height, pedestal_width
-            pedestal_height, pedestal_width, betan = base_model.feed_epednn(model=epednn_model, ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core=EPEDNN_core, Z_eff=Z_eff)
+            pedestal_height, pedestal_width, betan = base_model.feed_epednn(model=epednn_model, ne_ped=best_ne, x_ne=best_x, psiN_Te=psi_N_Te_new, Te_prev=T_prof_keV * 1e3, EPEDNN_core=EPEDNN_core, Z_eff=Z_eff, neped_value=neped_epednn)
         tanh_width_new = psi_to_x(1-pedestal_width) * -1 # will error if result if negative which should not happen
         print(f"Pedestal height: {pedestal_height} MPa, Pedestal width: {pedestal_width} (psi_N)")
 
@@ -253,9 +286,14 @@ def profiles_loop_solve(
         Delta = float(pedestal_width)
         psi_mid = 1.0 - 0.5 * Delta
         psi_ped = 1.0 - Delta
-        ne_ped_val = float(interp1d(best_x, best_ne, kind='linear',
-                                    bounds_error=False, fill_value='extrapolate')(
-                                        psi_to_x(psi_ped)))
+        # EPEDNN's p_ped is defined against the neped it was handed, i.e.
+        # p_ped = 2 * neped * Te_ped. Invert with that same density, not with
+        # the solved n_e at psi_ped: mixing the two breaks the identity and
+        # inflates Te_ped by neped_fed / n_e(psi_ped).
+        ne_ped_val = float(neped_epednn) * 1e19  # m^-3, what EPEDNN received
+        ne_ped_solved = float(interp1d(best_x, best_ne, kind='linear',
+                                       bounds_error=False, fill_value='extrapolate')(
+                                           psi_to_x(psi_ped)))  # diagnostic only
         T_sep_eV = float(np.asarray(base_model.T_e)[-1] * 1e3)  # keV -> eV
         eV_to_J = 1.602176634e-19
         Te_ped_eV = (float(pedestal_height) * 1.0e6 / (2.0 * ne_ped_val)) / eV_to_J
@@ -283,6 +321,22 @@ def profiles_loop_solve(
         keep = psi_prev < psi_ped
         psi_N_Te_new = np.concatenate([psi_prev[keep], psi_tanh])
         T_prof_keV = np.concatenate([Te_prev_keV[keep] + T_e_offset, Te_tanh_eV / 1e3])
+
+        # Store the EPEDNN-generated T_e profile (and the quantities that set it)
+        # on `sol` and re-save, so downstream plotting can see the profile this
+        # iteration produced rather than only the profile it was fed.
+        sol['psi_N_Te_new'] = np.asarray(psi_N_Te_new, dtype=float)
+        sol['Te_new_keV'] = np.asarray(T_prof_keV, dtype=float)
+        sol['Te_ped_eV'] = float(Te_ped_eV)
+        sol['ne_ped_val'] = float(ne_ped_val)
+        sol['ne_ped_solved'] = float(ne_ped_solved)
+        sol['psi_ped'] = float(psi_ped)
+        sol['pedestal_height'] = float(pedestal_height)
+        sol['pedestal_width'] = float(pedestal_width)
+        sol['epednn_neped_psin_eval'] = float(epednn_neped_psin_eval)
+        sol['epednn_neped_source'] = str(epednn_neped_source)
+        sol['neped_epednn_1e19'] = float(neped_epednn)
+        np.save(f'{equil_dir}/ne_and_Te_iter_{eped_iter}.npy', sol, allow_pickle=True)
 
         # psi_N_inner_boundary_new = psi_ped
 

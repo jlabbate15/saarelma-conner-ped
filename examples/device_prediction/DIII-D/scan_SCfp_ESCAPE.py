@@ -23,7 +23,7 @@ from examples.device_prediction.helper_functions import read_sparcpublic_profile
 
 
 equil_num = None
-output_dir = f'DIIIDSnyder_freeparam_loop_CKBM'
+output_dir = f'DIIIDSnyder_freeparam_noloop'
 Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 
@@ -142,7 +142,7 @@ def read_omfitnc_profiles(kprof_fp):
 x_res = 50
 epednn_model = 'EPED1' # 'EPED1' or 'EPED_SPARC'
 eped_tol_max = 1e-5
-eped_iter_max = 5
+eped_iter_max = 1
 kbm_treatment = "picard"
 kbm_gate_eps = 0.1
 picard_gate_mode = "average"
@@ -154,13 +154,13 @@ verbose_sc = False
 
 import itertools
 
-alpha_crits = np.logspace(-2, 1, 1)
+alpha_crits = np.array([0.01,2,10])
 # C_KBMs = np.logspace(-1, 1, 3)
 # De_chie_etgs = np.logspace(-1, 1, 3)
-nFC_x0s = np.logspace(15, 17.5, 1)
+nFC_x0s = np.logspace(15, 16.5, 1)
 # ncx_x0_ratios = np.logspace(0.1, 1.25, 1)
-C_KBMs = np.linspace(0.1, 1, 3)
-De_chie_etgs = np.linspace(0.1, 1, 1)
+C_KBMs = np.array([0.0,0.3,1.0])
+De_chie_etgs = np.array([0.1,0.5,1.0])
 ncx_x0_ratios = np.linspace(1, 20, 1)
 
 # ne_x0s = [None, 1e20, 2e20] # m^-3, manually specify outer bc for electron density
@@ -212,7 +212,7 @@ for mhd_fp, kprof_fp in equilibria:
                     KPROF_FP = kprof_fp,
                     kprof_loc = 'OMFITnc',
                     P_tot_e = P_tot_e,
-                    species = 'D-T',
+                    species = 'D',
                     Z_i = Zeff,
                     out_dir = out_dir,
                     x_res = x_res,

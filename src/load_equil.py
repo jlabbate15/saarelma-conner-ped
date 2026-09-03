@@ -4,13 +4,15 @@ from collections import defaultdict
 from pathlib import Path
 
 
-def initialize_inputs(equil_num, geqdsk_dir=None, pfile_dir=None, p_filetype="pfile"):
+def initialize_inputs(equil_num, geqdsk_dir=None, pfile_dir=None, p_filetype="pfile",
+                      select_equil=None):
     """Select equil_num g/profile file pairs from the input directories.
 
     Parameters
     ----------
     equil_num : int
-        Number of matched equilibria to return.
+        Number of matched equilibria to return. Ignored when
+        ``select_equil`` is given.
     geqdsk_dir : path-like
         Directory of GEQDSK files named g{shot}.{time}.
     pfile_dir : path-like
@@ -20,6 +22,13 @@ def initialize_inputs(equil_num, geqdsk_dir=None, pfile_dir=None, p_filetype="pf
         ``"OMFITnc"`` expects ``*.cdf`` files named like
         ``IDA_{shot}_{t0}_{t1}_.cdf``, matched to g-files when the g-file
         time (ms→s) lies in ``[t0, t1]``.
+    select_equil : str or sequence of str, optional
+        If given, switches to user-selected mode: only the named equilibria
+        are returned, in the order given, and ``equil_num`` is ignored. Each
+        name is an equilibrium identifier ``"{shot}.{time}"`` as it appears in
+        the g-file name (a leading ``"g"`` is accepted, e.g. ``"g153523.03745"``
+        or ``"153523.03745"``). A name that does not exactly match a matched
+        equilibrium raises ``ValueError``.
 
     Selection prioritizes one equilibrium per shot number before adding
     additional times from shots that already have a selected equilibrium.
@@ -44,6 +53,14 @@ def initialize_inputs(equil_num, geqdsk_dir=None, pfile_dir=None, p_filetype="pf
         g_by_key, p_by_key = _match_omfitnc(g_files, pfile_dir)
 
     shared_keys = sorted(set(g_by_key) & set(p_by_key))
+
+    if select_equil is not None:
+        selected = _select_named(select_equil, shared_keys, g_by_key, p_by_key,
+                                 geqdsk_dir, pfile_dir, p_filetype)
+        print(f"Selected {len(selected)} user-specified g/{p_filetype} file pairs:")
+        for mhd_fp, kprof_fp in selected:
+            print(f"  g: {mhd_fp}\n  p: {kprof_fp}")
+        return selected
 
     by_shot = defaultdict(list)
     for key in shared_keys:
@@ -78,6 +95,32 @@ def initialize_inputs(equil_num, geqdsk_dir=None, pfile_dir=None, p_filetype="pf
     print(f"Selected {len(selected)} g/{p_filetype} file pairs:")
     for mhd_fp, kprof_fp in selected:
         print(f"  g: {mhd_fp}\n  p: {kprof_fp}")
+    return selected
+
+
+def _select_named(select_equil, shared_keys, g_by_key, p_by_key,
+                  geqdsk_dir, pfile_dir, p_filetype):
+    """Return the pairs named in select_equil, requiring exact matches."""
+    if isinstance(select_equil, (str, Path)):
+        names = [select_equil]
+    else:
+        names = list(select_equil)
+    if not names:
+        raise ValueError("select_equil was given but is empty")
+
+    available = set(shared_keys)
+    selected = []
+    for name in names:
+        key = str(name)
+        if key.startswith("g"):
+            key = key[1:]
+        if key not in available:
+            raise ValueError(
+                f"Requested equilibrium {name!r} was not found among the "
+                f"matched g/{p_filetype} pairs in {geqdsk_dir} and {pfile_dir}. "
+                f"Available equilibria: {sorted(available)}"
+            )
+        selected.append((str(g_by_key[key]), str(p_by_key[key])))
     return selected
 
 

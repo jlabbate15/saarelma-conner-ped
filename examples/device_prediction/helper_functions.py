@@ -129,20 +129,25 @@ def psi_n_and_rho_psi(profiles):
 
 
 def build_manual_profs(profiles):
-    """manual_profs for kprof_loc='manual rho grid' with psi_N-consistent rho."""
-    _, rho_psi = psi_n_and_rho_psi(profiles)
+    """manual_profs for kprof_loc='manual psi_N grid', on psi_N from polflux.
+
+    The profiles are handed to the solver on psi_N directly. Nothing here goes
+    through rho: psi_N comes straight from the file's polflux, so the old
+    psi_N -> sqrt -> square round trip through a rho grid is gone.
+    """
+    psi_N, _ = psi_n_and_rho_psi(profiles)
     manual_profs = {
         'Te': profiles['Te'],
-        'rho_Te': rho_psi,
+        'psi_N_Te': psi_N,
         'ne': profiles['ne'] / 1e20,   # m^-3 -> 10^20 m^-3 (solver multiplies by 1e20)
-        'rho_ne': rho_psi,
+        'psi_N_ne': psi_N,
     }
     if 'Ti' in profiles:
         manual_profs['Ti'] = profiles['Ti']
-        manual_profs['rho_Ti'] = rho_psi
+        manual_profs['psi_N_Ti'] = psi_N
     if 'ni' in profiles:
         manual_profs['ni'] = profiles['ni'] / 1e20
-        manual_profs['rho_ni'] = rho_psi
+        manual_profs['psi_N_ni'] = psi_N
     return manual_profs
 
 
@@ -191,7 +196,8 @@ def calc_pressure_profile(profiles):
     Accepts either:
       - SPARCPublic ``profiles`` (``ne`` [m^-3], ``Te``/``Ti`` [keV], ``polflux``)
       - solver ``manual_profs`` (``ne`` [10^20 m^-3], ``Te``/``Ti`` [keV],
-        ``rho_ne`` / ``rho_Te``; ion grids ``rho_ni`` / ``rho_Ti`` optional)
+        ``psi_N_ne`` / ``psi_N_Te``; ion grids ``psi_N_ni`` / ``psi_N_Ti``
+        optional), or the legacy ``rho_*`` form of the same
 
     Parameters
     ----------
@@ -215,11 +221,21 @@ def calc_pressure_profile(profiles):
         Ti_keV = np.asarray(profiles['Ti'], dtype=float) if 'Ti' in profiles else None
         ni = _density_to_m3(profiles['ni'], profiles) if 'ni' in profiles else None
     elif 'psi_N_ne' in profiles and 'psi_N_Te' in profiles:
-        psi_N = profiles['psi_N_ne']
-        ne = profiles['ne']
+        psi_N = np.asarray(profiles['psi_N_ne'], dtype=float)
+        ne = _density_to_m3(profiles['ne'], profiles)
         Te_keV = _interp_to_psi(profiles['psi_N_Te'], profiles['Te'], psi_N)
-        Ti_keV = _interp_to_psi(profiles['psi_N_ne'], profiles['Ti'], psi_N) if 'Ti' in profiles else None
-        ni = profiles['ni'] if 'ni' in profiles else None
+        if 'Ti' in profiles:
+            psi_Ti = profiles.get('psi_N_Ti', profiles['psi_N_Te'])
+            Ti_keV = _interp_to_psi(psi_Ti, profiles['Ti'], psi_N)
+        else:
+            Ti_keV = None
+        if 'ni' in profiles:
+            psi_ni = profiles.get('psi_N_ni', profiles['psi_N_ne'])
+            ni = _density_to_m3(
+                _interp_to_psi(psi_ni, profiles['ni'], psi_N), profiles
+            )
+        else:
+            ni = None
     else:
         rho_ne = profiles.get('rho_ne', profiles.get('rho'))
         rho_Te = profiles.get('rho_Te', rho_ne)

@@ -865,23 +865,43 @@ class saarelma_connor:
             self.psi_Te_eval = self.psi_Te_eval_pfile # psi_N values at which T_e is evaluated
             self.psi_ne_eval = psi_N_unified
 
-        elif kprof_loc == 'manual rho grid':
+        elif kprof_loc in ('manual psi_N grid', 'manual rho grid'):
+            # Profiles supplied directly by the caller, on their own radial grid.
+            #   'manual psi_N grid'  the grid IS psi_N and is used as given
+            #   'manual rho grid'    legacy grid, rho treated as sqrt(psi_N), so
+            #                        psi_N = psi_N_pres[-1] * rho**2. Only for inputs
+            #                        genuinely on a rho grid (e.g. the digitized ARC
+            #                        profiles); anything derived from polflux should
+            #                        pass psi_N and use 'manual psi_N grid'.
+            def _psi_grid(psi_key, rho_key, fallback_psi=None, fallback_rho=None):
+                """psi_N for one profile, from its psi_N_* key or its legacy rho_* key."""
+                if manual_profs.get(psi_key) is not None:
+                    return np.asarray(manual_profs[psi_key], dtype=float)
+                if manual_profs.get(rho_key) is not None:
+                    rho = np.asarray(manual_profs[rho_key], dtype=float)
+                    return self.psi_N_pres[-1] * rho**2
+                if fallback_psi is not None:
+                    return fallback_psi
+                if fallback_rho is not None:
+                    return fallback_rho
+                raise KeyError(
+                    f"manual_profs needs '{psi_key}' (or the legacy '{rho_key}')"
+                )
+
             # Specify full T_e and corresponding psi_N profile
-            # rho is treated as sqrt(psi_N): pass sqrt(psi_N) if your file's rho is toroidal.
             self.T_e_pfile = manual_profs['Te'] # T_e values (keV) evaluated at psi_Te_eval
             self.T_e = self.T_e_pfile # keV
-            self.psi_Te_eval_pfile = self.psi_N_pres[-1] * (manual_profs['rho_Te']**2) # psi_N values at which T_e is evaluated
+            self.psi_Te_eval_pfile = _psi_grid('psi_N_Te', 'rho_Te') # psi_N values at which T_e is evaluated
             self.psi_Te_eval = self.psi_Te_eval_pfile # psi_N values at which T_e is evaluated
 
             # Specify n_e'(psi_N=0.85) and n_e(psi_N=1.0) boundary conditions
             # n_e_pfile is only used for the cross_sections and the boundary conditions
             self.n_e_pfile = manual_profs['ne'] * 1e20 # n_e values (10^20/m^3 -> m^-3) evaluated at psi_ne_eval
-            self.psi_ne_eval = self.psi_N_pres[-1] * (manual_profs['rho_ne']**2) # psi_N values at which n_e is evaluated
+            self.psi_ne_eval = _psi_grid('psi_N_ne', 'rho_ne') # psi_N values at which n_e is evaluated
 
             # Optional ion profiles. If omitted, Ti = T_rat * Te and ni = ne.
             if 'Ti' in manual_profs and manual_profs['Ti'] is not None:
-                rho_Ti = manual_profs.get('rho_Ti', manual_profs['rho_Te'])
-                psi_Ti = self.psi_N_pres[-1] * (np.asarray(rho_Ti, dtype=float)**2)
+                psi_Ti = _psi_grid('psi_N_Ti', 'rho_Ti', fallback_psi=self.psi_Te_eval)
                 Ti_keV = np.asarray(manual_profs['Ti'], dtype=float)
                 self.T_i_pfile = Ti_keV
                 self.psi_Ti_eval_pfile = psi_Ti
@@ -893,9 +913,8 @@ class saarelma_connor:
                 )(self.psi_Te_eval)
                 self.T_i_from_profile = True
             if 'ni' in manual_profs and manual_profs['ni'] is not None:
-                rho_ni = manual_profs.get('rho_ni', manual_profs['rho_ne'])
                 self.n_i_pfile = np.asarray(manual_profs['ni'], dtype=float) * 1e20  # 10^20/m^3 -> m^-3
-                self.psi_ni_eval = self.psi_N_pres[-1] * (np.asarray(rho_ni, dtype=float)**2)
+                self.psi_ni_eval = _psi_grid('psi_N_ni', 'rho_ni', fallback_psi=self.psi_ne_eval)
 
         elif kprof_loc == 'manual EPEDNN loop':
             assert manual_profs is not None, 'T and n_e, n_CX, n_FC profiles must be provided if T_e_source is epednn'
@@ -2889,6 +2908,35 @@ class saarelma_connor:
                     raise ValueError('T_rat_flag must be True if T_rat is provided')
                 T_tot_plasma = interp1d(psiN_Te, Te_prev + Ti_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
 
+            elif EPEDNN_core == 'stiff T_e and n_e': # previous T_e and n_e core stiff with pedestal
+                # Calculate core n_e
+                psi_N_core = np.linspace(0, self.psi_N_inner_boundary, 75)
+                _n_e_core = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_core)
+                n_e_core_at_ped = interp1d(self.psi_ne_eval, self.n_e_pfile, kind='linear', bounds_error=False, fill_value='extrapolate')(self.psi_N_inner_boundary)
+                ne_ped_at_top = interp1d(x_ne, ne_pedestal, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner)
+                delta = ne_ped_at_top - n_e_core_at_ped
+                n_e_core = _n_e_core + delta # push core up stiffly to match pedestal top
+                
+                # Calculate total n_e and T_e
+                psi_N_ped = interp1d(self.x_init, self.psi_N_pres, kind='linear', bounds_error=False, fill_value='extrapolate')(x_ne)
+                psi_N_plasma = np.concatenate([psi_N_core, psi_N_ped])
+                n_e_plasma = np.concatenate([n_e_core, ne_pedestal])
+
+                # x_dofs_si is in Firedrake DOF order (not spatial); sort to psi_N
+                # before np.gradient (same issue as dpdx in update_alpha).
+                sort_idx = np.argsort(psi_N_plasma)
+                psi_N_plasma = psi_N_plasma[sort_idx]
+                n_e_plasma = n_e_plasma[sort_idx]
+                _, uniq_idx = np.unique(psi_N_plasma, return_index=True)
+                psi_N_plasma = psi_N_plasma[uniq_idx]
+                n_e_plasma = n_e_plasma[uniq_idx]
+
+                if self.T_rat_flag:
+                    Ti_prev = Te_prev * self.T_rat
+                else:
+                    raise ValueError('T_rat_flag must be True if T_rat is provided')
+                T_tot_plasma = interp1d(psiN_Te, Te_prev + Ti_prev, kind='linear', bounds_error=False, fill_value='extrapolate')(psi_N_plasma)
+
             elif EPEDNN_core == 'previous T, varying ne': # stiched T_e and varyped outputted n_e
                 raise NotImplementedError('previous T, varying ne is not yet implemented')
 
@@ -2918,7 +2966,7 @@ class saarelma_connor:
         dV_dpsi = np.gradient(V_full_plasma, psi_N_plasma)
         self.volavgP = (simpson(pressure * dV_dpsi, psi_N_plasma)
                         / simpson(dV_dpsi, psi_N_plasma))
-
+                
     def calc_betan(self,x_ne,ne_pedestal,psiN_Te,Te_prev,EPEDNN_core='pfile',pres_gfile=False):
         """Calculate the normalized beta
 
@@ -3084,8 +3132,17 @@ class saarelma_connor:
         # print(f'bt: {self.bt}')
 
 
-    def feed_epednn(self, model='EPED1', ne_ped=None, x_ne=None, psiN_Te=None, Te_prev=None, EPEDNN_core='pfile', pres_gfile=False):
-        """Feed the Saarelma-Connor solution to the EPEDNN model"""
+    def feed_epednn(self, model='EPED1', ne_ped=None, x_ne=None, psiN_Te=None, Te_prev=None, EPEDNN_core='pfile', pres_gfile=False, Z_eff=None, neped_value=None):
+        """Feed the Saarelma-Connor solution to the EPEDNN model
+
+        neped_value : float, optional
+            Pedestal density handed to EPEDNN, in 10^19 m^-3. When given it is
+            used verbatim instead of interpolating ``ne_ped`` at ``x_inner``,
+            so the caller can pick where (and from which profile) neped is
+            sampled without disturbing the ``ne_ped``/``x_ne`` pair that
+            ``calc_betan`` stitches into the volume-averaged pressure.
+        """
+        # ne_ped is the entire pedestal profile here, not just the pedestal density height
         
         # Define inputs in Python
         # These map exactly to the InputEPED struct we saw in the Julia code
@@ -3103,10 +3160,19 @@ class saarelma_connor:
         self.calc_betan(self._x_ne,self._neped,psiN_Te,Te_prev,EPEDNN_core,pres_gfile)
         print(f'betan: {self.betan}')
 
-        if self._x_ne is None:
+        if neped_value is not None:
+            ne_ped_h = float(neped_value)  # already in 10^19 m^-3
+        elif self._x_ne is None:
             ne_ped_h = self._neped
         else:
             ne_ped_h = interp1d(self._x_ne, self._neped, kind='linear', bounds_error=False, fill_value='extrapolate')(self.x_inner) / (1e19) # m^-3 -> 10^19 m^-3
+        self.neped_epednn = float(ne_ped_h)  # 10^19 m^-3, what EPEDNN actually received
+
+        if Z_eff is None:
+            self.Z_eff = 1.0
+            print('Warning: Z_eff is not provided, assuming Z_eff = 1.0')
+        else:
+            self.Z_eff = Z_eff
 
         inputs = {
             "a": float(self.a),           # Minor radius (m)
@@ -3118,7 +3184,7 @@ class saarelma_connor:
             "m": float(self.M_eff),           # Effective mass (must be 2.0 for D or 2.5 for D-T)
             "neped": float(ne_ped_h),       # Pedestal density (in 10^19 m^-3)
             "r": float(self.Rmajor),           # Major radius (m)
-            "zeffped": float(self.Z_i)      # Effective charge
+            "zeffped": float(self.Z_eff)      # Effective charge
         }
 
         if model == 'EPED1':

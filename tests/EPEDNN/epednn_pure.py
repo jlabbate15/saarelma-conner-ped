@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 from src.solver_nondim import saarelma_connor_nondim
 from src.load_equil import initialize_inputs
 
-out_dir = 'EPEDNN_pure_output_v2/'
+out_dir = 'EPEDNN_pure_output_v3/'
 
 gfile_fps = '/mnt/homes_global/jal2351/software/sc_inputs/gHighPerfHMode/'
 kprof_fps = '/mnt/homes_global/jal2351/software/sc_inputs/OMFITnc_HighPerfHMode/'
@@ -26,9 +26,126 @@ PED_TOP_CSV = (
     'pedestal_tops_summary_HighPerfHMode.csv'
 )
 
+# Oak's per-profile pedestal fits. Needed because Oak_pedestal_fits.npy stores
+# each profile's pedestal value only at THAT profile's own gradient knee
+# (ped_eval_psin = grad_sym - grad_width/2), and the n_e knee is not the p_tot
+# knee: over this set the n_e knee sits outboard of the p_tot knee in 94% of
+# cases (median +0.012 in psi_N, up to +0.20). Re-evaluating Oak's fits at the
+# common ped top keeps neped, zeffped and psiN_ped_exp on one flux surface.
+OAK_FIT_CSV = (
+    '/mnt/homes_global/jal2351/software/sc_inputs/'
+    'pedestal_fits_snyder_short_Oak.csv'
+)
+
 epednn_model = 'EPED1'
 
 ne_ped_source = 'Oak'
+
+# Where the Oak density is evaluated:
+#   'ped_top'      -> psiN_ped, the p_tot gradient knee used for zeffped and
+#                     psiN_ped_exp (consistent; all pedestal-top quantities on
+#                     the same psi_N)
+#   'oak_ne_knee'  -> the n_e profile's own knee, i.e. Oak_pedestal_fits.npy
+#                     ['n_e'] verbatim (legacy behaviour)
+ne_ped_psin = 'ped_top'
+
+
+def tnh0(c, x):
+    """Modified tanh (Burrell/Groebner), same form as sc_inputs/fit_pedestals.py.
+
+    c = [symmetry point, full width, height, offset, alpha]
+    """
+    c = np.asarray(c, dtype=float)
+    z = 2.0 * (c[0] - x) / c[1]
+    pz = 1.0 + c[4] * z
+    mth = 0.5 * ((pz + 1.0) * np.tanh(z) + pz - 1.0)
+    return 0.5 * ((c[2] - c[3]) * mth + c[2] + c[3])
+
+
+def linfun(c, x):
+    """Two-line corner fit, same form as sc_inputs/fit_pedestals.py.
+
+    c = [pedestal top psiN, pedestal top value, inner slope, outer slope]
+    """
+    c = np.asarray(c, dtype=float)
+    y = np.where(x <= c[0], c[2] * (c[0] - x) + c[1], c[3] * (x - c[0]) + c[1])
+    return np.where(y < 0.0, 0.0, y)
+
+
+def _f(row, key):
+    """float(row[key]) with blanks/nan mapped to nan."""
+    v = (row.get(key) or '').strip()
+    if not v or v.lower() == 'nan':
+        return np.nan
+    try:
+        return float(v)
+    except ValueError:
+        return np.nan
+
+
+def load_oak_ne_fits(csv_path=OAK_FIT_CSV):
+    """shot -> list of n_e fit records from Oak's per-profile fit CSV.
+
+    Each record keeps the tanh and two-line parameters (so the fitted curves can
+    be evaluated anywhere), the profile's own knee, and the stored ped_val_mean.
+    """
+    by_shot = defaultdict(list)
+    path = Path(csv_path)
+    if not path.exists():
+        raise FileNotFoundError(f'Missing Oak fit CSV: {csv_path}')
+    with open(path) as f:
+        for row in csv.DictReader(f):
+            if row.get('profile') != 'n_e':
+                continue
+            if row.get('bad') in ('1', 'True', 'true'):
+                continue
+            tanh_c = [_f(row, k) for k in
+                      ('tanh_sym', 'tanh_width', 'tanh_height',
+                       'tanh_offset', 'tanh_alpha')]
+            lin_c = [_f(row, k) for k in
+                     ('lin_top', 'lin_val', 'lin_slope_in', 'lin_slope_out')]
+            by_shot[int(row['shot'])].append({
+                'time_ms': _f(row, 'time'),
+                'knee': _f(row, 'ped_eval_psin'),
+                'ped_val_mean': _f(row, 'ped_val_mean'),
+                # A method contributes only if it converged, exactly as
+                # fit_pedestals.py decides which fits enter ped_val_mean.
+                'tanh': tanh_c if (row.get('tanh_ok') == '1'
+                                   and np.all(np.isfinite(tanh_c))) else None,
+                'lin': lin_c if (row.get('lin_ok') == '1'
+                                 and np.all(np.isfinite(lin_c))) else None,
+                'grad_ok': row.get('grad_ok') == '1',
+            })
+    if not by_shot:
+        raise RuntimeError(f'No usable n_e rows in {csv_path}')
+    return by_shot
+
+
+def oak_ne_fit_for_tag(equil_tag, oak_fits):
+    """Oak n_e fit record for a g-file tag '125729.03589': shot, closest time."""
+    shot_s, time_s = equil_tag.split('.', 1)
+    rows = oak_fits.get(int(shot_s))
+    if not rows:
+        return None
+    return min(rows, key=lambda r: abs(r['time_ms'] - float(time_s)))
+
+
+def oak_ne_at_psin(fit, psin, psi_prof, ne_prof):
+    """Oak's n_e pedestal value at an arbitrary psi_N, in m^-3.
+
+    Mean of the fitted curves that converged, each evaluated at `psin` — the
+    same recipe fit_pedestals.py uses for ped_val_mean, but at a psi_N of our
+    choosing. The gradient method has no closed form: it is the measured
+    profile itself, so it enters as an interpolation of the IDA n_e.
+    """
+    vals = []
+    if fit['tanh'] is not None:
+        vals.append(float(tnh0(fit['tanh'], np.asarray([psin], dtype=float))[0]))
+    if fit['grad_ok']:
+        vals.append(float(np.interp(psin, psi_prof, ne_prof)))
+    if fit['lin'] is not None:
+        vals.append(float(linfun(fit['lin'], np.asarray([psin], dtype=float))[0]))
+    return float(np.mean(vals)) if vals else np.nan
 
 
 def load_ped_tops(csv_path=PED_TOP_CSV):
@@ -215,14 +332,18 @@ def OMFITnc_load(filename):
 
 ped_tops = load_ped_tops()
 equil_num = len(list(Path(kprof_fps).glob('*.cdf')))
-equilibria = initialize_inputs(equil_num, gfile_fps, kprof_fps, p_filetype='OMFITnc')
+equilibria = initialize_inputs(equil_num, gfile_fps, kprof_fps, p_filetype='OMFITnc', select_equil="144515.04108")
 
 Path(out_dir).mkdir(parents=True, exist_ok=True)
 
 if ne_ped_source == 'Oak':
-    _oak = np.load('Oak_pedestal_fits.npy', allow_pickle=True).item()
-    ne_peds = np.asarray(_oak['n_e'], dtype=float) / 1e19  # m^-3 -> 10^19 m^-3
-    equil_shotandtime_ne = list(_oak['equil_shotandtime'])
+    if ne_ped_psin not in ('ped_top', 'oak_ne_knee'):
+        raise ValueError(
+            f"ne_ped_psin must be 'ped_top' or 'oak_ne_knee', got {ne_ped_psin!r}"
+        )
+    oak_ne_fits = load_oak_ne_fits()
+    print(f'Loaded Oak n_e fits for {len(oak_ne_fits)} shots from {OAK_FIT_CSV}')
+    print(f"neped evaluated at: {ne_ped_psin}")
 
 i = 0
 n_skip = 0
@@ -240,28 +361,30 @@ for mhd_fp, kprof_fp in equilibria:
     if ne_ped_source == 'John':
         ne_ped = np.interp(psiN_ped, psi_N_unified, ne_unified)  # m^-3
         ne_ped = ne_ped / 1e19  # m^-3 -> 10^19 m^-3 (EPEDNN input)
+        psiN_neped = float(psiN_ped)
+        ne_ped_oak_knee = np.nan
     elif ne_ped_source == 'Oak':
         # Match shot exactly; pick closest time (g-tag ms vs Oak float ms).
-        # equil_tag: '125729.03589' ; equil_shotandtime_ne: '125729.3589.5480'
-        shot_s, time_s = equil_tag.split('.', 1)
-        shot = int(shot_s)
-        time_ms = float(time_s)
-        best_i, best_dt = None, None
-        for i_oak, tag_oak in enumerate(equil_shotandtime_ne):
-            s_oak, t_oak = str(tag_oak).split('.', 1)
-            if int(s_oak) != shot:
-                continue
-            dt = abs(float(t_oak) - time_ms)
-            if best_dt is None or dt < best_dt:
-                best_dt = dt
-                best_i = i_oak
-        if best_i is None:
-            print(f'  SKIP {equil_tag}: no Oak ne_ped for shot {shot}')
+        # equil_tag: '125729.03589' ; Oak CSV shot/time: 125729 / 3589.5480
+        fit = oak_ne_fit_for_tag(equil_tag, oak_ne_fits)
+        if fit is None:
+            print(f'  SKIP {equil_tag}: no Oak n_e fit for shot '
+                  f'{equil_tag.split(".", 1)[0]}')
             n_skip += 1
             continue
-        ne_ped = float(ne_peds[best_i])
+        # Oak's stored value lives at the n_e profile's own knee, which is NOT
+        # psiN_ped (the p_tot knee used for zeffped / psiN_ped_exp). Re-evaluate
+        # the same fits at psiN_ped so every pedestal-top quantity fed to EPEDNN
+        # refers to one flux surface.
+        ne_ped_oak_knee = float(fit['ped_val_mean']) / 1e19  # 10^19 m^-3
+        if ne_ped_psin == 'oak_ne_knee':
+            psiN_neped = float(fit['knee'])
+            ne_ped = ne_ped_oak_knee
+        else:
+            psiN_neped = float(psiN_ped)
+            ne_ped = oak_ne_at_psin(fit, psiN_ped, psi_N_unified, ne_unified) / 1e19
         if not np.isfinite(ne_ped):
-            print(f'  SKIP {equil_tag}: Oak ne_ped is nan (idx={best_i})')
+            print(f'  SKIP {equil_tag}: Oak ne_ped is nan')
             n_skip += 1
             continue
     zeff_ped = float(np.interp(psiN_ped, psi_N_unified, Zeff_unified))
@@ -286,10 +409,9 @@ for mhd_fp, kprof_fp in equilibria:
     )
     # feed_epednn maps self.Z_i -> zeffped. Override AFTER __init__ so ion
     # charge e_i (set from the constructor default Z_i=1 for D) stays correct.
-    base_model.Z_i = zeff_ped
     base_model.setup_epednn(model=epednn_model)
     pedestal_height, pedestal_width, betan = base_model.feed_epednn(
-        model=epednn_model, ne_ped=ne_ped, EPEDNN_core='pfile'
+        model=epednn_model, ne_ped=ne_ped, EPEDNN_core='pfile', Z_eff=zeff_ped
     )
     np.save(
         Path(out_dir) / Path(equil_tag + '.npy'),
@@ -301,6 +423,9 @@ for mhd_fp, kprof_fp in equilibria:
             'psiN_kfilepres': psi_N_unified,
             'psiN_ped_exp': psiN_ped,
             'ne_ped_1e19': ne_ped,
+            'psiN_neped': psiN_neped,             # where neped was evaluated
+            'ne_ped_psin_mode': ne_ped_psin,
+            'ne_ped_oak_knee_1e19': ne_ped_oak_knee,  # legacy value, for reference
             'zeff_ped': zeff_ped,
         },
     )

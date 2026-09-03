@@ -190,25 +190,24 @@ def read_cgyro_profiles(path: Path) -> dict:
 
 
 def build_manual_profs(profiles: dict) -> dict:
-    """manual_profs for kprof_loc='manual rho grid' with psi_N-consistent rho."""
+    """manual_profs for kprof_loc='manual psi_N grid', on psi_N from polflux."""
     if 'polflux' not in profiles:
-        raise KeyError('Profile file needs polflux to map rho -> psi_N correctly')
+        raise KeyError('Profile file needs polflux to give psi_N')
     pf = profiles['polflux']
     psi_N = (pf - pf[0]) / (pf[-1] - pf[0])
-    rho_psi = np.sqrt(np.clip(psi_N, 0.0, None))
 
     manual_profs = {
         'Te': profiles['Te'],
-        'rho_Te': rho_psi,
+        'psi_N_Te': psi_N,
         'ne': profiles['ne'] / 1e20,
-        'rho_ne': rho_psi,
+        'psi_N_ne': psi_N,
     }
     if 'Ti' in profiles:
         manual_profs['Ti'] = profiles['Ti']
-        manual_profs['rho_Ti'] = rho_psi
+        manual_profs['psi_N_Ti'] = psi_N
     if 'ni' in profiles:
         manual_profs['ni'] = profiles['ni'] / 1e20
-        manual_profs['rho_ni'] = rho_psi
+        manual_profs['psi_N_ni'] = psi_N
     return manual_profs
 
 def read_popcon(path: Path, keys):
@@ -306,7 +305,7 @@ def main():
         ncx_x0_ratio=round(float(ncx_x0_ratios[0]), 3),
         psi_N_inner_boundary=psi_val,
         mhd_fp=mhd_fp,
-        kprof_loc='manual rho grid',
+        kprof_loc='manual psi_N grid',
         manual_profs=manual_profs,
         species='D-T',
         Z_i=Zeff,
