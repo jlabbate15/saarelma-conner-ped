@@ -22,8 +22,8 @@ from OpenFUSIONToolkit.TokaMaker.util import create_isoflux, read_eqdsk
 from examples.device_prediction.helper_functions import read_sparcpublic_profiles, psi_n_and_rho_psi, build_manual_profs, calc_pressure_profile, _print_profile_summary, read_popcon, _to_watts
 
 
-equil_num = None
-output_dir = f'DIIIDSnyder_freeparam_noloop'
+equil_num = 1
+output_dir = f'DIIIDSnyder_ESCAPE5000iter_over'
 Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 
@@ -37,7 +37,7 @@ if equil_num is None:
     equil_num = equil_num_total
 print(f'Number of equilibria found: {equil_num_total}')
 print(f'Number of equilibria to process: {equil_num}')
-equilibria = initialize_inputs(equil_num, geqdsk_dir, pfile_dir, p_filetype='OMFITnc') # Load in equilibria
+equilibria = initialize_inputs(equil_num, geqdsk_dir, pfile_dir, p_filetype='OMFITnc', select_equil='148789.03508') # Load in equilibria
 
 
 # ── Heating power ────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ def read_omfitnc_profiles(kprof_fp):
 x_res = 50
 epednn_model = 'EPED1' # 'EPED1' or 'EPED_SPARC'
 eped_tol_max = 1e-5
-eped_iter_max = 1
+eped_iter_max = 5000
 kbm_treatment = "picard"
 kbm_gate_eps = 0.1
 picard_gate_mode = "average"
@@ -154,14 +154,16 @@ verbose_sc = False
 
 import itertools
 
-alpha_crits = np.array([0.01,2,10])
-# C_KBMs = np.logspace(-1, 1, 3)
-# De_chie_etgs = np.logspace(-1, 1, 3)
-nFC_x0s = np.logspace(15, 16.5, 1)
-# ncx_x0_ratios = np.logspace(0.1, 1.25, 1)
-C_KBMs = np.array([0.0,0.3,1.0])
-De_chie_etgs = np.array([0.1,0.5,1.0])
-ncx_x0_ratios = np.linspace(1, 20, 1)
+# alpha_crits = np.array([0.01,10])
+# nFC_x0s = np.append(np.logspace(14.7, 16, 3), 1e14)
+# C_KBMs = np.array([0.3,1.0])
+# De_chie_etgs = np.array([0.1,0.5])
+# ncx_x0_ratios = np.array([0.01,0.5])
+alpha_crits = np.array([0.01])
+nFC_x0s = np.array([1e16])
+C_KBMs = np.array([0.1])
+De_chie_etgs = np.array([0.1])
+ncx_x0_ratios = np.array([15])
 
 # ne_x0s = [None, 1e20, 2e20] # m^-3, manually specify outer bc for electron density
 ne_x0s = [None] # m^-3, manually specify outer bc for electron density

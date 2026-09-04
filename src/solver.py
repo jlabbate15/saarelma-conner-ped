@@ -2823,7 +2823,7 @@ class saarelma_connor:
 
 
 
-    def calc_volavgP(self,x_ne,ne_pedestal,psiN_Te,Te_prev,EPEDNN_core='pfile',pres_gfile=False):
+    def calc_volavgP(self,x_ne=None,ne_pedestal=None,psiN_Te=None,Te_prev=None,EPEDNN_core='pfile',pres_gfile=False):
         """Calculate the volume-averaged pressure
 
         Parameters
@@ -2852,7 +2852,7 @@ class saarelma_connor:
         """
 
         if pres_gfile: 
-            pressure = self.eq['pres']
+            pressure = self.eq['pres'][1:]
             psi_N_plasma = self.psi_N_pres
         else:
             if EPEDNN_core == 'pfile': # always fixed to p-file n_e and T_e
@@ -2967,7 +2967,7 @@ class saarelma_connor:
         self.volavgP = (simpson(pressure * dV_dpsi, psi_N_plasma)
                         / simpson(dV_dpsi, psi_N_plasma))
                 
-    def calc_betan(self,x_ne,ne_pedestal,psiN_Te,Te_prev,EPEDNN_core='pfile',pres_gfile=False):
+    def calc_betan(self,x_ne=None,ne_pedestal=None,psiN_Te=None,Te_prev=None,EPEDNN_core='pfile',pres_gfile=False):
         """Calculate the normalized beta
 
         Parameters

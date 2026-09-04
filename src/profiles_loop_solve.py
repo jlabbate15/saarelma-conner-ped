@@ -238,11 +238,11 @@ def profiles_loop_solve(
             eped_tol = abs((pedestal_height - pedestal_height_prev) / pedestal_height_prev) + abs((pedestal_width - pedestal_width_prev) / pedestal_width_prev)
             print(f"Normalized pedestal pressure height and width tolerance: {eped_tol}")
             sol['loop_tol'] = eped_tol
-            np.save(f'{equil_dir}/ne_and_Te_iter_{eped_iter}.npy', sol, allow_pickle=True)
+            # np.save(f'{equil_dir}/ne_and_Te_iter_{eped_iter}.npy', sol, allow_pickle=True)
             if abs(eped_tol) < eped_tol_max:
                 break
-        else:
-            np.save(f'{equil_dir}/ne_and_Te_iter_{eped_iter}.npy', sol, allow_pickle=True)
+        # else:
+        #     np.save(f'{equil_dir}/ne_and_Te_iter_{eped_iter}.npy', sol, allow_pickle=True)
 
         # --- New T_e profile (EPED1 tanh form, Eq. 1b without core H term) ---
         #   T(psi) = T_sep + aT0 * { tanh[2(1 - psi_mid)/Delta]
@@ -285,6 +285,18 @@ def profiles_loop_solve(
         T_prof_keV = np.concatenate([Te_prev_keV[keep] + T_e_offset, Te_tanh_eV / 1e3])
 
         # psi_N_inner_boundary_new = psi_ped
+
+        # Store the EPEDNN-generated T_e profile (and the quantities that set it)
+        # on `sol` and re-save, so downstream plotting can see the profile this
+        # iteration produced rather than only the profile it was fed.
+        sol['psi_N_Te_new'] = np.asarray(psi_N_Te_new, dtype=float)
+        sol['Te_new_keV'] = np.asarray(T_prof_keV, dtype=float)
+        sol['Te_ped_eV'] = float(Te_ped_eV)
+        sol['ne_ped_val'] = float(ne_ped_val)
+        sol['psi_ped'] = float(psi_ped)
+        sol['pedestal_height'] = float(pedestal_height)
+        sol['pedestal_width'] = float(pedestal_width)
+        np.save(f'{equil_dir}/ne_and_Te_iter_{eped_iter}.npy', sol, allow_pickle=True)
 
         if verbose:  # collect profile data for post-loop plotting
             Te_spliced_eV = T_prof_keV * 1e3

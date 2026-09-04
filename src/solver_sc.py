@@ -300,7 +300,7 @@ class saarelma_connor_sc(saarelma_connor):
                 # array (KBM off) is the conservative pre-solve choice.
                 self._D_KBM = np.zeros_like(self.x_init)
             self.find_inner_boundary()
-        else:
+        else: # should mostly be using this branch
             self.x_inner = float(np.interp(
                 self.psi_N_inner_boundary, self.psi_N_pres, self.x_init
             ))
@@ -347,7 +347,7 @@ class saarelma_connor_sc(saarelma_connor):
             raise ValueError(
                 f"bc_origin must be 'p-file' or 'user', got {bc_origin!r}."
             )
-        if val >= 0.0:
+        if val >= 0.0: # this is a likely but possible unnecessary hard stop, will keep in for now
             raise ValueError(
                 f"dne/dx(x_inner) = {val:.3e} m^-4 must be strictly "
                 "negative (density decreasing outward) for the Neumann "
@@ -479,7 +479,7 @@ class saarelma_connor_sc(saarelma_connor):
         order_desc = np.argsort(x)[::-1]
         cum_desc = cumulative_trapezoid(
             integrand[order_desc], x[order_desc], initial=0.0
-        )
+        ) # results in a negative value for the sum, since integrand should be positive and integrating from 0 to x < 0
         integral_from_0 = np.empty_like(cum_desc)
         integral_from_0[order_desc] = cum_desc
         return np.exp(integral_from_0)
@@ -516,6 +516,18 @@ class saarelma_connor_sc(saarelma_connor):
                 "eq6_form must be 'complete' (docs/derivation_eq16.tex "
                 "Eq. 16-full) or 'paper' (report Eq. 6 / Saarelma Eq. 16 "
                 f"as printed), got {eq6_form!r}."
+            )
+        if eq6_form == "paper":
+            import warnings
+            warnings.warn(
+                "eq6_form='paper' is the report Eq. 6 / Saarelma Eq. 16 "
+                "as printed, which drops the shape factor "
+                "1 + S_CX/(2 S_i) and cancels <|grad r|^2> against D_ped.  "
+                "On the DIII-D 158091 case this makes it ~35x stiffer than "
+                "the complete form (docs/derivation_eq16.tex Eq. 16-full) "
+                "and no implementation can solve it in double precision.  "
+                "Use eq6_form='complete' instead.",
+                RuntimeWarning, stacklevel=3
             )
         return eq6_form
 
@@ -1038,6 +1050,7 @@ class saarelma_connor_sc(saarelma_connor):
             ) * scale
             return f
 
+        # make non-dim coefficients
         coeffs = {
             "g":         _mk(self.gradr2_fsa, "gradr2_fsa"),
             "hat_Si":    _mk(self.S_i_pres, "hat_S_i", 1.0 / self._S0_sc),
@@ -1052,7 +1065,7 @@ class saarelma_connor_sc(saarelma_connor):
         }
         C_cx_fd = Function(V, name="C_cx")
         C_cx_fd.dat.data[:] = self._C_cx_sc(x_dofs_si)
-        coeffs["C_cx"] = C_cx_fd
+        coeffs["C_cx"] = C_cx_fd # already is non-dimensional
 
         self._fd_cache["coeffs_sc"] = coeffs
         return coeffs
@@ -1141,16 +1154,16 @@ class saarelma_connor_sc(saarelma_connor):
         L = self._L_sc
         n0 = self._n0_sc
         dne_dx_inner_val = self._sc_neumann_inner_value(bc_origin, dne_dx_inner)
-        dN_in_val = (L / n0) * dne_dx_inner_val
-        hat_nFC0 = self.nFC_x0 / n0
+        dN_in_val = (L / n0) * dne_dx_inner_val # non-dim
+        hat_nFC0 = self.nFC_x0 / n0 # non-dim
 
         _mesh, V, xi_dofs = self._ensure_firedrake_mesh_sc(
             x_res, fe_degree, force=force_setup,
         )
-        x_dofs_si = L * xi_dofs
+        x_dofs_si = L * xi_dofs # dimensionalized
         sort_idx = np.argsort(xi_dofs)
         unsort_idx = np.argsort(sort_idx)
-        x_sorted = x_dofs_si[sort_idx]
+        x_sorted = x_dofs_si[sort_idx] # dimensionalized 
         coeffs = self._build_sc_coefficients(V, x_dofs_si)
 
         # Initial guess (SI on the sorted grid, then back to DOF order).
@@ -1191,7 +1204,7 @@ class saarelma_connor_sc(saarelma_connor):
         )[unsort_idx]
         self._fd_cache["E_kernel_sc"] = E_fd
 
-        # Constants
+        # Constants (non-dimensional)
         dN_in_c = Constant(dN_in_val)
         hat_nFC0_c = Constant(hat_nFC0)
         hat_Vfc_c = Constant(abs(self.V_FC) / self._V0_sc)
